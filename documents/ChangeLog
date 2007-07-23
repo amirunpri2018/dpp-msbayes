@@ -1,0 +1,23 @@
+* Mon Nov  6 2006 Naoki Takebayashi <ffnt@uaf.edu>
+- obsSumStats.pl was using the old format (10 or 11 column formats).
+  We removed one of the two Ts/Tv ratio column and gamma rate columns, so
+  new input files contains 8 or 9 columns
+- in msprior.c, upper limit for ancestral population size was incorrectly
+  gParam.upperAncPopSize*gParam.upperTheta*gParam.upperTheta/theta.
+  Correct upper limit is gParam.upperAncPopSize*gParam.upperTheta/theta
+- README was updated to explain upper ancestral population size better.
+- Makefile updated, so one can make static binary with "make STATIC_LINK=YES".
+  For Mac OS-X with fink, this cause static linking to gsl, but dynamic link
+  to other system libs.
+
+* notes for a version before 20061005 Naoki Takebayashi <ffnt@uaf.edu>
+- Modified msprior.[ch] -- gParam.upperTheta (was 40.5) and
+  gParam.lowerTheta (was 0.5) is used.
+- Modified setup.c
+- Modified msprior, so the first element of output line is now upper theta,
+  which is required to stat program.
+- modified samplesDQH_rej_16tx.c
+  Takes option flags, which specify upper bound to theta (-T).
+  nadv used to be an argument, but it is changed to option (-a).
+- modified msbayes.pl to pass upper theta around
+
