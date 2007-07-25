@@ -49,7 +49,7 @@ CFLAGS = $(DEFS) $(INCLS) $(CCOPT)
 #### A suffix rule to make .o
 .c.o:; $(CC) -c -o $@ $(CFLAGS) $<
 
-TARGET = sumstatsvector msDQH msprior
+TARGET = sumstatsvector msDQH msprior msReject
 PERL_SCRIPTS = acceptRej.pl msbayes.pl obsSumStats.pl
 # header.pl is not needed anymore, superceded by acceptRej.pl
 
@@ -59,6 +59,7 @@ LIB_EXEC_FILES = acceptRej.r make_pd2005.r loc2plot.r
 
 MSPRIOR_O = msprior.o setup.o initvars.o whiteSpaces.o
 MSDQH_O = msQHarbpop.o QHarbpop-streec.o QHsubs.o QHarbpop-getpars.o rand2new.o
+MSREJECT_O = rejectinC.o
 SUMSTATSVECTOR = msStatsDQH.o  sumStatsVector.o
 
 all: $(TARGET)
@@ -68,6 +69,9 @@ sumstatsvector: $(SUMSTATSVECTOR)
 
 msDQH: $(MSDQH_O)
 	$(CC) $(LDFLAGS) -o $@ $(MSDQH_O) -lm
+
+msReject: $(MSREJECT_O)
+	$(CC) $(LDFLAGS) -o $@ $(MSREJECT_O) -lm
 
 msprior: $(MSPRIOR_O)
 	$(CC) $(LDFLAGS) -o $@ $(MSPRIOR_O) $(GSL_LIB)
