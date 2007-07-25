@@ -125,8 +125,8 @@ int main (int argc, char *argv[])
    * TAXAcount: sequential ID for each taxon pair (1 to # of taxon pairs)
    */  
   sscanf (line,
-	  " %s %d %d %s %lf %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %lf %s %s %s %s %s %s %s %s %s %s %s %lf %s %s %s %u %s %s %s %u %s %s %s %d %s %s %s %u ",
-	  dum, &nsam, &howmany, dum, &THETA, dum, dum, dum, dum, dum, dum,
+	  " %s %s %d %d %s %lf %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %lf %s %s %s %s %s %s %s %s %s %s %s %lf %s %s %s %u %s %s %s %u %s %s %s %d %s %s %s %u ",
+	  dum, dum, &nsam, &howmany, dum, &THETA, dum, dum, dum, dum, dum, dum,
 	  dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum,
 	  dum, dum, dum, dum, &Tau1, dum, dum, dum, dum, dum, dum, dum, dum,
 	  dum, dum, dum, &Tau2, dum, dum5, dum, &TauHyp, dum4, dum, dum1,

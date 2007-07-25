@@ -39,30 +39,35 @@ ran1 ()
 
 
 unsigned int
-seedit (const char *flag)
+seedit (const char *flag, long seed)
 {
-  FILE *fopen (), *pfseed;
-  unsigned int seed2;
-  
-  if (flag[0] == 't')
-    {
-      pfseed = fopen ("seedms", "r");
-      if (pfseed == NULL)
-	{
-	  seed2 = 59243;
-	}
-      else
-	{
-	  fscanf (pfseed, " %d", &seed2);
-	  fclose (pfseed);
-	}
-      srandom (seed2);
-      return (seed2);
-    }
-  else
-    {
-      pfseed = fopen ("seedms", "w");
-      fprintf (pfseed, "%ld \n", random ());
-      return (0);
-    }
+
 }
+
+/* unsigned int */
+/* seedit (const char *flag) */
+/* { */
+/*   FILE *fopen (), *pfseed; */
+/*   unsigned int seed2; */
+/*   if (flag[0] == 't') */
+/*     { */
+/*       pfseed = fopen ("seedms", "r"); */
+/*       if (pfseed == NULL) */
+/* 	{ */
+/* 	  seed2 = 59243; */
+/* 	} */
+/*       else */
+/* 	{ */
+/* 	  fscanf (pfseed, " %d", &seed2); */
+/* 	  fclose (pfseed); */
+/* 	} */
+/*       srandom (seed2); */
+/*       return (seed2); */
+/*     } */
+/*   else */
+/*     { */
+/*       pfseed = fopen ("seedms", "w"); */
+/*       fprintf (pfseed, "%ld \n", random ()); */
+/*       return (0); */
+/*     } */
+/* } */

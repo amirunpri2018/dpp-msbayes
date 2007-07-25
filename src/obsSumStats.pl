@@ -33,7 +33,7 @@
 # analysis.
 
 my $headerTmpl = <<HEADER_TEMPLATE;
-./msDQH DUM_TotSampleSize 1 -t 4.0 -Q 2.0 0.25 0.25 0.25 0.25 -H 999.0 -r 0 DUM_SeqLen -D 5 2 DUM_SampleSize1 DUM_SampleSize2 0 I 0.0 1.0 1.0 0.9 0.9 3.1 2 1 0 0 1 0 I 0.0 Nc 0.4 0.09 12.0 1 Nc 0.03 1 1 Nc 0.03 DUM_SeqLen 1 Nc 0.03 DUM_TaxonPairID 1 Nc 0.03 DUM_NumTaxonPairs
+./msDQH 1 DUM_TotSampleSize 1 -t 4.0 -Q 2.0 0.25 0.25 0.25 0.25 -H 999.0 -r 0 DUM_SeqLen -D 5 2 DUM_SampleSize1 DUM_SampleSize2 0 I 0.0 1.0 1.0 0.9 0.9 3.1 2 1 0 0 1 0 I 0.0 Nc 0.4 0.09 12.0 1 Nc 0.03 1 1 Nc 0.03 DUM_SeqLen 1 Nc 0.03 DUM_TaxonPairID 1 Nc 0.03 DUM_NumTaxonPairs
 
 777
 11

@@ -38,7 +38,7 @@ int usage(void);
 
 int getpars(int argc, char *argv[], struct parameters *pP)
 {
-  int arg=1, i, ii, iii=-1, sum, usage(), argnoerr(const char *, struct parameters ), printflag=0;
+  int arg=2, i, ii, iii=-1, sum, usage(), argnoerr(const char *, struct parameters ), printflag=0;
   /* int Mpattflag=0 ; */
   int cased=0, casem=0, configsum;
   double mig_rate, fsum2Dv(int , int , int , double **);
@@ -529,7 +529,7 @@ int printpars(char *arg0, struct parameters P )
 
 int usage()
 {
-  fprintf(stderr,"usage: msQHarbpop nsam howmany \n");
+  fprintf(stderr,"usage: msQHarbpop seed nsam howmany \n");
   fprintf(stderr,"  Options: \n"); 
   fprintf(stderr,"\t -t theta   (this option or the next must be used.)\n");
   fprintf(stderr,"\t -s segsites   ( fixed number of segregating sites)\n");

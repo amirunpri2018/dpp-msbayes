@@ -185,14 +185,14 @@ main(argc,argv)
         char *argv[];
 {
         int  i;
-	long count;
+	long count, seed;
         char **list, **cmatrix();
         FILE *pf, *fopen() ;
         int  segsites  ;
 	struct parameters P;
 	int getpars(int argc, char *argv[], struct parameters * );
 	int printpars(char *, struct parameters  );
-	unsigned int seedit( const char * ) ;
+/* 	unsigned int seedit( const char * ) ; */
 	/* double t, ttot; */
 /* Aug 11, 2004 Eli CHANGES */
 /* 	int seQmut; -PLACED IN struct parameters */
@@ -203,7 +203,8 @@ main(argc,argv)
 	printf("\n");
 	if ( getpars(argc, argv, &P) ) { printpars( argv[0], P); exit(0); }
 	/* seedit( "t"); */
-	printf("\n%u\n",seedit( "t"));
+	seed=atol(argv[1]);
+	printf("\n%u\n",(unsigned)seed);
         pf = stdout ;
 
 /* Aug 11, 2004 Eli changes */
@@ -255,7 +256,7 @@ main(argc,argv)
 	      for(i=0;i<P.nsam; i++) { fprintf(pf,"%s\n", list[i] ); }
 	}
 	fprintf(pf,"\n");
-	seedit( "end" );
+/* 	seedit( "end" ); */
 /* 	fprintf(pf,"\nCPUtime: %4.2f\n",(double)(clock()-starttime)/CLOCKS_PER_SEC); */
 	exit (EXIT_SUCCESS);
 }
