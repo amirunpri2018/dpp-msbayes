@@ -87,15 +87,25 @@ runParameters gParam;        /* stores upper limits of prior dist'n etc */
 mutParameterArray gMutParam; /* stores mut model & # samples for 
                                 each taxon pair */
 
+	int comp_nums(const double *num1, const double *num2)
+{
+  if (*num1 <  *num2) return -1;
+  if (*num1 == *num2) return  0;
+  if (*num1 >  *num2) return  1;
+} 
+
 int main (int argc, char *argv[])
 {
   double N1, N2, Nanc, *tauArray=NULL, theta, tauequalizer, gaussTime,
     mig, rec, BottStr1, BottStr2,BottleTime;
-  
-  unsigned int numTauClasses, u, locus;
+  int  tauClass;
+  unsigned int numTauClasses, u, locus, zzz;
   unsigned long randSeed;
   unsigned long long rep;
   extern const gsl_rng *gBaseRand;
+void display_nums(int *, int);
+int comp_nums(const double *, const double *);
+FILE *fp;
 
   /* set up gParam and gMutParam */
   LoadConfiguration(argc, argv);
@@ -151,6 +161,10 @@ int main (int argc, char *argv[])
 	  }
 	}
 
+	qsort(tauArray, (numTauClasses), sizeof(double), comp_nums);
+
+
+
       for (u = 0; u < gParam.numTaxaPair; u++)
 	{
 	  mutParameter taxonPairDat;
@@ -205,7 +219,23 @@ int main (int argc, char *argv[])
 	  /* pick a tau for every taxon-pair with replacement from the
 	     array of X taxon-pairs, where X is a uniform discrete RV
 	     from 1 to number of taxon-pairs */
-	  gaussTime= tauArray[gsl_rng_uniform_int(gBaseRand,numTauClasses)];
+		 
+		 tauClass = gsl_rng_uniform_int(gBaseRand,numTauClasses);
+		 
+		if ((fp=fopen("TauclassArray", "a+b")) ==NULL){
+   fprintf(stderr,"Cannot open the file.\n");
+
+   exit(1);
+ }
+		 if (u < 1)
+		 {
+		 fprintf(fp, "\n");
+		 }
+		 fprintf(fp, "%d\t",tauClass);
+	
+		   fclose (fp);
+		 
+	  gaussTime= tauArray[tauClass];
 	  
 	  /* use the following if simulating a particular fixed history */
 	  /* gaussTime = tauArray[u]; */
@@ -255,7 +285,27 @@ int main (int argc, char *argv[])
 	     theta, gaussTime, NumPerTax[u], yy, */
 	  }
 	}
+	
+	
+	if ((fp=fopen("TAUarray", "a+b")) ==NULL){
+   fprintf(stderr,"Cannot open the file.\n");
+
+   exit(1);
+ }
+
+
+for (zzz = 0; zzz < numTauClasses; zzz++)
+{
+fprintf(fp, "%lf\t",tauArray[zzz]);
+} 
+ fprintf(fp, "\n");
+ fclose (fp);
+ 
+
+
+	
     }
+
 
   free(tauArray);
   exit (0);
