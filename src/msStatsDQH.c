@@ -52,6 +52,7 @@ static int SS_comp (const void *, const void *);
 #if 0
 static int compare_doubles (const void *a, const void *b);
 #endif
+int frequency(char, int, int, char**);
 
 struct SumStat
 {	
@@ -700,10 +701,12 @@ nucdiv (int nsam, int segsites, char **list)
 /* denomis  # of ways to choose a pair: nsam choose 2 */
       /* frequency() returns the number of pair wise differences at site s from all pairwise comparison */
 
+
         double
 nucdiv( int nsam, int segsites, char **list)
 {
-	int s, n, i, frequency(char, int, int, char**);/*7/27/04; Hickerson*/
+	
+	int s, n, i ;/*7/27/04; Hickerson*/
 	double pi, p1, nd, nnm1, denom  ;
         char  dummy;
 	pi = 0.0 ;
@@ -713,7 +716,7 @@ nucdiv( int nsam, int segsites, char **list)
    	for( s = 0; s <segsites; s++){
                 /*printf("s: %d", s);*/
 		n=0;
-                   p1 = frequency(dummy, s, nsam,list) ; /*7/27/04; Hickerson*/
+				p1 = frequency(dummy, s, nsam,list) ; /*7/27/04; Hickerson*/
                 pi = pi + p1; /*7/27/04; Hickerson*/
                 /*printf("pi: %lf\n", pi);  test print*/  	
                 }
