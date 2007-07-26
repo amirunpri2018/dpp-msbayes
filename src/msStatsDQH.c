@@ -97,8 +97,8 @@ static int SS_comp (const void *p1, const void *p2)
   const struct SumStat *sp1 = (struct SumStat *) p1;
   const struct SumStat *sp2 = (struct SumStat *) p2;
 
-  return ((sp1->PI) > (sp2->PI)) - ((sp1->PI) <
-					    (sp2->PI));
+  return ((sp1->PI_b) > (sp2->PI_b)) - ((sp1->PI_b) <
+					    (sp2->PI_b));
   /*return  ( sp1->PI_b) - ( sp2->PI_b); */
 }
 
@@ -214,7 +214,7 @@ if (segwithin[0]<1 ) D1=0;
   /*fprintf(fp, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n", pi_b, FuLiD, FuLiF, tW, pi, segsites, pi_w, Fst, Pi_Net, D, TAU, TDen);
      fclose (fp); */
 
-   fprintf(fp, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n", pi_w2, tW2, TDen2, pi_w1, tW1, TDen1, pi, tW, TDen, D2, D1, D, pi_b, Pi_Net, TAU );
+   fprintf(fp, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n", pi_w2, tW2, TDen2, pi_w1, tW1, TDen1, pi_w, pi, tW, TDen, D2, D1, D, pi_b, Pi_Net, TAU );
 
   fclose (fp);
 
@@ -232,7 +232,7 @@ if (segwithin[0]<1 ) D1=0;
       STATLOAD = NumTaxa;
       SSLOAD = 11;
       for (a = 0; a < STATLOAD; a++)
-	fscanf(fp, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n", &PI_w2[a], &TW2[a], &TDD2[a], &PI_w1[a], &TW1[a], &TDD1[a], &PI[a], &TW[a], &TDD[a], &TD2[a], &TD1[a], &TD[a], &PI_b[a], &PI_Net[a], &tau[a]);
+	fscanf(fp, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n", &PI_w2[a], &TW2[a], &TDD2[a], &PI_w1[a], &TW1[a], &TDD1[a], &PI_w[a], &PI[a], &TW[a], &TDD[a], &TD2[a], &TD1[a], &TD[a], &PI_b[a], &PI_Net[a], &tau[a]);
 
       fclose (fp);
 
@@ -267,32 +267,38 @@ if (segwithin[0]<1 ) D1=0;
 	/*for (a=0;a<STATLOAD;a++)printf("%lf\t", SumStat_list[a].PI_Net);
 	   printf("\n"); */
 
-	/*for (a = 0; a < STATLOAD; a++)
-	  printf ("%lf\t", SumStat_list[a].PI_b);*/
+	for (a = 0; a < STATLOAD; a++)
+	  printf ("%lf\t", SumStat_list[a].PI_b);
+
+	for (a = 0; a < STATLOAD; a++)
+	  printf ("%lf\t", SumStat_list[a].PI_w);
+
+	for (a = 0; a < STATLOAD; a++)
+	  printf ("%lf\t", SumStat_list[a].PI);
+
+	for (a = 0; a < STATLOAD; a++)
+	  printf ("%lf\t", SumStat_list[a].TW);
+	  
+	  	for (a = 0; a < STATLOAD; a++)
+	  printf ("%lf\t", SumStat_list[a].PI_Net);
+	  
+	  	for (a = 0; a < STATLOAD; a++)
+	  printf ("%lf\t", SumStat_list[a].TD);
+
+		for (a = 0; a < STATLOAD; a++)
+	  printf ("%lf\t", SumStat_list[a].TDD);
 
 	for (a = 0; a < STATLOAD; a++)
 	  printf ("%lf\t", SumStat_list[a].PI_w2);
 	  
 	  	for (a = 0; a < STATLOAD; a++)
 	  printf ("%lf\t", SumStat_list[a].PI_w1);
-
-	for (a = 0; a < STATLOAD; a++)
-	  printf ("%lf\t", SumStat_list[a].PI);
 	  
 	for (a = 0; a < STATLOAD; a++)
 	  printf ("%lf\t", SumStat_list[a].TW2);
 	  
 	  	for (a = 0; a < STATLOAD; a++)
 	  printf ("%lf\t", SumStat_list[a].TW1);
-	  
-	for (a = 0; a < STATLOAD; a++)
-	  printf ("%lf\t", SumStat_list[a].TW);
-
-	for (a = 0; a < STATLOAD; a++)
-	  printf ("%lf\t", SumStat_list[a].PI_Net);
-
-	/*for (a = 0; a < STATLOAD; a++)
-	  printf ("%lf\t", SumStat_list[a].TD);*/
 
 	for (a = 0; a < STATLOAD; a++)
 	  printf ("%lf\t", SumStat_list[a].TDD2);
@@ -300,8 +306,6 @@ if (segwithin[0]<1 ) D1=0;
 	for (a = 0; a < STATLOAD; a++)
 	  printf ("%lf\t", SumStat_list[a].TDD1);
 	
-		for (a = 0; a < STATLOAD; a++)
-	  printf ("%lf\t", SumStat_list[a].TDD);
 	printf ("\n");
 	
 	/*    if ((fp=fopen("likeout1_21", "a+b")) ==NULL){
