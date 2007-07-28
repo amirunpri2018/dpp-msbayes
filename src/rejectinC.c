@@ -46,7 +46,7 @@ main( int argc, char *argv[])
 	ncolumns = argc-4 ;
 	columns = (int *)malloc( (unsigned)ncolumns*sizeof(int) ) ;
 	for( i=4; i<argc; i++){
-	  columns[i-4] = atoi( argv[i] ) ;
+	  columns[i-4] = atoi( argv[i] ) - 1 ;
 	}
 
 	inputstring = (char *)malloc( 100000*sizeof(char) );
