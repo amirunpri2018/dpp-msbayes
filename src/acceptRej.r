@@ -1,6 +1,6 @@
 #library and R code  and package stuff
-source("../make_pd2005.r")
-source("../loc2plot.r")
+source("make_pd2005.r")
+source("loc2plot.r")
 library(KernSmooth)
 library(locfit)  # this need to be installed from CRAN 
 # 1. To install locfit, download a package locfit_*.tar.gz from CRAN.

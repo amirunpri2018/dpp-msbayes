@@ -54,7 +54,7 @@ nss <- length(sumstat[1,])
     wt1 <- dst < abstol
 
     if(rejmethod){
-        l1 <- list(x=x[wt1],wt=0,wt1=wt1)
+        l1 <- list(x=x[wt1],wt=0)
     }
     else{
         regwt <- 1-dst[wt1]^2/abstol^2
