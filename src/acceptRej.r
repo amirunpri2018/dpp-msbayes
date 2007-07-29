@@ -1,6 +1,6 @@
 #library and R code  and package stuff
-source("make_pd2005.r")
-source("loc2plot.r")
+source("../make_pd2005.r")
+source("../loc2plot.r")
 library(KernSmooth)
 library(locfit)  # this need to be installed from CRAN 
 # 1. To install locfit, download a package locfit_*.tar.gz from CRAN.
@@ -47,14 +47,19 @@ printStatNames <- function() {
 #             so you can analyze the results further.
 # rejmethod: if True, it doesn't boether with the regression, and uses
 #            simple rejection
-stdAnalysis <- function(obs.infile, sim.infile, pdf.outfile="figs.pdf",
+stdAnalysis <- function(obs.infile, sim.infile, prior.infile, 
+	                pdf.outfile="figs.pdf",
                         tol=0.002,
                         used.stats=c("pi","wattTheta","pi.net","tajD.denom"),
-                        rejmethod=T,
+                        rejmethod=T, pre.rejected=F,
                         return.res=F
                         ) {
   simDat <- getData(sim.infile)
-  
+  if(pre.rejected) {
+    prior.dat <- scan(prior.infile)
+    prior.dat <- data.frame(matrix(prior.dat, ncol=length(params.from.priorDistn), byrow=T))
+    names(prior.dat) <- params.from.priorDistn
+  }
   nPairs <- simDat[["numTaxonPairs"]]
   simDat <- simDat[["dat"]]
 
@@ -117,10 +122,21 @@ stdAnalysis <- function(obs.infile, sim.infile, pdf.outfile="figs.pdf",
 
   # Print out figures
   pdf(pdf.outfile)
-  make.hist(simDat[,"omega"], result.omega, title="Omega (Var(t)/E(t))")
-  make.hist(simDat[,"Psi"], result.Psi, title="Psi (# of possible divtimes)")
-  make.hist(simDat[,"E.t"], result.E.t, title="E(t)")
-  
+
+  if (pre.rejected) {
+    make.hist(prior.dat[,"omega"], result.omega, title="Omega (Var(t)/E(t))")
+    make.hist(prior.dat[,"Psi"], result.Psi, title="Psi (# of possible divtimes)")
+    make.hist(prior.dat[,"E.t"], result.E.t, title="E(t)")
+  } else {
+    make.hist(simDat[,"omega"], result.omega, title="Omega (Var(t)/E(t))")
+    make.hist(simDat[,"Psi"], result.Psi, title="Psi (# of possible divtimes)")
+    make.hist(simDat[,"E.t"], result.E.t, title="E(t)")
+  }
+  # pdf("CrustCOITheta60Na30ssPibPi_jointdots7_18.pdf")
+  #plot(result11$x,result22$x,xlim=c(0,0.7),ylim=c(0,2.0),lty=2,lwd=0.5)
+  plot(result.omega$x,result.E.t$x,xlim=c(0,0.7),ylim=c(0,2.0),lty=2,lwd=0.5)
+  # CHECK THIS
+
   plotKernDensity(result.omega,result.E.t,
                   title="Omega and E(t)")
 
@@ -145,7 +161,11 @@ stdAnalysis <- function(obs.infile, sim.infile, pdf.outfile="figs.pdf",
 # dat is the data.frame, numTaxonPairs is an integer indicating the number
 # of taxon pairs.
 getData <- function (infile) {
-  dat <- read.table(infile, header=F)
+#  dat <- read.table(infile, header=F)
+  first.line <- scan(infile, nlines=1)
+  dat <- scan(infile)
+  dat <- data.frame(matrix(dat, ncol=length(first.line), byrow=T))
+ # check this
 
   # number of taxon pairs can be calculated from
   nTaxPairs <-

@@ -23,34 +23,37 @@
 
 
 my $pdfOut = "figs.pdf";  # default pdf output file name
+my $defaultTolerance = 0.002;  # default tolerance
+my $statString = 'pi,wattTheta,pi.net,tajD.denom';  # default stat strings
 
-my $usage="Usage: $0 [-hn] [-p outPDF] [-s summary_stats] \n" .
+my $usage="Usage: $0 [-hnar] [-p outPDF] [-s summary_stats] \n" .
           "                       [-t tolerance] obsData simData \n".
     "  -h: help\n".
     "  -n: print out the names of all available summary stats\n".
     "  -p: output pdf filename (default: $pdfOut)\n".
     "  -r: Simple rejection method without regression will be used\n".
-    "  -s: statString (e.g. -s 'pi,wattTheta,pi.net,tajD.denom', <=default)\n".
+    "  -s: statString (e.g. -s '$statString', <=default)\n".
     "      The summary statistics listed here will be used\n".
-    "  -t: tolerance (a value between 0 an 1, default set in acceptRej.r)"
+    "  -a: old analysis with all R processing (nobody needs it)\n" .
+    "  -t: tolerance (a value between 0 an 1, default: $defaultTolerance)"
     ;
 
 
 use Getopt::Std;
-getopts('hndp:rt:s:') || die "$usage\n";
+getopts('ahndp:rt:s:') || die "$usage\n";
 die "$usage\n" if (defined($opt_h));
 
-our($opt_h, $opt_n, $opt_d, $opt_p, $opt_r, $opt_t, $opt_s);
-
+our($opt_a, $opt_h, $opt_n, $opt_d, $opt_p, $opt_r, $opt_t, $opt_s);
 
 use File::Copy;
 use IO::File;
 use POSIX qw(tmpnam);
 
-# The names (not paths) of 3 R scripts required for this program.
+# The names (not paths) of 3 R scripts and a C prog required for this program.
 my $mainRscript = "acceptRej.r";
 my $make_pdRscript = "make_pd2005.r";
 my $loc2plotRscript = "loc2plot.r";
+my $rejectionExe = "msreject"; # rejection program
 
 # Adding the following paths to @INC, so we can find the R scripts.
 # The R scripts should be in the same directory as this perl script,
@@ -79,6 +82,27 @@ END {                   # delete the temp file when done
 	}
 };
 
+# open a temp file to preprocess the data with msrejection
+do {$tmpSimDat = tmpnam()} until $tmpSimDatfh = 
+    IO::File->new($tmpSimDat, O_RDWR|O_CREAT|O_EXCL);
+END {                   # delete the temp file when done
+    if (defined($tmpSimDat) && -e $tmpSimDat) {
+	unlink($tmpSimDat) || die "Couldn't unlink $tmpSimDat : $!"
+	}
+};
+
+# open a temp file to extract the prior columns.
+do {$tmpPrior = tmpnam()} until $tmpPriorfh = 
+    IO::File->new($tmpPrior, O_RDWR|O_CREAT|O_EXCL);
+END {                   # delete the temp file when done
+    if (defined($tmpPrior) && -e $tmpPrior) {
+	unlink($tmpPrior) || die "Couldn't unlink $tmpPrior : $!"
+	}
+};
+
+if (defined($opt_s)) {
+    $statString = MkStatString($opt_s);
+}
 
 my ($simDat, $obsDat);
 if(defined($opt_n)) {
@@ -101,7 +125,7 @@ if(defined($opt_n)) {
 	    "file name\n";
 	die $usage;
     }
-
+    
     if(defined($opt_p)) {
 	$pdfOut=$opt_p;
     }
@@ -110,6 +134,7 @@ if(defined($opt_n)) {
 }
 
 close($tmpRfh);  # the tmp R script is ready to use
+
 
 if(defined($opt_d)) {
     open RSCRIPT, "<$tmpR" || die ("ERROR: Can't open $tmpR\n");
@@ -140,6 +165,68 @@ if (! defined($opt_n)) {
 
 close $tmpObsfh;
 # done with preproscess the obs data
+
+## preprocess the simDat
+if (!defined($opt_n)) {
+    ## find the number of columns
+    my $numColInfile = ColNumTabDelimFile($simDat);
+    
+    # getting column structures from R
+    my ($arrRef1, $arrRef2) = GetPriorSumStatNames();
+    my @priorNames = @$arrRef1;
+    my @sumStatNames = @$arrRef2;
+    my $numPriorCols = scalar(@priorNames);
+
+    if (! defined($opt_a)) {  # use the external acceptRejection C program
+	my $tol = (defined($opt_t)) ?  $opt_t :  $defaultTolerance;
+	if (($numColInfile - @priorNames) % @sumStatNames != 0) {
+	  die "ERROR: Simulation file contains $numColInfile columns.\n" .
+	      "       R scripts says " . scalar(@priorNames) . " priors and ".
+	      scalar(@sumStatNames) . " summary stats for each taxon pairs.\n".
+	      "       $numColInfile - " . scalar(@priorNames) . " = " .
+		$numColInfile - scalar(@priorNames) . "should be multiple of ".
+		  scalar(@sumStatNames) . ".\n";
+	}
+	my $numTaxonPairs = ($numColInfile-@priorNames)/scalar(@sumStatNames);
+
+	my @usedSS = split /\s*,\s*/, $statString;
+	my @index=();
+	
+	# finding the column numbers to use as the summary statistics
+	my @indexHelper = 1..$numTaxonPairs;
+	foreach my $ss (@usedSS) {
+	    my $ssi = FindMatchingIndex($ss, @sumStatNames); # 0-offset
+	    my @tmp = map { $_ * ($ssi+1)+scalar(@priorNames)} @indexHelper;
+	    push @index, @tmp;  # @index is 1-offset
+	}
+	
+	# run rejection program
+	my $columns = join " ", @index;
+	my $rejExe = FindFile($rejectionExe);
+	system ("$rejExe $obsDat $simDat $tol $columns > $tmpSimDat");
+
+	## create the column only file
+	open SIMDAT, "<$simDat" || die "Can't open $simDat\n";
+	while (<SIMDAT>) {
+	  chomp;
+	  my @line = split /\t/;
+	  my @priors = splice @line, 0, $numPriorCols;
+	  print $tmpPriorfh join("\t", @priors), "\n";
+	}
+	close SIMDAT;
+    }
+
+    my @critVals = (0.01, 0.05, 0.1);
+    my @tmpCritVals =  ();
+    foreach my $cc (@critVals) {
+	push  @tmpCritVals, ($cc) x $numPriorCols;
+    }
+
+    # return the proportion of values below the threshold
+    # used to calculate bayes factor
+    my @priorLT = 
+	FreqOfValuesLessThan([1..$numPriorCols],\@tmpCritVals, $simDat);
+}
 
 # run R
 my @output = `R --quiet --no-save --no-restore --slave < $tmpR`;
@@ -192,16 +279,20 @@ sub MkStdAnalysisRScript {
     close MAIN_R_TMPL;
     
     # print $fh "source(\"$mainRt\")\n";
-    print $fh "res <- stdAnalysis(\"$tmpObs\", \"$simDat\", pdf.outfile=\"$pdfOut\"";
+    if(defined($opt_a)) {
+      print $fh "res <- stdAnalysis(\"$tmpObs\", \"$simDat\", pdf.outfile=\"$pdfOut\",pre.rejected=F";
 
-    if (defined($opt_t)) {
-	print $fh ", tol=$opt_t";
+    } else {
+      print $fh "res <- stdAnalysis(\"$tmpObs\", \"$tmpSimDat\", \"$tmpPrior\",pdf.outfile=\"$pdfOut\",pre.rejected=T";
     }
-
-    if (defined($opt_s)) {
-	my $statString = MkStatString($opt_s);
-	print $fh ", used.stats=c($statString)";
+    if (defined($opt_a)) {
+      my $tol = (defined($opt_t)) ? $opt_t : $defaultTolerance;
+      print $fh ", tol=$tol";
+    } else {
+      print $fh ", tol=1";
     }
+    
+    print $fh ", used.stats=c($statString)";
 
     if (defined($opt_r)) {
 	print $fh ", rejmethod=T";  # no regression
@@ -254,4 +345,121 @@ sub FindFile {
 	}
     }
     return -1;
+}
+
+## Read in a tab-delimited text file.
+## Then it returns the array whose elements are the frequencies
+## of values in columns less than the critical values.
+## The column numbers are specified by an array, and the reference to
+## the array should be passed as the first argument.
+## 2nd argument is the reference to the array of critical values.
+## If the two arrays of column numbers and critical values have different
+## length, the shorter ones are recycled in the way similar to R.
+## Example:
+##   FreqOfValuesLessThan([1,3],[0.5,0.5,1,1], "infile.txt")
+## returns an array of
+##   (freqs of values less than 0.5 in 1st column,
+##    freqs of values less than 0.5 in 2nd column,
+##    freqs of values less than 1   in 1st column,
+##    freqs of values less than 1   in 2nd column)
+
+sub FreqOfValuesLessThan {
+    my($colNumArrRef, $valueArrRef, $filename) = @_;
+
+    open IN, "<$filename" || die "Can't open $filename\n";
+
+    my $numCol = scalar(@$colNumArrRef);
+    my $numCritVal = scalar(@$valueArrRef);
+
+    # implement R style index recycling
+    my @colNums = ();
+    my @critVals = ();
+    if ($numCol < $numCritVal) {
+        for (my $i = 0; $i < $numCritVal; $i++) {
+            push @colNums, $$colNumArrRef[$i % $numCol];
+        }
+        @critVals = @$valueArrRef;
+        $numCol = $numCritVal;
+    } elsif ($numCritVal < $numCol) {
+        $numCol = $numCol;
+        @colNums = @$colNumArrRef;
+        for (my $i = 0; $i < $numCol; $i++) {
+            push @critVals, $$valueArrRef[$i % $numCritVal];
+        }
+    } else {
+        @colNums = @$colNumArrRef;
+        @critVals = @$valueArrRef;
+    }
+
+    my @result = map {0} 1..$numCol;
+
+    my $cntr = 0;
+    while(<IN>) {
+        chomp;
+        my @line = split /\t/;
+        for( my $i = 0; $i < $numCol; $i++) {
+            my $index = $colNums[$i] - 1;  # change to 0-offset
+            if ($line[$index] < $critVals[$i]) {
+                $result[$i] ++;
+            }
+        }
+        $cntr ++;
+    }
+    close (IN);
+    return map {$_ / $cntr} @result;
+}
+
+# find the names of Prior columns and sumstats
+sub GetPriorSumStatNames {
+  my @priorNames = ();
+  my @sumStatNames = ();
+
+  open NAMES, "$0 -n 2> /dev/null |" || die "Can't run $0 -n\n";
+                                        # running itself to get stat.names.
+  my $state = 1;
+  while(<NAMES>) {
+    chomp;
+    next if /^\s+$/;
+    if ($state == 1 && /params.from.priorDistn/) {
+      $state++; next;
+    }
+    if ($state == 2) {
+      @priorNames = split /\s+/;
+      $state++; next;
+    }
+    if ($state == 3 && /summary.stat.names/) {
+      $state++; next;
+    }
+    if($state == 4) {
+      @sumStatNames = split /\s+/;
+      last;
+    }
+  }
+  close NAMES;
+  return (\@priorNames, \@sumStatNames);
+}
+
+# Find the first incidence of target value from the array and return the index
+#  Argument: ($target, @array)
+sub FindMatchingIndex {
+    my $target = shift;
+    for (my $i = 0; $i < @_; $i++) {
+	return $i if ($target eq $_[$i]);
+    }
+}
+
+# Find the number of columns in tab delimited text file.
+sub ColNumTabDelimFile {
+  my $simDat = shift;
+  my ($line, $numColInFile);
+  open IN, "<$simDat" || die "Can't open $simDat\n";
+  while (defined ($line = <IN>)) {
+    chomp $line;
+    next if $line =~ /^\s*$/;
+    my @a = split /\t/, $line;
+    $numColInfile = @a;
+    last;
+  }
+  close IN;
+  return $numColInfile;
 }
