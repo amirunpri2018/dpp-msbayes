@@ -447,7 +447,7 @@ Let's take a look at the options
    "s"ummarry stats option.  For example, you can use -s
    'pi,tajD.denom' to use two stats as the summary (do not forget the
    single quotes).  By default, the program uses "pi", "wattTheta",
-   "pi.net", and "tajD.denom".YOU MAY HAVE TO BE FORCED TO USE pi.b, pi and wattTheta IF 
+   "pi.net", and "tajD.denom".YOU MAY HAVE TO BE FORCED TO USE pi.b (average pairwise differences between populations), pi and wattTheta IF 
    SOME POPULATION SAMPLES ONLY INCLUDE 1 SAMPLED INDIVIDUAL.  	
 
 -n
