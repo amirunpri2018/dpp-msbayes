@@ -29,7 +29,7 @@ params.from.priorDistn <- c("Psi", "var.t", "E.t", "omega")
 # If you change the names here, don't forget to update the default value
 # of used.stats in stdAnalysis
 summary.stat.names <- c("pi.b", "pi.w", "pi", "wattTheta", "pi.net",
-                            "tajD", "tajD.denom")
+                            "tajD", "tajD.denom", "pi.wPop2", "pi.wPop1", "wattTheta.Pop2", "wattTheta.Pop1", "tajD.denomPop2", "tajD.denomPop1")
 
 # Just print out the stat names
 printStatNames <- function() {
