@@ -98,8 +98,8 @@ int main (int argc, char *argv[])
 {
   double N1, N2, Nanc, *tauArray=NULL, theta, tauequalizer, gaussTime,
     mig, rec, BottStr1, BottStr2,BottleTime;
-  int  tauClass;
-  unsigned int numTauClasses, u, locus, zzz;
+  int  tauClass, PSIarray[1000];
+  unsigned int numTauClasses, u, locus, zzz, c;
   unsigned long randSeed;
   unsigned long long rep;
   extern const gsl_rng *gBaseRand;
@@ -151,6 +151,7 @@ FILE *fp;
 	fprintf(stderr, "ERROR: Not enough memory for tauArray\n");
 	exit(EXIT_FAILURE);
       }
+      
       for (u = 0; u < numTauClasses; u++)
 	{
 	  tauArray[u] = gsl_ran_flat (gBaseRand, 0.0, gParam.upperTau);
@@ -163,7 +164,10 @@ FILE *fp;
 
 	qsort(tauArray, (numTauClasses), sizeof(double), comp_nums);
 
-
+	for (c=0; c < numTauClasses; c++) 
+	  {
+	  PSIarray[c] = 0;
+	  }
 
       for (u = 0; u < gParam.numTaxaPair; u++)
 	{
@@ -222,20 +226,24 @@ FILE *fp;
 		 
 		 tauClass = gsl_rng_uniform_int(gBaseRand,numTauClasses);
 		 
-		if ((fp=fopen("TauclassArray", "a+b")) ==NULL){
+		 /*		if ((fp=fopen("TauclassArray", "a+b")) ==NULL){
    fprintf(stderr,"Cannot open the file.\n");
 
    exit(1);
  }
+
 		 if (u < 1)
 		 {
 		 fprintf(fp, "\n");
 		 }
 		 fprintf(fp, "%d\t",tauClass);
 	
-		   fclose (fp);
+		 fclose (fp);*/
 		 
 	  gaussTime= tauArray[tauClass];
+
+	  PSIarray[tauClass] = PSIarray[tauClass] + 1;  
+
 	  
 	  /* use the following if simulating a particular fixed history */
 	  /* gaussTime = tauArray[u]; */
@@ -286,7 +294,21 @@ FILE *fp;
 	  }
 	}
 	
+      if ((fp=fopen("PSIARRAY", "a+b")) ==NULL){
+	fprintf(stderr,"Cannot open the file.\n");
+
+	exit(1);
+      }
 	
+      for (zzz = 0; zzz < numTauClasses; zzz++)
+	{
+	  fprintf(fp, "%d\t",PSIarray[zzz]);
+	}
+
+      fprintf(fp, "\n");
+      fclose (fp);
+
+
 	if ((fp=fopen("TAUarray", "a+b")) ==NULL){
    fprintf(stderr,"Cannot open the file.\n");
 
