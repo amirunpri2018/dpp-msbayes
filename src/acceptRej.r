@@ -93,9 +93,9 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
   
   # Transformations, absorbing boundary at 0.0
   result.omega$x[which(result.omega$x < 0)] <- 0
-  result.Psi$x[which(result.Psi$x < 0)] <- 0
+  result.Psi$x[which(result.Psi$x < 1)] <- 1
   result.E.t$x[which(result.E.t$x < 0)] <- 0
-  result.E.t$x[which(result.E.t$x > nPairs)] <- nPairs
+  result.Psi$x[which(result.Psi$x > nPairs)] <- nPairs
   
   # Print out the results
   cat("######### results #######\n")
