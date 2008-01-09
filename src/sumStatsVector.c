@@ -214,7 +214,7 @@ int main (int argc, char *argv[])
 	    maxsites = segsites + 10;  /* extra 10 elements */
 	    posit = (tPositionOfSegSites *) 
 	      realloc(posit, maxsites * sizeof (tPositionOfSegSites));
-	    printf("PRE %d %d %d\n", segsites, maxsites, nsam); 
+	    /*printf("PRE %d %d %d\n", segsites, maxsites, nsam);*/ 
 	    if (posit == NULL || biggerlist(nsam, maxsites, list) != 0 ) {
 	      fprintf(stderr,
 		      "Not enough memory for reallocating char matrix\n");

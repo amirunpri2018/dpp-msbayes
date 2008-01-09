@@ -256,7 +256,7 @@ if (segwithin[0]<1 ) D1=0;
 	SumStat_list[a].TDD1 = TDD1[a];
 	}
  
-      qsort (SumStat_list, NumTaxa, sizeof SumStat_list[0], SS_comp);
+        qsort (SumStat_list, NumTaxa, sizeof SumStat_list[0], SS_comp);
 
       {
 	VarTAU = gsl_stats_variance (tau, 1, NumTaxa);
