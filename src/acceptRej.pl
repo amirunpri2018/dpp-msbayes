@@ -26,7 +26,7 @@ my $pdfOut = "figs.pdf";  # default pdf output file name
 my $defaultTolerance = 0.002;  # default tolerance
 my $statString = 'pi,wattTheta,pi.net,tajD.denom';  # default stat strings
 
-my $usage="Usage: $0 [-hnar] [-p outPDF] [-s summary_stats] \n" .
+my $usage="Usage: $0 [-hnacr] [-p outPDF] [-s summary_stats] \n" .
           "                       [-t tolerance] obsData simData \n".
     "  -h: help\n".
     "  -n: print out the names of all available summary stats\n".
@@ -35,15 +35,17 @@ my $usage="Usage: $0 [-hnar] [-p outPDF] [-s summary_stats] \n" .
     "  -s: statString (e.g. -s '$statString', <=default)\n".
     "      The summary statistics listed here will be used\n".
     "  -a: old analysis with all R processing (nobody needs it)\n" .
-    "  -t: tolerance (a value between 0 an 1, default: $defaultTolerance)"
+    "  -t: tolerance (a value between 0 an 1, default: $defaultTolerance)" .
+    "  -c: analysis based on prior constrained by Psi=2 to allow obtaining\n".
+    "      posteriors of extra hyper-parameters Psi1, Psi2, tau1, and tau2 \n"
     ;
 
 
 use Getopt::Std;
-getopts('ahndp:rt:s:') || die "$usage\n";
+getopts('ahncdp:rt:s:') || die "$usage\n";
 die "$usage\n" if (defined($opt_h));
 
-our($opt_a, $opt_h, $opt_n, $opt_d, $opt_p, $opt_r, $opt_t, $opt_s);
+our($opt_a, $opt_h, $opt_n, $opt_d, $opt_p, $opt_r, $opt_t, $opt_s, $opt_c);
 
 use File::Copy;
 use IO::File;
@@ -83,6 +85,7 @@ END {                   # delete the temp file when done
 };
 
 # open a temp file to preprocess the data with msrejection
+my $tmpSimDatfh;
 do {$tmpSimDat = tmpnam()} until $tmpSimDatfh = 
     IO::File->new($tmpSimDat, O_RDWR|O_CREAT|O_EXCL);
 END {                   # delete the temp file when done
@@ -184,8 +187,8 @@ if (!defined($opt_n)) {
 	      "       R scripts says " . scalar(@priorNames) . " priors and ".
 	      scalar(@sumStatNames) . " summary stats for each taxon pairs.\n".
 	      "       $numColInfile - " . scalar(@priorNames) . " = " .
-		$numColInfile - scalar(@priorNames) . "should be multiple of ".
-		  scalar(@sumStatNames) . ".\n";
+	      ($numColInfile - scalar(@priorNames)) . 
+	      " should be multiple of ". scalar(@sumStatNames) . ".\n";
 	}
 	my $numTaxonPairs = ($numColInfile-@priorNames)/scalar(@sumStatNames);
 
@@ -203,6 +206,9 @@ if (!defined($opt_n)) {
 	# run rejection program
 	my $columns = join " ", @index;
 	my $rejExe = FindFile($rejectionExe);
+	if ($rejExe eq '-1') {
+	    die  "ERROR: Can't find $rejectionExe, is it installed in your PATH?\n";
+	}
 	system ("$rejExe $obsDat $simDat $tol $columns > $tmpSimDat");
 
 	## create the column only file
@@ -244,7 +250,11 @@ sub MkPrintNameRScript {
 	die "Can't find $mainRscript in directories:\n", join(":", @INC), "\n";
     }
     print $fh "source(\"$mainR\")\n";
-    print $fh "printStatNames()\n";
+    if (defined($opt_c)) {
+	print $fh "printStatNames(constrained=T)\n";
+    } else {
+	print $fh "printStatNames(constrained=F)\n";
+    }
     return;
 }
 
@@ -299,6 +309,13 @@ sub MkStdAnalysisRScript {
     } else {
 	print $fh ", rejmethod=F";  # regression
     }
+
+    if (defined($opt_c)) {
+	print $fh ", constrained=T";  # constrained
+    } else {
+	print $fh ", constrained=F";  # not constrained
+    }
+
     print $tmpRfh ")\n";
 
     return;
@@ -414,7 +431,8 @@ sub GetPriorSumStatNames {
   my @priorNames = ();
   my @sumStatNames = ();
 
-  open NAMES, "$0 -n 2> /dev/null |" || die "Can't run $0 -n\n";
+  my $additionalOpt =  (defined($opt_c))? "-c" : "";
+  open NAMES, "$0 -n $additionalOpt 2> /dev/null |" || die "Can't run $0 -n\n";
                                         # running itself to get stat.names.
   my $state = 1;
   while(<NAMES>) {
