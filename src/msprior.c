@@ -54,7 +54,7 @@
     receive this and pass this value to the option flag (-T) of the 
     stat program.
 
-  * Tue Mar 14 2006 Naoki Takebayashi <ffnt@uaf.edu>
+    * Tue Mar 14 2006 Naoki Takebayashi <ffnt@uaf.edu>
   - separated the function of reading in the config file, and setup parameters.
     This is now done in a separate file setup.c.  Setting up parameters
     are cleaner now.
@@ -66,18 +66,18 @@
   - Compared the results of the previous and new implementations.  Other than
     this arbitrary preference to stronger bottleneck, the results are 
     completely identical with the same seed.
- */
+*/
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <gsl/gsl_rng.h>	/* for base rand num gen's */
-#include <gsl/gsl_randist.h>	/* for gsl_ran_gamma */
+#include <gsl/gsl_rng.h>/* for base rand num gen's */
+#include <gsl/gsl_randist.h>/* for gsl_ran_gamma */
 #include "msprior.h"
 #include "setup.h"
 
 /* This has to be Global */
-const gsl_rng *gBaseRand;	/* global rand number generator */
+const gsl_rng *gBaseRand;/* global rand number generator */
 
 /* 
  * global variables which stores the parameters (settings for the upper
@@ -87,7 +87,7 @@ runParameters gParam;        /* stores upper limits of prior dist'n etc */
 mutParameterArray gMutParam; /* stores mut model & # samples for 
                                 each taxon pair */
 
-	int comp_nums(const double *num1, const double *num2)
+int comp_nums(const double *num1, const double *num2)
 {
   if (*num1 <  *num2) return -1;
   if (*num1 == *num2) return  0;
@@ -103,23 +103,23 @@ int main (int argc, char *argv[])
   unsigned long randSeed;
   unsigned long long rep;
   extern const gsl_rng *gBaseRand;
-void display_nums(int *, int);
-int comp_nums(const double *, const double *);
-FILE *fp;
+  void display_nums(int *, int);
+  int comp_nums(const double *, const double *);
+  FILE *fp;
 
   /* set up gParam and gMutParam */
   LoadConfiguration(argc, argv);
 
   /* for initiating the gsl random number generator */
   /* initialize PRNG */
-  srand (gParam.prngSeed);		/* Better way of seeding here ? */
+  srand (gParam.prngSeed);/* Better way of seeding here ? */
   randSeed = rand ();
   if (debug_level > 0)
     randSeed = 1;
 
-  gBaseRand = gsl_rng_alloc (gsl_rng_mt19937);	/* set the base PRNG to
-						   Mersenne Twister */
-  gsl_rng_set (gBaseRand, randSeed);	/* seed the PRNG */
+  gBaseRand = gsl_rng_alloc (gsl_rng_mt19937);/* set the base PRNG to
+						 Mersenne Twister */
+  gsl_rng_set (gBaseRand, randSeed);/* seed the PRNG */
 
   /* Beginning of the main loop */
   for (rep = 0; rep < gParam.reps; rep++)
@@ -135,14 +135,18 @@ FILE *fp;
        */ 
       if (gParam.numTauClasses == 0) {
 	numTauClasses = 1 + gsl_rng_uniform_int(gBaseRand, gParam.numTaxaPair);
-      } else {  /* fixed numTauClasses */
+      } 
+      else {  /* fixed numTauClasses */
 	if (gParam.numTauClasses > gParam.numTaxaPair) {
 	  fprintf(stderr, "WARN: numTauClasses (%u) is larger than "
 		  "numTaxaPair (%u). Setting numTauClasses to %u",
 		  gParam.numTauClasses,gParam.numTaxaPair,gParam.numTaxaPair);
 	  gParam.numTauClasses = gParam.numTaxaPair;
 	}
+        
+	//local numTauClasses
 	numTauClasses = gParam.numTauClasses;
+        //printf("size of tauArray: %d   ", numTauClasses);
       }
       
       /* sample tau's from uniform prior dist'n */
@@ -155,19 +159,22 @@ FILE *fp;
       for (u = 0; u < numTauClasses; u++)
 	{
 	  tauArray[u] = gsl_ran_flat (gBaseRand, 0.0, gParam.upperTau);
-
+          
+          //printf("tauArray[%d] : %lf   ", u, tauArray[u]);
+          
 	  if (debug_level) {
 	    fprintf(stderr, "DEBUG:%u of %u categories:\t%lf\n",
 		    u, numTauClasses, tauArray[u]);
 	  }
 	}
 
-	qsort(tauArray, (numTauClasses), sizeof(double), comp_nums);
+      //qsort(tauArray, (numTauClasses), sizeof(double), comp_nums);
 
-	for (c=0; c < numTauClasses; c++) 
-	  {
+      for (c=0; c < numTauClasses; c++) 
+	{
+	  // probably not being used
 	  PSIarray[c] = 0;
-	  }
+	}
 
       for (u = 0; u < gParam.numTaxaPair; u++)
 	{
@@ -195,7 +202,7 @@ FILE *fp;
 	  N1 = gsl_ran_flat (gBaseRand, 0.01, 1.99);
 
 	  N2 = 2.0 - N1;
-	  
+	    
 	  /* ancestral population size prior */
 	  if(gParam.upperAncPopSize < 0.01) {
 	    fprintf(stderr, "The upper bound (%lf) of ancestral pop. size is "
@@ -203,53 +210,62 @@ FILE *fp;
 		    gParam.upperAncPopSize);
 	    exit(EXIT_FAILURE);
 	  }
-	  /*Hickchange 5_3_06*/	  
-	  
+	  /*Hickchange 5_3_06*/  
+	    
 	  /*
-	    Nmax=((gParam.upperAncPopSize*gParam.upperTheta)*gParam.upperTheta)
-	    /theta; 
-	  Nanc = gsl_ran_flat (gBaseRand, 0.01, Nmax);
+	        Nmax=((gParam.upperAncPopSize*gParam.upperTheta)*gParam.upperTheta)
+		    /theta; 
+		      Nanc = gsl_ran_flat (gBaseRand, 0.01, Nmax);
 	  */
-	  
+	    
 	  /* The upper limit of ancestral theta is defined by the product
-  	     of upper Theta (e.g. 40) and upper AncPopSize (e.g. 0.5) */
+	     of upper Theta (e.g. 40) and upper AncPopSize (e.g. 0.5) */
 	  Nanc = gsl_ran_flat(gBaseRand, 0.01, 
 			      gParam.upperAncPopSize*gParam.upperTheta);
 	  Nanc = Nanc / theta; /* get the ratio of theta_anc / theta_cur 
 				  This ratio is required for msDQH */
 
 	  tauequalizer = gParam.upperTheta / 2 / theta;
-	 
+	   
 	  /* pick a tau for every taxon-pair with replacement from the
-	     array of X taxon-pairs, where X is a uniform discrete RV
-	     from 1 to number of taxon-pairs */
-		 
-		 tauClass = gsl_rng_uniform_int(gBaseRand,numTauClasses);
-		 
-		 /*		if ((fp=fopen("TauclassArray", "a+b")) ==NULL){
+	          array of X taxon-pairs, where X is a uniform discrete RV
+		  from 1 to number of taxon-pairs */
+	  
+
+          // 1-31-2007 it will use new way of picking tau
+	  if( u < numTauClasses)
+	    {
+	      tauClass = u;
+            } 
+	  else
+	    {
+	      tauClass = gsl_rng_uniform_int(gBaseRand,numTauClasses);
+	    } 
+	  /*if ((fp=fopen("TauclassArray", "a+b")) ==NULL){
    fprintf(stderr,"Cannot open the file.\n");
 
    exit(1);
  }
 
-		 if (u < 1)
-		 {
-		 fprintf(fp, "\n");
-		 }
-		 fprintf(fp, "%d\t",tauClass);
-	
-		 fclose (fp);*/
-		 
+  if (u < 1)
+   {
+    fprintf(fp, "\n");
+     }
+      fprintf(fp, "%d\t",tauClass);
+      
+      fclose (fp);*/
+	   
 	  gaussTime= tauArray[tauClass];
+          //printf("picking index: %d, gaussTime: %lf  ", tauClass, tauArray[tauClass]);
 
 	  PSIarray[tauClass] = PSIarray[tauClass] + 1;  
 
-	  
+	    
 	  /* use the following if simulating a particular fixed history */
 	  /* gaussTime = tauArray[u]; */
-	  
+	    
 	  gaussTime = gaussTime * tauequalizer;
-	  
+	    
 	  /* The following 2 if's are weird */
 	  if (gaussTime < 0.0001)
 	    gaussTime = 0.0001;
@@ -262,10 +278,10 @@ FILE *fp;
 	  if(debug_level) 
 	    fprintf(stderr, "DEBUG: BottleTime:%lf\tgaussTime:%lf\n",
 		    BottleTime, gaussTime);
-	  
+	    
 	  /* recombination rate */
 	  rec = gsl_ran_flat (gBaseRand, 0.0, gParam.upperRec);
-	  
+	    
 	  /* print out the results */
 	  for (locus = 0; locus < gParam.numLoci; locus++) {
 	    printf("%lf %lf %lf %lf %lf %u ",
@@ -283,23 +299,23 @@ FILE *fp;
 	    printf("%lf %lf %lf %lf ",
 		   taxonPairDat.freqA, taxonPairDat.freqC, taxonPairDat.freqG, 
 		   taxonPairDat.freqT);
-		
-		printf("%u\n",  gParam.numTaxaPair);  
-	  
-	  /* These feed into the system command line (msDQH) within
-	     the perl shell msbayes.  Some of these are used directly
-	     by msDQH, but some are also passed on to the sumstats
-	     programs via the msDQH commabnd line, .... like bp[u],
-	     theta, gaussTime, NumPerTax[u], yy, */
+	    
+	    printf("%u\n",  gParam.numTaxaPair);  
+	      
+	    /* These feed into the system command line (msDQH) within
+	            the perl shell msbayes.  Some of these are used directly
+		         by msDQH, but some are also passed on to the sumstats
+			      programs via the msDQH commabnd line, .... like bp[u],
+			      theta, gaussTime, NumPerTax[u], yy, */
 	  }
 	}
-	
+      
       if ((fp=fopen("PSIARRAY", "a+b")) ==NULL){
 	fprintf(stderr,"Cannot open the file.\n");
 
 	exit(1);
       }
-	
+      
       for (zzz = 0; zzz < numTauClasses; zzz++)
 	{
 	  fprintf(fp, "%d\t",PSIarray[zzz]);
@@ -309,23 +325,23 @@ FILE *fp;
       fclose (fp);
 
 
-	if ((fp=fopen("TAUarray", "a+b")) ==NULL){
-   fprintf(stderr,"Cannot open the file.\n");
+      if ((fp=fopen("TAUarray", "a+b")) ==NULL){
+	fprintf(stderr,"Cannot open the file.\n");
 
-   exit(1);
- }
+	exit(1);
+      }
 
 
-for (zzz = 0; zzz < numTauClasses; zzz++)
-{
-fprintf(fp, "%lf\t",tauArray[zzz]);
-} 
- fprintf(fp, "\n");
- fclose (fp);
+      for (zzz = 0; zzz < numTauClasses; zzz++)
+	{
+	  fprintf(fp, "%lf\t",tauArray[zzz]);
+	} 
+      fprintf(fp, "\n");
+      fclose (fp);
  
 
 
-	
+      
     }
 
 
