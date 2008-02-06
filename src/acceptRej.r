@@ -33,8 +33,10 @@ params.from.priorDistn2 <- c("Tau1", "Tau2", "Psi1", "Psi2", "Psi", "var.t", "E.
 # each taxon pairs, then 9 columns of "pi.w", ... etc.
 # If you change the names here, don't forget to update the default value
 # of used.stats in stdAnalysis
-summary.stat.names <- c("pi.b", "pi.w", "pi", "wattTheta", "pi.net",
-                            "tajD", "tajD.denom", "pi.wPop2", "pi.wPop1", "wattTheta.Pop2", "wattTheta.Pop1", "tajD.denomPop2", "tajD.denomPop1")
+summary.stat.names <- c("pi.b", "pi.w", "pi", "wattTheta", "pi.net", "tajD", "tajD.denom", "pi.wPop2", "pi.wPop1", "wattTheta.Pop2", "wattTheta.Pop1", "tajD.denomPop2", "tajD.denomPop1", "ShannonsIndex.Between", "ShannonsIndex.Net", "ShannonsIndex.Pop1", "ShannonsIndex.Pop2"  )
+
+#summary.stat.names <- c("pi.b", "pi.w", "pi", "wattTheta", "pi.net",
+#                            "tajD", "tajD.denom", "pi.wPop2", "pi.wPop1", "wattTheta.Pop2", "wattTheta.Pop1", "tajD.denomPop2", "tajD.denomPop1")
 
 # Just print out the stat names
 printStatNames <- function(constrained=F) {

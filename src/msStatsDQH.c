@@ -27,13 +27,17 @@
 #include <math.h>
 #include <gsl/gsl_statistics.h>
 #include <gsl/gsl_sort.h>
+
+#include "hashtab.h"
+#include <string.h>
+//#include <math.h>
+
 /* #include <float.h> */
 /* #if defined (__SVR4) && defined (__sun) */
 /*   int isinf(double x) { return !finite(x) && x==x; } */
 /* #endif */
 
-double nucdiv (int, int, char **);
-double nucdiv_w (int, int, char **, int, int *);
+double nucdiv (int, int, char **);double nucdiv_w (int, int, char **, int, int *);
 double nucdiv_w1(int, int, char **, int, int *);
 double nucdiv_w2(int, int, char **, int, int *);
 double nucdiv_bw (int, int, char **, int, int *);
@@ -54,6 +58,11 @@ static int compare_doubles (const void *a, const void *b);
 #endif
 int frequency(char, int, int, char**);
 
+
+void shannonIndex(char **list, int* config, double **shannonIndexArray);
+int charCount(char *arr);
+
+
 struct SumStat
 {	
 	double PI_b  ;
@@ -71,6 +80,10 @@ struct SumStat
 	double TDD ;
 	double TDD1 ;
 	double TDD2 ;
+        double si1;
+        double si2;
+        double si3;
+        double si4;
 };
 
 #if 0  /* commented out since it is not used */
@@ -115,7 +128,7 @@ printstats (int nsam, int segsites, char **list, int nsub, int npops, int *n,
   int *freqdist, nsegsub=-1, CC, a;
   double NSEGSUB[NumTaxa];
   double TW[NumTaxa],TW1[NumTaxa],TW2[NumTaxa], PI[NumTaxa], PI_w[NumTaxa], PI_w1[NumTaxa],PI_w2[NumTaxa],PI_b[NumTaxa], 
-    PI_Net[NumTaxa], TD[NumTaxa],TD1[NumTaxa],TD2[NumTaxa], tau[NumTaxa], TDD[NumTaxa], TDD1[NumTaxa], TDD2[NumTaxa];
+    PI_Net[NumTaxa], TD[NumTaxa],TD1[NumTaxa],TD2[NumTaxa], tau[NumTaxa], TDD[NumTaxa], TDD1[NumTaxa], TDD2[NumTaxa], si1[NumTaxa], si2[NumTaxa],si3[NumTaxa], si4[NumTaxa];
       double tW_w;/*zzz Hickerson 6/26/04 zzz */ /*yyy tW_w  Eli 05/15/06 yyy*/
 int *segwithin, tW_w_npops ;/*yyy Eli 5/15/06 yyy*/
   double MeanTAU, VarTAU;
@@ -204,7 +217,15 @@ if (segwithin[0]<1 ) D1=0;
 
   CC = TAXAcount - 1;
  
+   double *shannonIndexArray;
   
+   shannonIndexArray = (double*)malloc(4*sizeof(double));
+  
+
+   shannonIndex(list, n, &shannonIndexArray);
+
+   
+  //printf( "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n", pi_w2, tW2, TDen2, pi_w1, tW1, TDen1, pi_w, pi, tW, TDen, D2, D1, D, pi_b, Pi_Net, TAU );
   if ((fp = fopen ("PARarray-E", "a+b")) == NULL)
     {
       fprintf (stderr, "Cannot open the file.\n");
@@ -212,10 +233,12 @@ if (segwithin[0]<1 ) D1=0;
     }
 
 
-  /*fprintf(fp, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n", pi_b, FuLiD, FuLiF, tW, pi, segsites, pi_w, Fst, Pi_Net, D, TAU, TDen);
+/*fprintf(fp, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n", pi_b, FuLiD, FuLiF, tW, pi, segsites, pi_w, Fst, Pi_Net, D, TAU, TDen);
      fclose (fp); */
 
-   fprintf(fp, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n", pi_w2, tW2, TDen2, pi_w1, tW1, TDen1, pi_w, pi, tW, TDen, D2, D1, D, pi_b, Pi_Net, TAU );
+   fprintf(fp, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n", pi_w2, tW2, TDen2, pi_w1, tW1, TDen1, pi_w, pi, tW, TDen, D2, D1, D, pi_b, Pi_Net, TAU, shannonIndexArray[0], shannonIndexArray[1],shannonIndexArray[2],shannonIndexArray[3]);
+
+   free(shannonIndexArray);
 
   fclose (fp);
 
@@ -233,7 +256,7 @@ if (segwithin[0]<1 ) D1=0;
       STATLOAD = NumTaxa;
       SSLOAD = 11;
       for (a = 0; a < STATLOAD; a++)
-	fscanf(fp, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n", &PI_w2[a], &TW2[a], &TDD2[a], &PI_w1[a], &TW1[a], &TDD1[a], &PI_w[a], &PI[a], &TW[a], &TDD[a], &TD2[a], &TD1[a], &TD[a], &PI_b[a], &PI_Net[a], &tau[a]);
+	fscanf(fp, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n", &PI_w2[a], &TW2[a], &TDD2[a], &PI_w1[a], &TW1[a], &TDD1[a], &PI_w[a], &PI[a], &TW[a], &TDD[a], &TD2[a], &TD1[a], &TD[a], &PI_b[a], &PI_Net[a], &tau[a], &si1[a], &si2[a], &si3[a], &si4[a]);
 
       fclose (fp);
 
@@ -254,9 +277,13 @@ if (segwithin[0]<1 ) D1=0;
 	SumStat_list[a].TDD = TDD[a];
 	SumStat_list[a].TDD2 = TDD2[a];
 	SumStat_list[a].TDD1 = TDD1[a];
+        SumStat_list[a].si1 =  si1[a];
+        SumStat_list[a].si2 =  si2[a];
+        SumStat_list[a].si3 =  si3[a];
+        SumStat_list[a].si4 =  si4[a];
 	}
  
-        qsort (SumStat_list, NumTaxa, sizeof SumStat_list[0], SS_comp);
+      qsort (SumStat_list, NumTaxa, sizeof SumStat_list[0], SS_comp);
 
       {
 	VarTAU = gsl_stats_variance (tau, 1, NumTaxa);
@@ -265,10 +292,12 @@ if (segwithin[0]<1 ) D1=0;
 
 
 	printf ("%d\t%lf\t%lf\t%lf\t", TauHyp, VarTAU, MeanTAU, CV);
-	/*for (a=0;a<STATLOAD;a++)printf("%lf\t", SumStat_list[a].PI_Net);
-	   printf("\n"); */
+	
+        //for (a=0;a<STATLOAD;a++)printf("%lf\t", SumStat_list[a].PI_Net);
+	// printf("\n"); 
 
-	for (a = 0; a < STATLOAD; a++)
+	        
+   	for (a = 0; a < STATLOAD; a++)
 	  printf ("%lf\t", SumStat_list[a].PI_b);
 
 	for (a = 0; a < STATLOAD; a++)
@@ -280,25 +309,25 @@ if (segwithin[0]<1 ) D1=0;
 	for (a = 0; a < STATLOAD; a++)
 	  printf ("%lf\t", SumStat_list[a].TW);
 	  
-	  	for (a = 0; a < STATLOAD; a++)
+	for (a = 0; a < STATLOAD; a++)
 	  printf ("%lf\t", SumStat_list[a].PI_Net);
 	  
-	  	for (a = 0; a < STATLOAD; a++)
+	for (a = 0; a < STATLOAD; a++)
 	  printf ("%lf\t", SumStat_list[a].TD);
 
-		for (a = 0; a < STATLOAD; a++)
+	for (a = 0; a < STATLOAD; a++)
 	  printf ("%lf\t", SumStat_list[a].TDD);
 
 	for (a = 0; a < STATLOAD; a++)
 	  printf ("%lf\t", SumStat_list[a].PI_w2);
 	  
-	  	for (a = 0; a < STATLOAD; a++)
+	for (a = 0; a < STATLOAD; a++)
 	  printf ("%lf\t", SumStat_list[a].PI_w1);
 	  
 	for (a = 0; a < STATLOAD; a++)
 	  printf ("%lf\t", SumStat_list[a].TW2);
 	  
-	  	for (a = 0; a < STATLOAD; a++)
+	for (a = 0; a < STATLOAD; a++)
 	  printf ("%lf\t", SumStat_list[a].TW1);
 
 	for (a = 0; a < STATLOAD; a++)
@@ -307,7 +336,26 @@ if (segwithin[0]<1 ) D1=0;
 	for (a = 0; a < STATLOAD; a++)
 	  printf ("%lf\t", SumStat_list[a].TDD1);
 	
-	printf ("\n");
+
+        for(a = 0; a < STATLOAD; a++)
+          printf ("%lf\t", SumStat_list[a].si1);
+
+        for(a = 0; a < STATLOAD; a++)
+          printf ("%lf\t", SumStat_list[a].si2);
+
+        for(a = 0; a < STATLOAD; a++)
+          printf ("%lf\t", SumStat_list[a].si3);
+	
+
+        for(a = 0; a < STATLOAD; a++)
+          printf ("%lf\t", SumStat_list[a].si4);
+
+        printf ("\n");
+	
+
+        //for(a = 0; a < STATLOAD; a++)
+          //printf ("%lf\n", SumStat_list[a].si4);
+
 	
 	/*    if ((fp=fopen("likeout1_21", "a+b")) ==NULL){
 	   fprintf(stderr,"Cannot open the file.\n");
@@ -865,3 +913,159 @@ segsub (int nsub, int segsites, char **list)
     }
   return (count);
 }
+
+void shannonIndex(char **list, int* config, double **shannonIndexArray)
+{
+    int sizeOfSp1, sizeOfSp2;
+    sizeOfSp1 = config[0]; sizeOfSp2 = config[1];
+
+    double freqSp1, freqSp2, pool = 0;
+	
+      
+    freqSp1 = (double)sizeOfSp1/((double)(sizeOfSp1+sizeOfSp2));
+    freqSp2 = (double)sizeOfSp2/((double)(sizeOfSp1+sizeOfSp2));
+
+
+    double sHa1=0, sHa2=0, sHu=0, sHua=0;
+
+    int i;
+
+    hashtab_t *subPop1 = ht_init(sizeOfSp1, NULL);
+    hashtab_t *subPop2 = ht_init(sizeOfSp2, NULL);
+
+    // AlCount1 is an integer array of size of sub-population 1  
+    int *AlCount1;
+    AlCount1 = (int *)malloc(sizeOfSp1*sizeof(int));
+    for(i=0;i<sizeOfSp1;i++)
+      AlCount1[i] = 1;
+        
+    // AlCount2 is an integer array of size of sub-population 2
+    int *AlCount2;
+    AlCount2 = (int *)malloc(sizeOfSp2*sizeof(int));
+    for(i=0;i<sizeOfSp2;i++)
+      AlCount2[i] = 1;
+ 
+      
+   int j = 0;
+   
+   // what is the length of an integer?
+
+   // insert allel-count pair into hashtables (key: allel as string, value: number of allel as int)
+   for(i = 0;i<sizeOfSp1;i++)
+   {
+      if(  ht_search(subPop1, list[i], charCount(list[i])) ==NULL   )
+	{  
+          //fprintf(testShannon, "insert: %s \n", list[i]);
+           ht_insert(subPop1, list[i], charCount(list[i]), (AlCount1+j), (int)sizeof((*(AlCount1+j))));
+           j++;
+        }
+      else if(  ht_search(subPop1, list[i], charCount(list[i]))!=NULL   )
+	  {
+	      (*((int*)ht_search(subPop1, list[i], charCount(list[i]))))++;
+	  }
+   }
+   
+   j=0;
+   // what is the length of an integer?
+   //insert allel-count pair into hashtables (key: allel as string, value: number of allel as int)
+   for(i = 0;i<sizeOfSp2;i++)
+   {
+      if(  ht_search(subPop2, list[sizeOfSp1+i], charCount(list[sizeOfSp1+i])) ==NULL   )
+       { 
+	 // printf("For debugging: sizeOfSp1: %d, i: %d, j: %d, list[sizeOfSp1+i]: %s, charCount: %d , j: %d, *(AlCount2+j): %d, sizeof(...): %d  \n\n", sizeOfSp1, i, j, list[sizeOfSp1+i], charCount(list[sizeOfSp1+i]), j, *(AlCount2+j), (int)sizeof((*(AlCount2+j))));
+        ht_insert(subPop2, list[sizeOfSp1+i], charCount(list[sizeOfSp1+i]), (AlCount2+j), (int)sizeof((*(AlCount2+j))));
+       j++;
+       }
+      else if(  ht_search(subPop2, list[sizeOfSp1+i], charCount(list[sizeOfSp1+i]))!=NULL   )
+	  {
+	      (*((int*)ht_search(subPop2, list[sizeOfSp1+i], charCount(list[sizeOfSp1+i]))))++;
+	  }
+   }
+
+   //initialize the hashtable iterator
+   hashtab_iter_t sp1i;
+   ht_iter_init(subPop1, &sp1i);
+
+   hashtab_iter_t sp2i;
+   ht_iter_init(subPop2, &sp2i);
+   
+
+   // calculate sHua1 
+   double temp;
+
+   for(;sp1i.key !=NULL;ht_iter_inc(&sp1i))
+   {
+     temp = (double)(*((int*)(sp1i.value)));
+       temp = temp/(double)sizeOfSp1;
+	   sHa1 +=   (-(log(temp) / log((double)2) * temp));
+   }
+
+   // calculate sHua2
+   for(;sp2i.key !=NULL;ht_iter_inc(&sp2i))
+   { 
+     temp = (double)(*((int*)(sp2i.value)));
+     temp = temp/sizeOfSp2;
+     sHa2 +=  (-(log(temp)/log((double)2)*temp));
+   }
+
+   // reinitialize hash_table iterator
+   ht_iter_init(subPop1, &sp1i);
+   ht_iter_init(subPop2, &sp2i);
+
+   
+   // calculate sHu
+   double temp2;
+   for(;(sp1i.key!=NULL)||(sp2i.key!=NULL);ht_iter_inc(&sp1i),ht_iter_inc(&sp2i))
+   {
+       if((sp1i.key!=NULL)&&(sp2i.key!=NULL))
+	 {       temp  = (double)(*((int*)(sp1i.value)));
+	         temp  = temp/(double)sizeOfSp1;
+	         temp2 = (double)(*((int*)(sp2i.value)));
+                 temp2 = temp2/(double)sizeOfSp2;
+                 pool = freqSp1*temp + freqSp2*temp2;
+	   }
+	   else if((sp1i.key!=NULL)&&(sp2i.key==NULL))
+	     {   temp =  (double)(*((int*)(sp1i.value)));
+	     temp = temp/(double)sizeOfSp1;
+	        pool = freqSp1*temp;
+	     }
+	   else if((sp2i.key!=NULL)&&(sp1i.key==NULL))
+	     {   temp2 = (double)(*((int*)(sp2i.value)));
+	         temp2 = temp2/(double)sizeOfSp2;
+	     pool = freqSp2*temp2;
+             }
+       sHu += (-(log(pool)/log((double)2)*pool));
+       //fprintf(testShannon, "pool: %f, freqSp1: %f, freqSp2: %f \n", (float)pool, (float)freqSp1, (float)freqSp2); 
+    }
+
+   // calculate sHua
+  sHua = sHu - freqSp1*sHa1 - freqSp2*sHa2;
+  
+  // throw values into double array shannonIndexArray
+  *(*shannonIndexArray+0) = sHa1, *(*shannonIndexArray+1) = sHa2,  *(*shannonIndexArray+2) = sHu, *(*shannonIndexArray+3) = sHua;
+
+
+   free(AlCount1);
+   free(AlCount2);
+ 
+   ht_destroy(subPop1);
+   ht_destroy(subPop2);
+	
+}
+
+/* 
+ * Count the number of characters in a cstring (size of the char*)
+ *
+ * Argument:
+ *   arr: the cstring whose number of characters to be counted
+ *
+ * Returns: the size of the string
+ *
+ */
+int charCount(char *arr)
+{
+	int k=0;
+	while(arr[k]!='\0')
+	    ++k;
+	return k;
+}//int charCount(char*)

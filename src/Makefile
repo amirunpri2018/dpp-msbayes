@@ -60,7 +60,7 @@ LIB_EXEC_FILES = acceptRej.r make_pd2005.r loc2plot.r
 MSPRIOR_O = msprior.o setup.o initvars.o whiteSpaces.o
 MSDQH_O = msQHarbpop.o QHarbpop-streec.o QHsubs.o QHarbpop-getpars.o rand2new.o
 MSREJECT_O = rejectinC.o
-SUMSTATSVECTOR = msStatsDQH.o  sumStatsVector.o
+SUMSTATSVECTOR = msStatsDQH.o  sumStatsVector.o hashtab.o
 
 all: $(TARGET)
 
