@@ -121,6 +121,17 @@ int main (int argc, char *argv[])
 						 Mersenne Twister */
   gsl_rng_set (gBaseRand, randSeed);/* seed the PRNG */
 
+  /* fixed numTauClasses configuration */
+  if (gParam.numTauClasses != 0) {
+    if (gParam.numTauClasses > gParam.numTaxaPair) {
+      fprintf(stderr, "WARN: numTauClasses (%u) is larger than "
+	      "numTaxaPair (%u). Setting numTauClasses to %u",
+	      gParam.numTauClasses,gParam.numTaxaPair,gParam.numTaxaPair);
+      gParam.numTauClasses = gParam.numTaxaPair;
+    }
+    numTauClasses = gParam.numTauClasses;
+  }
+
   /* Beginning of the main loop */
   for (rep = 0; rep < gParam.reps; rep++)
     {
@@ -133,21 +144,9 @@ int main (int argc, char *argv[])
        * If gParam.numTauClasses is not set, we are sampling
        * numTauClasses from a uniform prior dist'n.
        */ 
-      if (gParam.numTauClasses == 0) {
+      if (gParam.numTauClasses == 0) { /* numTauClasses is NOT fixed */
 	numTauClasses = 1 + gsl_rng_uniform_int(gBaseRand, gParam.numTaxaPair);
       } 
-      else {  /* fixed numTauClasses */
-	if (gParam.numTauClasses > gParam.numTaxaPair) {
-	  fprintf(stderr, "WARN: numTauClasses (%u) is larger than "
-		  "numTaxaPair (%u). Setting numTauClasses to %u",
-		  gParam.numTauClasses,gParam.numTaxaPair,gParam.numTaxaPair);
-	  gParam.numTauClasses = gParam.numTaxaPair;
-	}
-        
-	//local numTauClasses
-	numTauClasses = gParam.numTauClasses;
-        //printf("size of tauArray: %d   ", numTauClasses);
-      }
       
       /* sample tau's from uniform prior dist'n */
       tauArray = calloc(numTauClasses, sizeof(double));
@@ -195,7 +194,7 @@ int main (int argc, char *argv[])
 
 	  /* theta prior */
 	  theta = gsl_ran_flat (gBaseRand, gParam.lowerTheta, 
-				gParam.upperTheta);  /* Naoki mod */
+				gParam.upperTheta);
 
 	  /* population sizes immediately after the separation, and 
 	     what it grows to after the bottleneck (today) */

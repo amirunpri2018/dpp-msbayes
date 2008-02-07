@@ -124,7 +124,7 @@ cleanObj:
 	rm -f *.o core
 
 distribution: clean
-	cd ../../; tar czvf msbayes-$(VERSION).tgz --exclude msbayes-$(VERSION)/old --exclude *~  msbayes-$(VERSION) 
+	cd ../../; ln -s trunk msbayes-$(VERSION) && tar czvf msbayes-$(VERSION).tgz --exclude msbayes-$(VERSION)/old --exclude *~  msbayes-$(VERSION) && rm msbayes-$(VERSION)
 
 #### Generate dependencies (from GNU info on make)
 
