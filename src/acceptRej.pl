@@ -155,6 +155,13 @@ if(defined($opt_d)) {
     warn "### debug: end of R script file\n";
 }
 
+
+{   # Making sure R is installed
+    my $checkR = system("which R > /dev/null");
+    die "\nERROR: Can't find R.  Make sure R is installed and in your PATH.\n" 
+	unless ($checkR == 0);
+}
+
 ## preprocess the obs data
 ## Sometime the obs data isn't in 1 line, so converting this to 1 line (same
 ## format as the simulated data).
