@@ -70,6 +70,7 @@ use Getopt::Std;
 use FindBin qw($Bin);
 use lib "$Bin";
 use lib "$Bin/../lib/msbayes";
+use lib ".";  # looks for required files in the current directory at first
 
 my $sumStatsBinName  = "sumstatsvector";
 my $sep = "\t";  # used as the internal separater between seq and seq name
@@ -654,6 +655,7 @@ sub FindFile {
 
     foreach my $dir (@INC) {
         if ( -e "$dir/$name" ) {
+	    print STDERR "FILEINFO: using $dir/$name\n";
             return "$dir/$name";
         }
     }

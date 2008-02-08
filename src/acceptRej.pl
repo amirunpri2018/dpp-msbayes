@@ -65,7 +65,13 @@ my $rejectionExe = "msreject"; # rejection program
 use FindBin qw($Bin);
 use lib "$Bin";
 use lib "$Bin/../lib/msbayes";
-
+use lib ".";  # looks for Required files in the current directory at first
+              # -d will print out the search path
+if (defined($opt_d)) {
+    print STDERR "FILEINFO: searching path is ";
+    print STDERR join(":", @INC);
+    print STDERR "\n";
+}
 # open a temporary file to store the dynamically created R script
 do {$tmpR = tmpnam()} until $tmpRfh = 
     IO::File->new($tmpR, O_RDWR|O_CREAT|O_EXCL);
@@ -241,27 +247,11 @@ print @output;
 
 exit (0);
 
-
-# Making R script to print out stat names
-sub MkPrintNameRScript {
-    my $fh = shift;
-    my $mainR = FindFile($mainRscript);
-    if ($mainR eq '-1') {
-	die "Can't find $mainRscript in directories:\n", join(":", @INC), "\n";
-    }
-    print $fh "source(\"$mainR\")\n";
-    if (defined($opt_c)) {
-	print $fh "printStatNames(constrained=T)\n";
-    } else {
-	print $fh "printStatNames(constrained=F)\n";
-    }
-    return;
-}
-
-# making the R script
-sub MkStdAnalysisRScript {
-    my $fh = shift;
-    # find all required R scripts
+# find all required R scripts, the main R script has to source several
+# R scripts within.  This function will return a text string of the R main script after
+# a modification so that source() points to the correct file
+sub ProperMainRScript {
+    my $result = "";
     my $mainR = FindFile($mainRscript);
     if ($mainR eq '-1') {
 	die "Can't find $mainRscript in directories:\n", join(":", @INC), "\n";
@@ -277,18 +267,40 @@ sub MkStdAnalysisRScript {
 	die "Can't find $loc2plotRscript in directories:\n",join(":", @INC),"\n";
     }
 
-    print $fh "source(\"$make_pd\")\n";
-    print $fh "source(\"$loc2plot\")\n";
+    $result = "source(\"$make_pd\")\nsource(\"$loc2plot\")\n";
 
     open MAIN_R_TMPL, "<$mainR";
     while(<MAIN_R_TMPL>) {
 	s/^\s*source\s*\(\s*["']$make_pdRscript['"]\s*\)\s*$//;
 	s/^\s*source\s*\(\s*["']$loc2plotRscript['"]\s*\)\s*$//;
-	print $fh $_;
+	$result .= $_;
     }
     close MAIN_R_TMPL;
+
+    return $result;
+}
+
+# Making R script to print out stat names
+sub MkPrintNameRScript {
+    my $fh = shift;
+
+    my $mainRScript = ProperMainRScript();
+    print $fh "$mainRScript\n";
+    if (defined($opt_c)) {
+	print $fh "printStatNames(constrained=T)\n";
+    } else {
+	print $fh "printStatNames(constrained=F)\n";
+    }
+    return;
+}
+
+# making the R script
+sub MkStdAnalysisRScript {
+    my $fh = shift;
+
+    my $mainRScript = ProperMainRScript();
+    print $fh "$mainRScript\n";
     
-    # print $fh "source(\"$mainRt\")\n";
     if(defined($opt_a)) {
       print $fh "res <- stdAnalysis(\"$tmpObs\", \"$simDat\", pdf.outfile=\"$pdfOut\",pre.rejected=F";
 
@@ -358,9 +370,11 @@ sub FindFile {
 
     foreach my $dir (@INC) {
 	if ( -e "$dir/$name" ) {
+	    print STDERR "FILEINFO: using $dir/$name\n";
 	    return "$dir/$name";
 	}
     }
+
     return -1;
 }
 
