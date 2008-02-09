@@ -14,11 +14,11 @@ MAKE = make
 CC = gcc
 
 # for debugging
-#CCOPT = -O0 -g  -Wunused
+CCOPT = -O0 -g  -Wunused
 #-Wall -Werror
 #LDFLAGS =  -g         # for debugging but not profiling
 # for performance
-CCOPT = -O3 -Wall -fomit-frame-pointer -funroll-loops
+#CCOPT = -O3 -Wall -fomit-frame-pointer -funroll-loops
 LDFLAGS =
 INCLS = -I.
 DEFS =
@@ -68,7 +68,7 @@ sumstatsvector: $(SUMSTATSVECTOR)
 	$(CC) $(LDFLAGS) -o $@ $(SUMSTATSVECTOR) $(GSL_LIB) -lm
 
 msDQH: $(MSDQH_O)
-	$(CC) $(LDFLAGS) -o $@ $(MSDQH_O) -lm
+	$(CC) $(LDFLAGS) -o $@ $(MSDQH_O) $(GSL_LIB) -lm 
 
 msReject: $(MSREJECT_O)
 	$(CC) $(LDFLAGS) -o $@ $(MSREJECT_O) -lm

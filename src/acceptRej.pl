@@ -35,7 +35,7 @@ my $usage="Usage: $0 [-hnacr] [-p outPDF] [-s summary_stats] \n" .
     "  -s: statString (e.g. -s '$statString', <=default)\n".
     "      The summary statistics listed here will be used\n".
     "  -a: old analysis with all R processing (nobody needs it)\n" .
-    "  -t: tolerance (a value between 0 an 1, default: $defaultTolerance)" .
+    "  -t: tolerance (a value between 0 an 1, default: $defaultTolerance)\n" .
     "  -c: analysis based on prior constrained by Psi=2 to allow obtaining\n".
     "      posteriors of extra hyper-parameters Psi1, Psi2, tau1, and tau2 \n"
     ;
@@ -55,7 +55,7 @@ use POSIX qw(tmpnam);
 my $mainRscript = "acceptRej.r";
 my $make_pdRscript = "make_pd2005.r";
 my $loc2plotRscript = "loc2plot.r";
-my $rejectionExe = "msreject"; # rejection program
+my $rejectionExe = "msReject"; # rejection program
 
 # Adding the following paths to @INC, so we can find the R scripts.
 # The R scripts should be in the same directory as this perl script,

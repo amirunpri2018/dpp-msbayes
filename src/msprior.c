@@ -90,22 +90,22 @@ mutParameterArray gMutParam; /* stores mut model & # samples for
 int comp_nums(const double *num1, const double *num2)
 {
   if (*num1 <  *num2) return -1;
-  if (*num1 == *num2) return  0;
-  if (*num1 >  *num2) return  1;
+  else if (*num1 > *num2) return 1;
+  else return 0;
 } 
 
 int main (int argc, char *argv[])
 {
   double N1, N2, Nanc, *tauArray=NULL, theta, tauequalizer, gaussTime,
     mig, rec, BottStr1, BottStr2,BottleTime;
-  int  tauClass, PSIarray[1000];
-  unsigned int numTauClasses, u, locus, zzz, c;
+  int  tauClass, *PSIarray=NULL;
+  unsigned int numTauClasses=-1, u, locus, zzz, c;
   unsigned long randSeed;
   unsigned long long rep;
   extern const gsl_rng *gBaseRand;
   void display_nums(int *, int);
   int comp_nums(const double *, const double *);
-  FILE *fp;
+  FILE *fpPsiTauArray;
 
   /* set up gParam and gMutParam */
   LoadConfiguration(argc, argv);
@@ -132,6 +132,25 @@ int main (int argc, char *argv[])
     numTauClasses = gParam.numTauClasses;
   }
 
+  /* Sizes are set to the number of taxon pairs (Max number of tau)*/
+  tauArray = calloc(gParam.numTaxaPair, sizeof(double));
+  if (tauArray == NULL) {
+    fprintf(stderr, "ERROR: Not enough memory for tauArray\n");
+    exit(EXIT_FAILURE);
+  }
+  
+  PSIarray = calloc(gParam.numTaxaPair, sizeof(int));
+  if (PSIarray == NULL) {
+    fprintf(stderr, "ERROR: Not enough memory for PSIarray\n");
+    exit(EXIT_FAILURE);
+  }
+
+  /* open the stream to output PSIarray and tauArray */
+  if ((fpPsiTauArray=fopen(gParam.priorOutFile, "w")) == NULL) {
+    fprintf(stderr,"Cannot open the file.\n");
+    exit(1);
+  }
+
   /* Beginning of the main loop */
   for (rep = 0; rep < gParam.reps; rep++)
     {
@@ -148,13 +167,7 @@ int main (int argc, char *argv[])
 	numTauClasses = 1 + gsl_rng_uniform_int(gBaseRand, gParam.numTaxaPair);
       } 
       
-      /* sample tau's from uniform prior dist'n */
-      tauArray = calloc(numTauClasses, sizeof(double));
-      if (tauArray == NULL) {
-	fprintf(stderr, "ERROR: Not enough memory for tauArray\n");
-	exit(EXIT_FAILURE);
-      }
-      
+      /* sample tau's from uniform prior dist'n */      
       for (u = 0; u < numTauClasses; u++)
 	{
 	  tauArray[u] = gsl_ran_flat (gBaseRand, 0.0, gParam.upperTau);
@@ -170,10 +183,7 @@ int main (int argc, char *argv[])
       //qsort(tauArray, (numTauClasses), sizeof(double), comp_nums);
 
       for (c=0; c < numTauClasses; c++) 
-	{
-	  // probably not being used
-	  PSIarray[c] = 0;
-	}
+	PSIarray[c] = 0;  /* Reset the PSIarray counters */
 
       for (u = 0; u < gParam.numTaxaPair; u++)
 	{
@@ -209,7 +219,6 @@ int main (int argc, char *argv[])
 		    gParam.upperAncPopSize);
 	    exit(EXIT_FAILURE);
 	  }
-	  /*Hickchange 5_3_06*/  
 	    
 	  /*
 	        Nmax=((gParam.upperAncPopSize*gParam.upperTheta)*gParam.upperTheta)
@@ -233,27 +242,10 @@ int main (int argc, char *argv[])
 
           // 1-31-2007 it will use new way of picking tau
 	  if( u < numTauClasses)
-	    {
-	      tauClass = u;
-            } 
+	    tauClass = u;
 	  else
-	    {
-	      tauClass = gsl_rng_uniform_int(gBaseRand,numTauClasses);
-	    } 
-	  /*if ((fp=fopen("TauclassArray", "a+b")) ==NULL){
-   fprintf(stderr,"Cannot open the file.\n");
-
-   exit(1);
- }
-
-  if (u < 1)
-   {
-    fprintf(fp, "\n");
-     }
-      fprintf(fp, "%d\t",tauClass);
-      
-      fclose (fp);*/
-	   
+	    tauClass = gsl_rng_uniform_int(gBaseRand,numTauClasses);
+	  
 	  gaussTime= tauArray[tauClass];
           //printf("picking index: %d, gaussTime: %lf  ", tauClass, tauArray[tauClass]);
 
@@ -308,42 +300,20 @@ int main (int argc, char *argv[])
 			      theta, gaussTime, NumPerTax[u], yy, */
 	  }
 	}
-      
-      if ((fp=fopen("PSIARRAY", "a+b")) ==NULL){
-	fprintf(stderr,"Cannot open the file.\n");
 
-	exit(1);
-      }
-      
-      for (zzz = 0; zzz < numTauClasses; zzz++)
-	{
-	  fprintf(fp, "%d\t",PSIarray[zzz]);
+      if (gParam.numTauClasses > 0) {  /* constrained psi analysis */
+	for (zzz = 0; zzz < numTauClasses; zzz++)
+	  fprintf(fpPsiTauArray, "%d\t",PSIarray[zzz]);
+	
+	for (zzz = 0; zzz < numTauClasses; zzz++) {
+	  fprintf(fpPsiTauArray, "%lf",tauArray[zzz]);
+	  fprintf(fpPsiTauArray, ((zzz != numTauClasses - 1) ? "\t" : "\n"));
 	}
-
-      fprintf(fp, "\n");
-      fclose (fp);
-
-
-      if ((fp=fopen("TAUarray", "a+b")) ==NULL){
-	fprintf(stderr,"Cannot open the file.\n");
-
-	exit(1);
       }
-
-
-      for (zzz = 0; zzz < numTauClasses; zzz++)
-	{
-	  fprintf(fp, "%lf\t",tauArray[zzz]);
-	} 
-      fprintf(fp, "\n");
-      fclose (fp);
- 
-
-
-      
     }
 
-
+  fclose(fpPsiTauArray);
   free(tauArray);
+  free(PSIarray);
   exit (0);
 }

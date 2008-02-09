@@ -22,26 +22,30 @@
  */
 /* modified by Naoki Takebayashi */
 
-/*  Link in this file for random number generation with rand() */
-/*changed rand to random 11/4/04*/
-#define RAN random()/((double)RAND_MAX+1)	// Mac OS X or BSD Unix (Linux)
 
 #include <stdio.h>
 #include <stdlib.h>
-#define randomfunction() RAN
 
+#include <gsl/gsl_rng.h>/* for base rand num gen's */
 
-double
-ran1 ()
-{
-  return (randomfunction ());
+const gsl_rng *gBaseRand;/* global rand number generator */
+
+double ran1 () {
+  return (gsl_rng_uniform(gBaseRand));
 }
 
 
-unsigned int
-seedit (const char *flag, long seed)
+int seedit (unsigned long seed)
 {
+  gBaseRand = gsl_rng_alloc (gsl_rng_mt19937);/* set the base PRNG to
+						 Mersenne Twister */
+  gsl_rng_set (gBaseRand, seed); /* seed the PRNG */
+  return 0;
+}
 
+int cleanPRNG(void) {
+  gsl_rng_free(gBaseRand);
+  return 0;
 }
 
 /* unsigned int */

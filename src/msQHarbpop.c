@@ -3,9 +3,9 @@
 *       Generates samples of gametes ( theta given or fixed number 
 *						of segregating sites.)
 *	Usage is shown by typing ms without arguments.   
-        usage: ms nsam howmany  -t  theta  [options]
+        usage: ms seed nsam howmany  -t  theta  [options]
 		or
-	       ms nsam howmany -s segsites  [options] 
+	       ms seed nsam howmany -s segsites  [options] 
 
 	   nsam is the number of gametes per sample.
 	   howmany is the number of samples to produce.
@@ -54,6 +54,8 @@
 		npop is one, otherwise, No is the diploid population size of each
 		subpopulation. However, if the -d option is used the population sizes
 		are No times various factors specified by the -d arguments.
+	The following behavior of seedms is removed for msbayes.  seed is
+                fed from the command line argument
 	A seed file called "seedms" will be created  if it doesn't exist. The
 		seed(s) in this file will be modified by the program. 
 		So subsequent runs
@@ -173,6 +175,8 @@ int make_gametes(int nsam, struct node *ptree, double tt, int newsites,
 		 int ns,  char **list);
 int poisso(double u);
 
+int seedit (unsigned long seed);
+int cleanPRNG(void);
 
 extern void assign_QHsiterate(double theta,int nsites,struct QHparameters *QH);
 
@@ -185,7 +189,8 @@ main(argc,argv)
         char *argv[];
 {
         int  i;
-	long count, seed;
+	long count;
+	unsigned long seed;
         char **list, **cmatrix();
         FILE *pf, *fopen() ;
         int  segsites  ;
@@ -203,8 +208,9 @@ main(argc,argv)
 	printf("\n");
 	if ( getpars(argc, argv, &P) ) { printpars( argv[0], P); exit(0); }
 	/* seedit( "t"); */
-	seed=atol(argv[1]);
-	printf("\n%u\n",(unsigned)seed);
+	seed=strtoul(argv[1], NULL, 10);
+	seedit(seed);
+	printf("\n%lu\n", seed);
         pf = stdout ;
 
 /* Aug 11, 2004 Eli changes */
@@ -257,6 +263,7 @@ main(argc,argv)
 	}
 	fprintf(pf,"\n");
 /* 	seedit( "end" ); */
+	cleanPRNG();
 /* 	fprintf(pf,"\nCPUtime: %4.2f\n",(double)(clock()-starttime)/CLOCKS_PER_SEC); */
 	exit (EXIT_SUCCESS);
 }

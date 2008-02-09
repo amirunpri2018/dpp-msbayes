@@ -11,6 +11,7 @@
 #define DEFAULT_NUM_LOCI 1;
 #define DEFAULT_REPS  500000
 #define DEFAULT_MUT_FILE "SampleSize_MuModel_Vector"
+#define DEFAULT_PRIOR_OUT_FILE "msBayesPriorOut.csv"
 
 #define MAX_FILENAME_LEN 255
 
@@ -27,6 +28,7 @@ typedef struct {
   unsigned int numLoci;
   long prngSeed;
   char configFile[MAX_FILENAME_LEN];
+  char priorOutFile[MAX_FILENAME_LEN];
 } runParameters;
 
 extern runParameters gParam;

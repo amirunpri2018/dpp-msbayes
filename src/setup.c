@@ -43,6 +43,7 @@ static void ParseCommandLine(int argc, char *agv[]);
 static int InteractiveSetupParams(runParameters *paramPtr);
 static void SetupParams(FILE *fp, runParameters *paramPtr);
 static int SetConfigFile(char *fName);
+static int SetPriorOutFile(char *fName);
 void PrintParam(void);
 static int InitMutPara(FILE *fp, mutParameterArray *mutParaArray);
 static int CheckMutParaArray(mutParameterArray *mpaPtr, int index);
@@ -151,10 +152,6 @@ static int SetConfigFile(char *fName)
   if(!fName || !fName[0])
     return -1;
 
-  /*
-  if(gParam.configFile[0])
-    return -1;
-  */
   len = strlen(fName);
   if((len + 1) >= MAX_FILENAME_LEN)
     return -1;
@@ -165,6 +162,27 @@ static int SetConfigFile(char *fName)
   return 0;
 }
 
+/*
+ * Set the prior outpuf file if it hasn't already been set.
+ *
+ * Return -1 on error,
+ *         0 on success.
+ */
+static int SetPriorOutFile(char *fName)
+{
+  int len;
+
+  if(!fName || !fName[0])
+    return -1;
+
+  len = strlen(fName);
+  if((len + 1) >= MAX_FILENAME_LEN)
+    return -1;
+  
+  strncpy(gParam.priorOutFile, fName, MAX_FILENAME_LEN);
+
+  return 0;
+}
 
 /*
  * Print out the usage, and exit
@@ -185,12 +203,13 @@ static void PrintUsage(char *progname)
 
   fprintf(stderr,
 	  "\nUsage: %s [--help] [--reps N] [--debug N] [--seed N] "
-	  "[--config <filename>]\n\n"
+	  "[--config <filename>] [--priorOut <filename>]\n\n"
 	  "       help: Print this usage function (-h)\n"
 	  "       reps: Run N replications (-r)\n"
 	  "      debug: Set the debug level to N (larger N => more info) (-d)\n"
 	  "       seed: Set the pseudo-random number generator seed to N (-s)\n"
-	  "     config: Specify a configuration file (-c)\n\n"
+	  "     config: Specify a configuration file (-c)\n"
+	  "     priorOut: Specify output file (-p)\n\n"
 	  "If config file is not given, the parameter values are set "
 	  "interactively.\n\n", p);
   exit(EXIT_FAILURE);
@@ -207,6 +226,7 @@ static struct option sim_opts[] = {
   /*  { "interactive", 0, NULL, 'i' },*/ /* interactive mode */
   { "reps", 1, NULL, 'r' },       /* how many reps */
   { "config", 1, NULL, 'c' },     /* which config file to use */
+  { "priorOut", 1, NULL, 'p'},     /* prior output file */
   { NULL, 0, NULL, 0 }
 };
 
@@ -218,7 +238,7 @@ static void ParseCommandLine(int argc, char *argv[])
     int opt;
     int opt_index;
     
-    opt = getopt_long(argc, argv, "hd:r:c:", sim_opts, &opt_index);
+    opt = getopt_long(argc, argv, "hd:s:r:c:p:", sim_opts, &opt_index);
     if(opt < 0)
       break;
 
@@ -264,10 +284,17 @@ static void ParseCommandLine(int argc, char *argv[])
       case 'c':   /* Specify the configuration file */
 	rc = SetConfigFile(optarg);
         if(rc < 0) {
-          fprintf(stderr, "Could not use config file '%s'\n", optarg);
+          fprintf(stderr, "Could not set config filename as '%s'\n", optarg);
           PrintUsage(argv[0]);
         }
         break;
+      case 'p':  /* PriorOutput file, PsiTauArray */
+	rc=SetPriorOutFile(optarg);
+	if(rc<0) {
+          fprintf(stderr, "Could not use prior out filename as '%s'\n", optarg);
+          PrintUsage(argv[0]);
+	}
+	break;
     default:
         PrintUsage(argv[0]); /* This function will exit */
         break;
@@ -323,6 +350,9 @@ static void SetDefaultParams(runParameters * paramPtr) {
   }
   if (! paramPtr->numLoci) {
     paramPtr->numLoci = DEFAULT_NUM_LOCI;
+  }
+  if (! paramPtr->priorOutFile || ! paramPtr->priorOutFile[0]) {
+    strncpy(paramPtr->priorOutFile, DEFAULT_PRIOR_OUT_FILE, MAX_FILENAME_LEN);
   }
   return;
 }
@@ -406,9 +436,8 @@ static int InteractiveSetupParams (runParameters * paramPtr)
 
   for(badInput=1; badInput; ) {
     fprintf (stderr, 
-	     "Upper limit of discrete uniform hyper-prior distribution for number of events (divergence times per Y population pairs),  "
-	     " [1, #population pairs] "
-	     ": \n", paramPtr->numTauClasses);
+	     "Number of categories with different divergenece time.  The value should be between 1 and #taxon pairs.  For example, 2 means that the model is constrained to have two divergence events, and each taxon pairs belongs to either one of the two categories.  Specify 0 (default) if you do not want to constrain the number of categories, and want to draw it from the discrete uniform distribution of [1, #taxon pairs]. "
+	     " [%u]: \n", paramPtr->numTauClasses);
     lineLen = GetLine(line, MAX_INPUT_LINE_LENGTH);
     if (lineLen == 1)
       badInput = 0;  /* use default value */

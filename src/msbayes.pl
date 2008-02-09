@@ -36,6 +36,7 @@ my $defaultOutFile = "Prior_SumStat_Outfile";
 
 use File::Copy;
 use IO::File;
+use POSIX qw(tmpnam);
 
 use Getopt::Std;
 
@@ -75,6 +76,33 @@ my $msprior = FindExec("msprior");
 my $msDQH = FindExec("msDQH");
 my $sumstatsvector = FindExec("sumstatsvector");
 
+# open and close a temp file
+# This is used to store the prior paras from msprior (psiarray and tauarray)
+my $tmpPriorOut, $tmpPriorOutfh;
+do {$tmpPriorOut = tmpnam()} until $tmpPriorOutfh = 
+    IO::File->new($tmpPriorOut, O_RDWR|O_CREAT|O_EXCL);
+END {                   # delete the temp file when done
+    if (defined($tmpPriorOut) && -e $tmpPriorOut) {
+	unlink($tmpPriorOut) || die "Couldn't unlink $tmpPriorOut : $!"
+	}
+};
+$tmpPriorOutfh->close();
+$options = $options . " --priorOut $tmpPriorOut ";
+
+# The main results (after sumstatsvector) get stored in this file
+# Then this and $tmpPriorOut files get column concatenated produce the final
+# output.  As long as the /tmp is local file, this enable running the
+# program in NFS mounted /home
+my $tmpMainOut, $tmpMainOutfh;
+do {$tmpMainOut = tmpnam()} until $tmpMainOutfh = 
+    IO::File->new($tmpMainOut, O_RDWR|O_CREAT|O_EXCL);
+END {                   # delete the temp file when done
+    if (defined($tmpMainOut) && -e $tmpMainOut) {
+	unlink($tmpMainOut) || die "Couldn't unlink $tmpMainOut : $!"
+	}
+};
+$tmpMainOutfh->close();
+
 #### setting up output filename
 my $outFile;
 if(defined($opt_o)) {
@@ -113,11 +141,11 @@ while (<RAND>) {
     # it to be 0 here
     $rec = 0;
 
-    $SEED = int(rand(2**10));
+    $SEED = int(rand(2**32));  # msDQH expect unsigned long, the max val (2**32-1) is chosen here
 
-    system("$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 6 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $tmpVal 1 Nc $Nanc $numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonPairID 1 Nc $Nanc $numTaxaPair | $sumstatsvector -T $upperTheta >> $outFile");
+    system("$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 6 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $tmpVal 1 Nc $Nanc $numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonPairID 1 Nc $Nanc $numTaxaPair | $sumstatsvector -T $upperTheta >> $tmpMainOut");
 
-#   system("$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 6 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $tmpVal 1 Nc $Nanc $numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonPairID 1 Nc $Nanc $numTaxaPair >> $outFile");
+#   system("$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 6 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $tmpVal 1 Nc $Nanc $numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonPairID 1 Nc $Nanc $numTaxaPair >> $tmpMainOut");
 
 
 # minor change 9/8/06; $N1 $N1 $N2 $N2 to $N1 $BottStr1 $N2 $BottStr2
@@ -230,6 +258,23 @@ while (<RAND>) {
 }
 
 close RAND;
+
+# combine the two outputfile to create the final output file
+my $rc = ColCatFiles($tmpPriorOut, $tmpMainOut, $outFile);
+if ($rc != 1) {
+    if ($rc == 2) {
+	warn "WARN: the number of lines in the prior output different from the main".
+	    " output.  This should not have happened.  Something went wrong, so ".
+	    "DO NOT TRUST THE RESULTS!!!"
+    }
+    if ($debug && $rc == -1) {    # debug, remove this later
+	warn "In Concatenating at the end, one file was empty.  This means that the simulation was the UNCONSTRAINED\n";
+    }
+}
+
+if (-e "PARarray-E") {
+    unlink("PARarray-E") || die "Couldn't unlink PARarray-E : $!";
+}
 exit(0);
 
 # interactively setting up.
@@ -274,8 +319,14 @@ sub CheckNBackupFile {
 ### In addition to regular path, it search for several other places
 sub FindExec {
     my $prog = shift;
-    $ENV{'PATH'} = $ENV{'PATH'} . 
-	":/bin:/usr/bin:/usr/local/bin:$ENV{'HOME'}/bin:.";
+    # I'm making it to find the binary in the current directory (.) at first.
+    # I do not personally like this.  But since Mike doesn't like to
+    # install the binaries in the appropriate directories, we need to
+    # force this behavior to reduce confusion. 
+    # When this program become more matured, we should reevaluate this.
+    # Similar behavior in acceptRej.pl introduced  Naoki Feb 8, 2008
+    $ENV{'PATH'} = ".:" . $ENV{'PATH'} . 
+	":/bin:/usr/bin:/usr/local/bin:$ENV{'HOME'}/bin";
     my $bin = `which $prog 2>/dev/null`;
     chomp $bin;
 
@@ -283,5 +334,78 @@ sub FindExec {
 	die "ERROR: $prog not found in PATH $ENV{'PATH'}\n";
     }
 
+    print STDERR "INFO: using $bin\n";
     return $bin;
+}
+
+# Take filenames of two files, and concatenate them side by side to
+# produce the outputfile given as the 3rd argument.  The tab will be
+# inserted after each line of the first file.
+# If two files do not have the same number of lines, the output file
+# have the same length as the files with less lines.  The rest of the
+# longer file is ignored.
+
+# Return value
+# 1 two files same number of lines, and successfully concatenated
+# 2 two files have different number of lines
+# -1 Either one file or bot files were empty.  non-empty file is copied as the 
+#    output file
+sub ColCatFiles {
+    my ($infilename1, $infilename2, $outfilename) = @_;
+
+    #debug
+    system ("cat $infilename1");
+
+    # check empty files, if empty, copy is enough
+    if ( -s $infilename1 && -z $infilename2) { # file 2 empty
+	copy($infilename1, $outfilename) ||
+	    warn "WARN: copy $infilename1, $outfilename failed";
+	return -1;
+    } elsif (-z $infilename1 ) { # file 1 empty or both empty
+	copy($infilename2, $outfilename) ||
+	    warn "WARN: copy $infilename2, $outfilename failed";
+	return -1;
+    }
+
+    # both infiles are not empty
+    my $retval = 1;
+
+    open FILE1, "<$infilename1" || die "Can't open $infilename1\n";
+    open FILE2, "<$infilename2" || die "Can't open $infilename2\n";
+    open OUT, ">$outfilename" || die "Can't open $outfile\n";
+
+    $numLines1 = `wc -l < $infilename1`;
+    die "wc failed: $?" if $?;
+    chomp $numLines1;
+    $numLines2 = `wc -l < $infilename2`;
+    die "wc failed: $?" if $?;
+    chomp $numLines2;
+
+    if ($numLines1 != $numLines2) {
+	warn "WARN: number of lines differ between $infilename1 and $infilename2\n";
+	$retval = 2;
+    }
+    
+    my $maxLines =  ($numLines1 > $numLines2) ? $numLines1 : $numLines2;
+    
+    for(my $i = 0; $i < $maxLines; $i++) {
+	if ($i < $numLines1) {
+	    $line = <FILE1>;
+	    chomp $line;
+	    print OUT $line;
+	}
+	print OUT "\t";
+
+	if ($i < $numLines2) {
+	    $line = <FILE2>;
+	    chomp $line;
+	    print OUT $line;
+	}
+	print OUT "\n";
+    }
+    
+    close OUT;
+    close FILE1;
+    close FILE2;
+    return $retval;
 }

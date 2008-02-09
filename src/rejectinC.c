@@ -31,11 +31,12 @@ If simulated statistics are equal to 'nan' or 'inf', a warning message is writte
 #include <math.h>
 #include <float.h>
 
+int
 main( int argc, char *argv[])
 {
 	int i, c, ncolumns, *columns;
 	FILE *pfin, *fopen(), *freopen() ;
-        char *filename, *inputstring, *definstr, *cptr, dum[30], **bestline, *strcpy();
+        char *inputstring, *definstr, *cptr=NULL, dum[30], **bestline, *strcpy();
 	double tolerance, *obs, *vec, *x, *s, *normobs, normalizedvec, euclid, *besteuclid, **bestvec;
 	long  linecount, *count, li, lii, tolerated ;
 	double sqrt();
@@ -115,7 +116,7 @@ main( int argc, char *argv[])
 	      ++count[c];
 	    }
 	    if ((*cptr =='\0')&&(c<ncolumns-1)) {
-	      fprintf(stderr,"Not enough columns in simulated stats file %s, line %d.\n",argv[2],linecount);
+	      fprintf(stderr,"Not enough columns in simulated stats file %s, line %ld.\n",argv[2],linecount);
 	      exit(1);
 	    }
 	  }
@@ -164,7 +165,7 @@ main( int argc, char *argv[])
 	    if (finite(vec[c])) {
 	      normalizedvec = (vec[c]-x[c])/s[c] ;
 	    } else {
-	      fprintf(stderr,"WARNING: Nan or inf in simulated stats file %s, line %d, column %d. Arbitrarily, the Euclidean distance of this simulation replicate to the observed has been incremented by 3 for this statistic.\n",argv[2],linecount,columns[c]);
+	      fprintf(stderr,"WARNING: Nan or inf in simulated stats file %s, line %ld, column %d. Arbitrarily, the Euclidean distance of this simulation replicate to the observed has been incremented by 3 for this statistic.\n",argv[2],linecount,columns[c]);
 	      normalizedvec = 3.;
 	    }
 /*  	    if (count>755) fprintf(stderr,"dum=%s, vec[c]=%f, ",dum,vec[c]); */
@@ -217,7 +218,7 @@ main( int argc, char *argv[])
 	  printf("%s", bestline[li]);
 	}
 /* 	printf("\n"); */
-
+	exit (0);
 }
 
 
