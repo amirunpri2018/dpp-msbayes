@@ -119,12 +119,12 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
                              simDat[,"Tau2"], simDat[,usedColNames], tol,
                              rep(T,len=nrow(simDat)),rejmethod=rejmethod)
 
-    print("Working on Step 7")
+    print("Working on Step 6")
     result.Psi1 <- makepdANY(as.vector(obsDat[1,usedColNames],mode="numeric"),
                              simDat[,"Psi1"], simDat[,usedColNames], tol,
                              rep(T,len=nrow(simDat)),rejmethod=rejmethod)
     
-    print("Working on Step 8")
+    print("Working on Step 7")
     result.Psi2 <- makepdANY(as.vector(obsDat[1,usedColNames],mode="numeric"),
                              simDat[,"Psi2"], simDat[,usedColNames], tol,
                              rep(T,len=nrow(simDat)),rejmethod=rejmethod)

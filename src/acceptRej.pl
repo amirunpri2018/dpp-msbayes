@@ -24,7 +24,7 @@
 
 my $pdfOut = "figs.pdf";  # default pdf output file name
 my $defaultTolerance = 0.002;  # default tolerance
-my $statString = 'pi,wattTheta,pi.net,tajD.denom';  # default stat strings
+my $statString = "'pi','wattTheta','pi.net','tajD.denom'";  # default stat strings
 
 my $usage="Usage: $0 [-hnacr] [-p outPDF] [-s summary_stats] \n" .
           "                       [-t tolerance] obsData simData \n".
@@ -72,22 +72,33 @@ if (defined($opt_d)) {
     print STDERR join(":", @INC);
     print STDERR "\n";
 }
+
+my $rmTempFiles = 1;  # set this to 0 for debugging
+
 # open a temporary file to store the dynamically created R script
 do {$tmpR = tmpnam()} until $tmpRfh = 
     IO::File->new($tmpR, O_RDWR|O_CREAT|O_EXCL);
 END {                   # delete the temp file when done
-    if (defined($tmpR) && -e $tmpR) {
-	unlink($tmpR) || die "Couldn't unlink $tmpR : $!"
+    if ($rmTempFiles) {
+	if (defined($tmpR) && -e $tmpR) {
+	    unlink($tmpR) || die "Couldn't unlink $tmpR : $!"
 	}
+    } else {
+	print "FILE: \$tmpR = $tmpR\n";
+    }
 };
 
 # open a temp file to preprocess the observed data
 do {$tmpObs = tmpnam()} until $tmpObsfh = 
     IO::File->new($tmpObs, O_RDWR|O_CREAT|O_EXCL);
 END {                   # delete the temp file when done
-    if (defined($tmpObs) && -e $tmpObs) {
-	unlink($tmpObs) || die "Couldn't unlink $tmpObs : $!"
+    if ($rmTempFiles) {
+	if (defined($tmpObs) && -e $tmpObs) {
+	    unlink($tmpObs) || die "Couldn't unlink $tmpObs : $!"
 	}
+    } else {
+	print "FILE: \$tmpR = $tmpR\n";
+    }
 };
 
 # open a temp file to preprocess the data with msrejection
@@ -95,18 +106,26 @@ my $tmpSimDatfh;
 do {$tmpSimDat = tmpnam()} until $tmpSimDatfh = 
     IO::File->new($tmpSimDat, O_RDWR|O_CREAT|O_EXCL);
 END {                   # delete the temp file when done
-    if (defined($tmpSimDat) && -e $tmpSimDat) {
-	unlink($tmpSimDat) || die "Couldn't unlink $tmpSimDat : $!"
+    if ($rmTempFiles) {
+	if (defined($tmpSimDat) && -e $tmpSimDat) {
+	    unlink($tmpSimDat) || die "Couldn't unlink $tmpSimDat : $!"
 	}
+    } else {
+	print "FILE: \$tmpR = $tmpR\n";
+    }
 };
 
 # open a temp file to extract the prior columns.
 do {$tmpPrior = tmpnam()} until $tmpPriorfh = 
     IO::File->new($tmpPrior, O_RDWR|O_CREAT|O_EXCL);
 END {                   # delete the temp file when done
-    if (defined($tmpPrior) && -e $tmpPrior) {
-	unlink($tmpPrior) || die "Couldn't unlink $tmpPrior : $!"
+    if ($rmTempFiles) {
+	if (defined($tmpPrior) && -e $tmpPrior) {
+	    unlink($tmpPrior) || die "Couldn't unlink $tmpPrior : $!"
 	}
+    } else {
+	print "FILE: \$tmpR = $tmpR\n";
+    }
 };
 
 if (defined($opt_s)) {

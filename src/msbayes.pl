@@ -23,7 +23,7 @@
 
 my $usage="Usage: $0 [-hd] [-s seed]\n".
     "  -h: help\n".
-    "  -d: debug (msprior uses the same initial seed, but msDQH doesn't)\n".
+    "  -d: debug (msprior and msDQH uses the same initial seed = 1)\n".
     "  -s: set the initial seed (but not verbose like -d)\n" .
     "      By default (without -s), unique seed is automaically set from time\n".
     "  -o: output file name\n" .
@@ -69,6 +69,14 @@ if (defined($opt_c)) {
 
 if (defined ($opt_s)) {
     $options = $options . " --seed $opt_s ";
+}
+
+if (defined($opt_s) || defined($opt_d)) {  # set the msDQH use the same seeds
+    if (defined($opt_s)) {
+	srand($opt_s);
+    } else {
+	srand(1);
+    }
 }
 
 #### Find programs
@@ -352,9 +360,6 @@ sub FindExec {
 #    output file
 sub ColCatFiles {
     my ($infilename1, $infilename2, $outfilename) = @_;
-
-    #debug
-    system ("cat $infilename1");
 
     # check empty files, if empty, copy is enough
     if ( -s $infilename1 && -z $infilename2) { # file 2 empty
