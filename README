@@ -1,6 +1,8 @@
 msBayes: Pipeline for testing comparative Phylogeographic histories
 using hierarchical ABC
 
+Pronounced "em es bayzzz"
+
 Overview: test for simultaneous divergence (TSD) of multiple population-pairs.
 
 In the example used in this document, we have sequence data from 6
