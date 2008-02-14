@@ -105,7 +105,7 @@ int main (int argc, char *argv[])
   extern const gsl_rng *gBaseRand;
   void display_nums(int *, int);
   int comp_nums(const double *, const double *);
-  FILE *fpPsiTauArray;
+  FILE *fpTauPsiArray;
 
   /* set up gParam and gMutParam */
   LoadConfiguration(argc, argv);
@@ -145,12 +145,25 @@ int main (int argc, char *argv[])
     exit(EXIT_FAILURE);
   }
 
-  /* open the stream to output PSIarray and tauArray */
-  if ((fpPsiTauArray=fopen(gParam.priorOutFile, "w")) == NULL) {
+  /* open the stream to output tauArray and PSIarray */
+  if ((fpTauPsiArray=fopen(gParam.priorOutFile, "w")) == NULL) {
     fprintf(stderr,"Cannot open the file.\n");
     exit(1);
   }
 
+  /* print out the column headers to the tauArray and PSIarray  */
+  /* PRI.numTauClass PRI.Tau.1  PRI.Tau.2 PRI.Tau.3 ... PRI.Psi.1 PRI.Psi.2 PRI.Psi.3 ... */
+  fprintf(fpTauPsiArray, "PRI.numTauClass\t");
+  if (gParam.numTauClasses > 0) {  /* constrained psi analysis */
+    for (zzz = 0; zzz < numTauClasses; zzz++) {
+      fprintf(fpTauPsiArray, "PRI.Tau.%d\t",zzz+1);
+    }
+    for (zzz = 0; zzz < numTauClasses; zzz++) {
+      fprintf(fpTauPsiArray, "PRI.Psi.%d",zzz+1);
+      fprintf(fpTauPsiArray, ((zzz != numTauClasses - 1) ? "\t" : "\n"));	  
+    }
+  }
+  
   /* Beginning of the main loop */
   for (rep = 0; rep < gParam.reps; rep++)
     {
@@ -301,18 +314,19 @@ int main (int argc, char *argv[])
 	  }
 	}
 
+      fprintf(fpTauPsiArray, "%d\t",numTauClasses);
       if (gParam.numTauClasses > 0) {  /* constrained psi analysis */
-	for (zzz = 0; zzz < numTauClasses; zzz++)
-	  fprintf(fpPsiTauArray, "%d\t",PSIarray[zzz]);
-	
 	for (zzz = 0; zzz < numTauClasses; zzz++) {
-	  fprintf(fpPsiTauArray, "%lf",tauArray[zzz]);
-	  fprintf(fpPsiTauArray, ((zzz != numTauClasses - 1) ? "\t" : "\n"));
+	  fprintf(fpTauPsiArray, "%lf\t",tauArray[zzz]);
+	}
+	for (zzz = 0; zzz < numTauClasses; zzz++) {
+	  fprintf(fpTauPsiArray, "%d",PSIarray[zzz]);
+	  fprintf(fpTauPsiArray, ((zzz != numTauClasses - 1) ? "\t" : "\n"));	  
 	}
       }
     }
 
-  fclose(fpPsiTauArray);
+  fclose(fpTauPsiArray);
   free(tauArray);
   free(PSIarray);
   exit (0);

@@ -29,6 +29,7 @@ typedef struct {
   long prngSeed;
   char configFile[MAX_FILENAME_LEN];
   char priorOutFile[MAX_FILENAME_LEN];
+  char scratchFile[MAX_FILENAME_LEN];
 } runParameters;
 
 extern runParameters gParam;

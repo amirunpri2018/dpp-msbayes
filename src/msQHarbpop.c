@@ -141,6 +141,7 @@ compile with QHsubs.c in addition to the standard files. */
 
 #include "msQHarbpop.h"
 #include "QHsubs.h"
+#include "msprior.h"
 
 #define SITESINC 10 
 

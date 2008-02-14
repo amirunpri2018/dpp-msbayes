@@ -101,7 +101,7 @@ $options = $options . " --priorOut $tmpPriorOut ";
 # Then this and $tmpPriorOut files get column concatenated produce the final
 # output.  As long as the /tmp is local file, this enable running the
 # program in NFS mounted /home
-my $tmpMainOut, $tmpMainOutfh;
+my ($tmpMainOut, $tmpMainOutfh);
 do {$tmpMainOut = tmpnam()} until $tmpMainOutfh = 
     IO::File->new($tmpMainOut, O_RDWR|O_CREAT|O_EXCL);
 END {                   # delete the temp file when done
@@ -110,6 +110,18 @@ END {                   # delete the temp file when done
 	}
 };
 $tmpMainOutfh->close();
+
+# This is used by sumstats to store temporary output.  It used to be
+# "PARarray-E", but now we are using temp file.  Better for NFS home
+my ($tmpSumStatVectScratch, $tmpSumStatVectScratchFh);
+do {$tmpSumStatVectScratch = tmpnam()} until $tmpSumStatVectScratchFh = 
+    IO::File->new($tmpSumStatVectScratch, O_RDWR|O_CREAT|O_EXCL);
+END {                   # delete the temp file when done
+    if (defined($tmpSumStatVectScratch) && -e $tmpSumStatVectScratch) {
+	unlink($tmpSumStatVectScratch) || die "Couldn't unlink $tmpSumStatVectScratch : $!"
+	}
+};
+$tmpSumStatVectScratchFh->close();
 
 #### setting up output filename
 my $outFile;
@@ -128,6 +140,7 @@ open (RAND, "$msprior $options |") ||
 ## before computation if there is a leftover.
 CheckNBackupFile("PARarray-E");
 
+my $counter  = 1;
 while (<RAND>) {
     s/^\s+//; s/\s+$//; 
 
@@ -151,7 +164,12 @@ while (<RAND>) {
 
     $SEED = int(rand(2**32));  # msDQH expect unsigned long, the max val (2**32-1) is chosen here
 
-    system("$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 6 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $tmpVal 1 Nc $Nanc $numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonPairID 1 Nc $Nanc $numTaxaPair | $sumstatsvector -T $upperTheta >> $tmpMainOut");
+    # Printing the header at the right time
+    my $headerOpt = ($counter == $numTaxaPair) ? "-H":"";
+
+#    print("$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 6 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $tmpVal 1 Nc $Nanc $numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonPairID 1 Nc $Nanc $numTaxaPair | $sumstatsvector -T $upperTheta $headerOpt >> $tmpMainOut"); print ("\n");
+
+    system("$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 6 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $tmpVal 1 Nc $Nanc $numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonPairID 1 Nc $Nanc $numTaxaPair | $sumstatsvector -T $upperTheta --tempFile $tmpSumStatVectScratch $headerOpt >> $tmpMainOut");
 
 #   system("$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 6 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $tmpVal 1 Nc $Nanc $numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonPairID 1 Nc $Nanc $numTaxaPair >> $tmpMainOut");
 
@@ -262,7 +280,7 @@ while (<RAND>) {
 #    Dint4 npops 1
 #      (Nrec_Npast)[] 0.42 0.42 
 #       tpast 1013.03
-
+    $counter++;
 }
 
 close RAND;

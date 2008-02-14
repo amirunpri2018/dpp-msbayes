@@ -29,6 +29,7 @@
 #include <gsl/gsl_sort.h>
 
 #include "hashtab.h"
+#include "msprior.h"
 #include <string.h>
 //#include <math.h>
 
@@ -36,6 +37,9 @@
 /* #if defined (__SVR4) && defined (__sun) */
 /*   int isinf(double x) { return !finite(x) && x==x; } */
 /* #endif */
+
+#define MAX_LEN_COLUMN_NAME 128  /* Used for header. This is the maximum char length
+				    of names for each column */
 
 double nucdiv (int, int, char **);double nucdiv_w (int, int, char **, int, int *);
 double nucdiv_w1(int, int, char **, int, int *);
@@ -61,7 +65,12 @@ int frequency(char, int, int, char**);
 
 void shannonIndex(char **list, int* config, double **shannonIndexArray);
 int charCount(char *arr);
+extern int gPrintHeader; /* boolean 1 means print header (column names), 0 = no header
+			    -H option invoke printing of the header */
 
+static void PrintHeader(char priorNames[][MAX_LEN_COLUMN_NAME], int numPriors, 
+			char sumStatNames[][MAX_LEN_COLUMN_NAME], int numSumStats, 
+			int numTaxonPairs);
 
 struct SumStat
 {	
@@ -117,6 +126,17 @@ static int SS_comp (const void *p1, const void *p2)
 }
 
 
+/*
+  nsam: number of samples
+  segsites: number of segregating sites
+  list: character matrix (A,T,G,orC) containing nsam rows and segsites columns
+  nsub: gNadv, default 0, but can be specified by --nadv option
+  npops: number of sub-populations
+  n: a vector of sub-population sizes, there are npops elements
+  THETA: 4 Ne mu used for the simulations, it comes from the command line option (-t)
+         to msDQH 
+  Sbool: boolean; T if NumSegSites is Const	 
+*/
 void
 printstats (int nsam, int segsites, char **list, int nsub, int npops, int *n,
 	    double THETA, int Sbool, int Qbool, int Fst_bool, double TAU,
@@ -129,128 +149,112 @@ printstats (int nsam, int segsites, char **list, int nsub, int npops, int *n,
   double NSEGSUB[NumTaxa];
   double TW[NumTaxa],TW1[NumTaxa],TW2[NumTaxa], PI[NumTaxa], PI_w[NumTaxa], PI_w1[NumTaxa],PI_w2[NumTaxa],PI_b[NumTaxa], 
     PI_Net[NumTaxa], TD[NumTaxa],TD1[NumTaxa],TD2[NumTaxa], tau[NumTaxa], TDD[NumTaxa], TDD1[NumTaxa], TDD2[NumTaxa], si1[NumTaxa], si2[NumTaxa],si3[NumTaxa], si4[NumTaxa];
-      double tW_w;/*zzz Hickerson 6/26/04 zzz */ /*yyy tW_w  Eli 05/15/06 yyy*/
-int *segwithin, tW_w_npops ;/*yyy Eli 5/15/06 yyy*/
+  double tW_w;/*zzz Hickerson 6/26/04 zzz */ /*yyy tW_w  Eli 05/15/06 yyy*/
+  int *segwithin, tW_w_npops ;/*yyy Eli 5/15/06 yyy*/
   double MeanTAU, VarTAU;
   /* double h, th, ObsvVARD, ObsvVARPi_Net, ObsvEPi_Net, ObsvCV_pi_net_tW; */
-
+  
   FILE *fp;
-
+  
   struct SumStat SumStat_list[NumTaxa];
-
-
 
   freqdist = (int *) malloc (nsam * sizeof (int));
   if (Qbool)
-    {
-      FrequencyDistrQ (freqdist, nsam, segsites, list);
-    }
+    FrequencyDistrQ (freqdist, nsam, segsites, list);
   else
-    {
-      FrequencyDistrInfSites (freqdist, nsam, segsites, list);
-    }
+    FrequencyDistrInfSites (freqdist, nsam, segsites, list);
+  
   if (Sbool)
     tW = THETA;
   else
     tW = (double) thetaW (nsam, segsites);
+
   pi = (double) nucdiv (nsam, segsites, list);
-  /*  printf("%d\n", BasePairs); */
-
-
-  /*  printf("%d\t%d\n", npops, n); */
+  
   if (Fst_bool)
     {
-	      /*yyy BELOW  Eli 05/15/06 yyy*/
-    segwithin = (int *)malloc( npops *sizeof(int));
-    segsubs( segwithin, segsites, list, npops, n) ;
-    tW_w=0.;
-    tW_w_npops=0;
-    for (i=0;i<npops;i++)
-      if(n[i]>1) {tW_w+=thetaW(n[i],segwithin[i]); tW_w_npops++;}
-    tW_w/=tW_w_npops;
-    /*yyy ABOVE  Eli 05/15/06 yyy*/
-	    tW2 = (double) thetaW(n[1], segwithin[1]);
-		tW1 = (double) thetaW(n[0], segwithin[0]);
+      /*yyy BELOW  Eli 05/15/06 yyy*/
+      segwithin = (int *)malloc( npops *sizeof(int));
+      segsubs( segwithin, segsites, list, npops, n) ;
+      tW_w=0.;
+      tW_w_npops=0;
+      for (i=0;i<npops;i++)
+	if(n[i]>1) {tW_w+=thetaW(n[i],segwithin[i]); tW_w_npops++;}
+      tW_w/=tW_w_npops;
+      /*yyy ABOVE  Eli 05/15/06 yyy*/
+      tW2 = (double) thetaW(n[1], segwithin[1]);
+      tW1 = (double) thetaW(n[0], segwithin[0]);
       pi_w = (double) nucdiv_w (nsam, segsites, list, npops, n) / BasePairs;
-	  pi_w2 = (double) nucdiv_w2(nsam, segsites, list, npops, n);
-    pi_w1 = (double) nucdiv_w1(nsam, segsites, list, npops, n);
-
+      pi_w2 = (double) nucdiv_w2(nsam, segsites, list, npops, n);
+      pi_w1 = (double) nucdiv_w1(nsam, segsites, list, npops, n);
+      
       pi_b = (double) nucdiv_bw (nsam, segsites, list, npops, n) / BasePairs;
       Fst = 1. - pi_w / pi_b;
       Pi_Net = (double) pi_b - pi_w;
-      if (Fst < 0)
-	{
-	  Fst = 0.;
-	  Nm = -1.;
-	}
-      else
+      if (Fst < 0) {
+	Fst = 0.;
+	Nm = -1.;
+      } else {
 	Nm = (1. / Fst - 1.) / 4.;
+      }
     }				/*zzz Hickerson 7/29/04 zzz */
-/*   th = thetah(nsam, segsites, list) ; */
+  /*   th = thetah(nsam, segsites, list) ; */
   D = (pi - tW) / tajddenominator (nsam, segsites, pi);
-      D2 = (pi_w2-tW2)/tajddenominator2(n[1],segwithin[1],pi_w2) ;
-	D1 = (pi_w1-tW1)/tajddenominator2(n[0],segwithin[0],pi_w2) ;
-		TDen2 =tajddenominator2(n[1],segwithin[1],pi_w2) ;
-		TDen1 =tajddenominator2(n[0],segwithin[0],pi_w1) ;
+  D2 = (pi_w2-tW2)/tajddenominator2(n[1],segwithin[1],pi_w2) ;
+  D1 = (pi_w1-tW1)/tajddenominator2(n[0],segwithin[0],pi_w2) ;
+  TDen2 =tajddenominator2(n[1],segwithin[1],pi_w2) ;
+  TDen1 =tajddenominator2(n[0],segwithin[0],pi_w1) ;
   TDen = tajddenominator (nsam, segsites, pi);
 /*  FuLi(&FuLiD,&FuLiF,nsam,segsites,list,pi);*/
 /*   h = pi-th ; */
   if (nsub > 0)
     nsegsub = segsub (nsub, segsites, list);
 
-
   tW2 =   tW2/BasePairs;
   tW1 =   tW1/BasePairs;
   tW =   tW/BasePairs;
   pi =  pi/BasePairs;
-	pi_w2 = pi_w2/BasePairs;
-	pi_w1 = pi_w1/BasePairs; 
+  pi_w2 = pi_w2/BasePairs;
+  pi_w1 = pi_w1/BasePairs; 
 
-if (segsites < 1) D=0, Fst=0, Pi_Net=0, FuLiD=0, FuLiF=0, tW=0,tW1=0,tW2=0, pi=0, pi_b=0, pi_w=0, pi_w1=0, pi_w2=0, TDen =0,TDen1 =0,TDen2 =0;
-if (segwithin[1]<1 ) D2=0;
-if (segwithin[0]<1 ) D1=0;
+  if (segsites < 1) D=0, Fst=0, Pi_Net=0, FuLiD=0, FuLiF=0, tW=0,tW1=0,tW2=0, pi=0, pi_b=0, pi_w=0, pi_w1=0, pi_w2=0, TDen =0,TDen1 =0,TDen2 =0;
+  if (segwithin[1]<1 ) D2=0;
+  if (segwithin[0]<1 ) D1=0;
   if (Pi_Net < 0)
     Pi_Net = 0;
   if (pi_b < 0)
     pi_b = 0;
 
-
   CC = TAXAcount - 1;
  
-   double *shannonIndexArray;
+  double *shannonIndexArray;
   
-   shannonIndexArray = (double*)malloc(4*sizeof(double));
-  
-
-   shannonIndex(list, n, &shannonIndexArray);
-
+  shannonIndexArray = (double*)malloc(4*sizeof(double));
+  shannonIndex(list, n, &shannonIndexArray);
    
-  //printf( "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n", pi_w2, tW2, TDen2, pi_w1, tW1, TDen1, pi_w, pi, tW, TDen, D2, D1, D, pi_b, Pi_Net, TAU );
-  if ((fp = fopen ("PARarray-E", "a+b")) == NULL)
+  if ((fp = fopen (gParam.scratchFile, "a+")) == NULL)
     {
-      fprintf (stderr, "Cannot open the file.\n");
+      fprintf (stderr, "Cannot open the file: %s\n", gParam.scratchFile);
       exit (1);
     }
-
 
 /*fprintf(fp, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n", pi_b, FuLiD, FuLiF, tW, pi, segsites, pi_w, Fst, Pi_Net, D, TAU, TDen);
      fclose (fp); */
 
-   fprintf(fp, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n", pi_w2, tW2, TDen2, pi_w1, tW1, TDen1, pi_w, pi, tW, TDen, D2, D1, D, pi_b, Pi_Net, TAU, shannonIndexArray[0], shannonIndexArray[1],shannonIndexArray[2],shannonIndexArray[3]);
+  fprintf(fp, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n", pi_w2, tW2, TDen2, pi_w1, tW1, TDen1, pi_w, pi, tW, TDen, D2, D1, D, pi_b, Pi_Net, TAU, shannonIndexArray[0], shannonIndexArray[1],shannonIndexArray[2],shannonIndexArray[3]);
 
-   free(shannonIndexArray);
-
+  free(shannonIndexArray);
+  
   fclose (fp);
-
 
   if (nsub > 0)
     NSEGSUB[CC] = nsegsub;
 
   if (TAXAcount == NumTaxa)		
     {
-      if ((fp = fopen ("PARarray-E", "rb")) == NULL)
+      if ((fp = fopen (gParam.scratchFile, "r")) == NULL)
 	{
-	  fprintf (stderr, "Cannot open the file.\n");
+	  fprintf (stderr, "Cannot open the file: %s\n", gParam.scratchFile);
 	  exit (1);
 	}
       STATLOAD = NumTaxa;
@@ -259,50 +263,69 @@ if (segwithin[0]<1 ) D1=0;
 	fscanf(fp, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n", &PI_w2[a], &TW2[a], &TDD2[a], &PI_w1[a], &TW1[a], &TDD1[a], &PI_w[a], &PI[a], &TW[a], &TDD[a], &TD2[a], &TD1[a], &TD[a], &PI_b[a], &PI_Net[a], &tau[a], &si1[a], &si2[a], &si3[a], &si4[a]);
 
       fclose (fp);
-
+      
       for (a = 0; a < STATLOAD; a++)
 	{
-		SumStat_list[a].PI_b = PI_b[a];
-	 	SumStat_list[a].PI_Net = PI_Net[a];
-	SumStat_list[a].TD2 = TD2[a];
-	SumStat_list[a].TD1 = TD1[a];
-	SumStat_list[a].TD = TD[a];
-	SumStat_list[a].PI_w = PI_w[a];
-	SumStat_list[a].PI_w2 = PI_w2[a];
-	SumStat_list[a].PI_w1 = PI_w1[a];
-	SumStat_list[a].PI = PI[a];
-	SumStat_list[a].TW = TW[a];
-	SumStat_list[a].TW2 = TW2[a];
-	SumStat_list[a].TW1 = TW1[a];
-	SumStat_list[a].TDD = TDD[a];
-	SumStat_list[a].TDD2 = TDD2[a];
-	SumStat_list[a].TDD1 = TDD1[a];
-        SumStat_list[a].si1 =  si1[a];
-        SumStat_list[a].si2 =  si2[a];
-        SumStat_list[a].si3 =  si3[a];
-        SumStat_list[a].si4 =  si4[a];
+	  SumStat_list[a].PI_b = PI_b[a];
+	  SumStat_list[a].PI_Net = PI_Net[a];
+	  SumStat_list[a].TD2 = TD2[a];
+	  SumStat_list[a].TD1 = TD1[a];
+	  SumStat_list[a].TD = TD[a];
+	  SumStat_list[a].PI_w = PI_w[a];
+	  SumStat_list[a].PI_w2 = PI_w2[a];
+	  SumStat_list[a].PI_w1 = PI_w1[a];
+	  SumStat_list[a].PI = PI[a];
+	  SumStat_list[a].TW = TW[a];
+	  SumStat_list[a].TW2 = TW2[a];
+	  SumStat_list[a].TW1 = TW1[a];
+	  SumStat_list[a].TDD = TDD[a];
+	  SumStat_list[a].TDD2 = TDD2[a];
+	  SumStat_list[a].TDD1 = TDD1[a];
+	  SumStat_list[a].si1 =  si1[a];
+	  SumStat_list[a].si2 =  si2[a];
+	  SumStat_list[a].si3 =  si3[a];
+	  SumStat_list[a].si4 =  si4[a];
 	}
  
       qsort (SumStat_list, NumTaxa, sizeof SumStat_list[0], SS_comp);
 
       {
+	/* NOTE:  If you modify the order to print out the summary stats and pirors
+	 * or if new summary stats are added, please modify numPriorColumns, numStats,
+	 * priorNameVect, and ssNameVect.  numSumStats should be the number
+	 * of summary statistics used for each taxon pair. ORDER is important.
+	 * For prior names, start with "PRI."
+	 */
+	if (gPrintHeader) {
+	  int numPriorColumns = 4;
+	  char priorNameVect[][MAX_LEN_COLUMN_NAME] = 
+	    {"PRI.Psi", "PRI.var.t", "PRI.E.t", "PRI.omega"};
+	  int numSumStats = 17;
+	  char ssNameVect[][MAX_LEN_COLUMN_NAME] =
+	    {"pi.b", "pi.w", "pi", "wattTheta", "pi.net", "tajD", "tajD.denom", 
+	     "pi.wPop2", "pi.wPop1", "wattTheta.Pop2", "wattTheta.Pop1", 
+	     "tajD.denomPop2", "tajD.denomPop1", "ShannonsIndex.Between", 
+	     "ShannonsIndex.Net", "ShannonsIndex.Pop1", "ShannonsIndex.Pop2"};
+	  PrintHeader(priorNameVect,numPriorColumns,ssNameVect,numSumStats,STATLOAD);
+	}
+	
 	VarTAU = gsl_stats_variance (tau, 1, NumTaxa);
 	MeanTAU = gsl_stats_mean (tau, 1, NumTaxa);
 	CV = VarTAU / MeanTAU;
 
-
+	/* printing pirors */
 	printf ("%d\t%lf\t%lf\t%lf\t", TauHyp, VarTAU, MeanTAU, CV);
 	
         //for (a=0;a<STATLOAD;a++)printf("%lf\t", SumStat_list[a].PI_Net);
 	// printf("\n"); 
 
-	        
+	/* start to print sum stats */
    	for (a = 0; a < STATLOAD; a++)
 	  printf ("%lf\t", SumStat_list[a].PI_b);
-
+	
 	for (a = 0; a < STATLOAD; a++)
 	  printf ("%lf\t", SumStat_list[a].PI_w);
-
+	
 	for (a = 0; a < STATLOAD; a++)
 	  printf ("%lf\t", SumStat_list[a].PI);
 
@@ -367,13 +390,28 @@ if (segwithin[0]<1 ) D1=0;
 
       }
 
-      remove ("PARarray-E");
-
+      remove (gParam.scratchFile);
       /*remove arrays */
-
-
     }
 }
+
+static void PrintHeader(char priorNames[][MAX_LEN_COLUMN_NAME], int numPriors, 
+			char sumStatNames[][MAX_LEN_COLUMN_NAME], int numSumStats, 
+			int numTaxonPairs) {
+  int i,a;
+  for (i = 0; i < numPriors; i++) {
+    printf ("%s\t", priorNames[i]);
+  }
+  for (i = 0; i < numSumStats; i++) {
+    for (a = 0; a < numTaxonPairs; a++) {
+      printf ("%s.%d\t", sumStatNames[i], a+1);
+    }
+  }
+  printf("\n");
+  return;
+}
+
+
 
 /*
  * Checks that sub population sample sizes n[] are reasonable.

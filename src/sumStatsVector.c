@@ -41,7 +41,7 @@
 #include <errno.h>
 #include <getopt.h> /* for getopt_long() */
 #include <ctype.h> /* for isspace() */
-#include "msprior.h"
+#include "msprior.h"  /* MAX_FILENAME_LEN */
 
 #define MAX_LNSZ 1000
 
@@ -52,6 +52,7 @@ typedef unsigned int tPositionOfSegSites;
 
 runParameters gParam;
 int gNadv = 0;
+int gPrintHeader = 0;
 
 /* function prototypes of external functions */
 void printstats (int n, int S, char **, int subn, int npops, int *config,
@@ -74,7 +75,7 @@ char *FindFirstSpace(char *str);
 char *RmLeadingSpaces(char *str);
 
 static void ParseCommandLine(int argc, char *argv[]);
-
+static int SetScratchFile(char *fName);
 
 int main (int argc, char *argv[])
 {
@@ -97,16 +98,10 @@ int main (int argc, char *argv[])
   /* check the command line argument */
   /* if -T is given, the value from the option will override the default */
   gParam.upperTheta = DEFAULT_UPPER_THETA;  
-  /* set gParam.upperTheta and gNadv (default 0) */
-  ParseCommandLine(argc, argv);
-  /*
-  if (argc > 1)
-    nadv = atoi (argv[1]);
-  else
-    nadv = 0;
-  */
+  strncpy(gParam.scratchFile, "PARarray-E", MAX_FILENAME_LEN); /* set default scratch file */
+  /* set gParam.upperTheta, gNadv (default 0) gParam.scratchFile */
+  ParseCommandLine(argc, argv);  
   
-
   pfin = stdin;  /* read the data from STDIN */
 
   /* read in first line of output (command line options of msDQH) */
@@ -132,8 +127,6 @@ int main (int argc, char *argv[])
 	  dum, dum, dum, &Tau2, dum, dum5, dum, &TauHyp, dum4, dum, dum1,
 	  &BasePairs, dum2, dum3, dum, &TAXAcount, dum, dum, dum, &NumTaxa);
 
-  /*printf("TAXAcount:\t%d\t%d\n", TAXAcount, TauHyp); */
-
   /* 
    * of course, I have to put a prior generator in the actual sample
    * generator for theta and tau down below for each count 
@@ -141,10 +134,6 @@ int main (int argc, char *argv[])
   
   TAU = Tau1 + Tau2;           /* time of separation */
   TAU = TAU * (THETA * 2 / gParam.upperTheta);
-  
-  /* printf("Theta:\t%lf\tTAU:\t%lf\tTAU1:\t%lf\tTAU2:\t%lf\n", THETA, TAU, Tau1, Tau2); */
-  /*sscanf(line," %s  %d %d", dum,  &nsam, &howmany); */
-
 
   /* Find the theta or number of segregating sites from -t or -s */
   mutscanline = strstr (line, "-s");
@@ -181,7 +170,6 @@ int main (int argc, char *argv[])
   /* Checking if 0 < config[i] < nsam for all i */
   if ((npops > 1) && (multiplepopssampledfrom (nsam, npops, config)))
     Fst_bool = 1;
-  
 
   /* prepare the storage for segregating sites data */
   if (isNumSegSitesConst)
@@ -197,7 +185,6 @@ int main (int argc, char *argv[])
 
   /* Start to process the data */
   count = 0;
-
   while (howmany - count++)
     {
       /* The line after "//" is the beginning of simulation data */
@@ -504,11 +491,13 @@ static void PrintUsage(char *progname)
     p = progname;
 
   fprintf(stderr,
-          "\nUsage: %s [--help] [--upper_theta N] [--nadv N] [< output_line_of_msDQH]\n\n"
+          "\nUsage: %s [--help] [--header] [--upper_theta N] [--nadv N] [--tempFile fileName] [< output_line_of_msDQH]\n\n"
           "        help: Print this usage function (-h)\n"
+	  "      header: Print column header (-H)\n"
           " upper_theta: Specify a upper limit of prior distribution for "
 	                 "theta (-T)\n\n"
 	  "        nadv: Specify nadv (-a)\n"
+	  "     tmpFile: Specify a filename which can be used to store temporary data (-t)\n"
           "stdin is used to read in a single line of msDQH output "
 	  "(output_line_of_msDQH)"
           "\n\n", p);
@@ -518,24 +507,29 @@ static void PrintUsage(char *progname)
 
 static struct option sim_opts[] = {
   { "help", 0, NULL, 'h'},  /* list options */
+  { "header",0,NULL, 'H'},
   { "upper_theta", 1, NULL, 'T'},
   { "nadv", 1, NULL, 'a'},
+  { "tempFile", 1, NULL, 't'},
   { NULL, 0, NULL, 0}
 };
 
 static void ParseCommandLine(int argc, char *argv[])
 {
   while(1) {
-    int opt;
+    int opt, rc;
     int opt_index;
     
-    opt = getopt_long(argc, argv, "hT:", sim_opts, &opt_index);
+    opt = getopt_long(argc, argv, "hHT:a:t:", sim_opts, &opt_index);
     if(opt < 0)
       break;
     
     switch(opt) {
     case 'h':   /* Print usage and exit */
       PrintUsage(argv[0]); /* This function will exit */
+      break;
+    case 'H':   /* Print header */
+      gPrintHeader = 1;
       break;
     case 'T':   /* Specify the upperTheta */
       if (!optarg) {
@@ -561,9 +555,37 @@ static void ParseCommandLine(int argc, char *argv[])
 	PrintUsage(argv[0]);
       }
       break;
+    case 't':
+      if (!optarg) {
+	fprintf(stderr, "Must specify filename used for temporary storage file\n");
+	PrintUsage(argv[0]);
+      }
+      rc=SetScratchFile(optarg);
+      if(rc<0) {
+	fprintf(stderr, "Can't set the temporary scratch file as '%s'\n", optarg);
+	PrintUsage(argv[0]);
+      }
+      break;
     default:
       PrintUsage(argv[0]); /* This function will exit */
       break;
     }
   }
+}
+
+
+static int SetScratchFile(char *fName) 
+{
+  int len;
+
+  if(!fName || !fName[0])
+    return -1;
+
+  len = strlen(fName);
+  if((len + 1) >= MAX_FILENAME_LEN)
+    return -1;
+  
+  strncpy(gParam.scratchFile, fName, MAX_FILENAME_LEN);
+
+  return 0;
 }
