@@ -256,7 +256,7 @@ The obsSumVect file will then be one long line of columns. The first several col
 
 
 ##################################################################
-#### Running the simulations
+#### Step 2 Running the simulations
 ##################################################################
 
 Now we are ready to run the simulation.  You should run the following
@@ -480,6 +480,11 @@ Let's take a look at the options
    These summary statistics can be used for -s option.  Here is
    the example output.  Ignore most of the output, and the final line
    is only relevant here.
+
+   so far the full number of summary statistics is:
+	"pi.b", "pi.w", "pi", "wattTheta", "pi.net", "tajD", "tajD.denom", "pi.wPop2", "pi.wPop1", "wattTheta.Pop2", "wattTheta.Pop1", "tajD.denomPop2", "tajD.denomPop1", "ShannonsIndex.Between", "ShannonsIndex.Net", "ShannonsIndex.Pop1", "ShannonsIndex.Pop2" 
+	 	
+
 
 $ acceptRej.pl -n
 
