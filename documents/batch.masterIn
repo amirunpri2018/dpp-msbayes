@@ -42,6 +42,7 @@ numTauClasses = 0
 
    # upper bound of prior distribution for migration rate.
 upperMig = 0.0
+   # otherwise the value will condition the random draws from the hyper-prior (conditional on # tauclases)
 
    # upper bound of prior distribution for recombination rate.
 upperRec = 200.0
@@ -53,7 +54,8 @@ upperAncPopSize = 0.5
 
    # number of replicates (simulation runs)
 reps = 500000
-
+   # the number of taxon-pairs from which all subparameters will be constrained. This is used for simulating under a fixed history
+subParamConstrain = 6
 
 ####  sample sizes and mutation model for 8 taxon pairs
 # The first line which does not contain "=" is considered as the beginning
