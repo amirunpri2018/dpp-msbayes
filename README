@@ -252,6 +252,8 @@ INFO: taxon= stolida.fasta      file= stolida.fasta     # variable sites= 41
 INFO: Number of population-pairs in the data set = 6 pairs
 
 
+The obsSumVect file will then be one long line of columns. The first several columns are dummy hyper-parameter values and are labeled PRI.xxx, PRI.xxxx, PRI.xxx, PRI.xxxx, etc. After these are columns that are the summary statistics are are labeled (see the "Step 3 post processing of simulated data" section below)  
+
 
 ##################################################################
 #### Running the simulations
