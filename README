@@ -3,7 +3,17 @@ using hierarchical ABC
 
 Pronounced "em es bayzzz"
 
-Overview: test for simultaneous divergence (TSD) of multiple population-pairs.
+Overview: msBayes implements a comparative phylogeographic analysis of multiple co-distributed taxon-pairs using a hierarchical approximate Bayesian computation (HABC) model.  
+
+From DNA sequence data, one can:
+1. test if the taxon-pairs formed at the same time (tau) using the Bayes factor and estimating the hyper-parameters Psi and Omega (Psi = # of different events per Y taxon-pairs and Omega = Var(tau)/E(tau) )
+2. estimate when the simultaneous divergence or colonization occurred by estimating the Mean divergence time
+If simultaneous divergence/colonization is not supported given the data, one can:
+3. estimate how many divergence/colonization events occurred and when they occurred
+4. estimate how many taxon-pairs formed at divergence/colonization each event and identify which of the taxon-pairs were formed at each of the events
+5. calculate a number of summary statistics from all of the Y taxon-pairs
+
+6. One can also conduct simulations rather then use the simulations for HABC estimation   
 
 In the example used in this document, we have sequence data from 6
 population-pairs. These data were kindly provided by Chris Meyer and are
@@ -14,6 +24,11 @@ For the full description of method see:
 
 2006 Hickerson, M.J., E, Stahl, and H.A. Lessios. Test for
 simultaneous divergence using approximate Bayesian computation. Evolution 60: 2435-2453
+
+and 
+
+2007 Hickerson, M.J., E, Stahl, and N. Takebayeyashi. msBayes: Pipeline for testing comparative phylogeographic histories using hierarchical approximate Bayesian computation. BMC Bioinformatics. 8:268
+
 
 This program runs on the command line on a unix/linux or Mac OS-X
 Terminal.app.  In this document, we use "$" to indicate the command
@@ -87,7 +102,7 @@ $ mkdir -p Documents/IndoPacific
    case) if it doesn't exist.
 
 
------ Master infile -----
+----- Master infile (instructions file: SampleSize_MuModel_Vector) -----
 
 First, you need to create your master infile (we are calling this file
 "SampleSize_MuModel_Vector", but you can use whatever filename) with
@@ -262,6 +277,9 @@ $ msbayes.pl
 Then it will ask following questions:
 
 -------------------------------
+INFO: using ./msprior
+INFO: using ./msDQH
+INFO: using ./sumstatsvector
 Output Filename? [Return] to use default of "Prior_SumStat_Outfile"
 
 
@@ -351,7 +369,7 @@ ok:
 
  reps = 100   # comments here
 
-The recognized parameter names (case-sensitive) are:
+The recognized options for bounds on the parameters and options  (case-sensitive) are:
 
   numLoci
   lowerTheta
@@ -362,6 +380,7 @@ The recognized parameter names (case-sensitive) are:
   upperRec
   upperAncPopSize
   reps
+  subParamConstrain
 
 For an example of this master infile, see documents/batch.masterIn.
 The comments in this file may be useful, too.  After you are done
