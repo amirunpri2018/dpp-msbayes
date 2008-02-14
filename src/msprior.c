@@ -314,16 +314,14 @@ int main (int argc, char *argv[])
 	  }
 	}
 
-      fprintf(fpTauPsiArray, "%d\t",numTauClasses);
+      fprintf(fpTauPsiArray, "%d",numTauClasses);
       if (gParam.numTauClasses > 0) {  /* constrained psi analysis */
-	for (zzz = 0; zzz < numTauClasses; zzz++) {
-	  fprintf(fpTauPsiArray, "%lf\t",tauArray[zzz]);
-	}
-	for (zzz = 0; zzz < numTauClasses; zzz++) {
-	  fprintf(fpTauPsiArray, "%d",PSIarray[zzz]);
-	  fprintf(fpTauPsiArray, ((zzz != numTauClasses - 1) ? "\t" : "\n"));	  
-	}
-      }
+	for (zzz = 0; zzz < numTauClasses; zzz++)
+	  fprintf(fpTauPsiArray, "\t%lf",tauArray[zzz]);
+	for (zzz = 0; zzz < numTauClasses; zzz++)
+	  fprintf(fpTauPsiArray, "\t%d",PSIarray[zzz]);
+      } 
+      fprintf(fpTauPsiArray, "\n");
     }
 
   fclose(fpTauPsiArray);
