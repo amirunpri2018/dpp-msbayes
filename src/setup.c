@@ -48,6 +48,9 @@ void PrintParam(void);
 static int InitMutPara(FILE *fp, mutParameterArray *mutParaArray);
 static int CheckMutParaArray(mutParameterArray *mpaPtr, int index);
 static int ReadMutLine(mutParameter *mpp, char *line, int ncol);
+static int InitConPara(FILE *fp, constrainedParameterArray *conParaArray);
+static int CheckConParaArray(constrainedParameterArray *cpaPtr, int index);
+static int ReadConLine(constrainedParameter *cpa, char *line, int ncol);
 
 /*
  * The functions in this file is to set global parameters gParam and gMutParam.
@@ -94,6 +97,7 @@ void LoadConfiguration(int argc, char *argv[])
   /* initialize the parameters with 0 */
   memset(&gParam, 0, sizeof(gParam));
   memset(&gMutParam, 0, sizeof(gMutParam));
+  memset(&gConParam, 0, sizeof(gConParam));
 
   /* Process the options */
   ParseCommandLine(argc, argv);
@@ -136,6 +140,15 @@ void LoadConfiguration(int argc, char *argv[])
     fprintf(stderr, "Unable to read in muataion parameters from %s\n",
 	    gParam.configFile);
     exit(EXIT_FAILURE);
+  }
+
+  if(gParam.constrain > 0)
+  {
+    rc = InitConPara(fp, &gConParam);
+    if(rc != 0)
+      {
+	fprintf(stderr, "Unable to read in constrain paramters from %s\n", gParam.configFile);
+      }
   }
 }
 
@@ -537,12 +550,13 @@ static void SetupParams (FILE *fp, runParameters * paramPtr)
   SetDefaultParams(paramPtr);
   
   retVal = init_globals(fp ,
-	     "lowerTheta upperTheta upperTau numTauClasses upperMig upperRec upperAncPopSize reps numLoci",
+	     "lowerTheta upperTheta upperTau numTauClasses upperMig upperRec upperAncPopSize reps numLoci subParamConstrain",
 	     "dddudddVu",
 	     &paramPtr->lowerTheta, &paramPtr->upperTheta,
 	     &paramPtr->upperTau, &paramPtr->numTauClasses, 
 	     &paramPtr->upperMig, &paramPtr->upperRec,
-	     &paramPtr->upperAncPopSize, &paramPtr->reps, &paramPtr->numLoci);
+	     &paramPtr->upperAncPopSize, &paramPtr->reps, 
+             &paramPtr->numLoci, &paramPtr->constrain);
   
   if (retVal !=0) {
     if (debug_level) {
@@ -620,7 +634,10 @@ static int InitMutPara(FILE *fp, mutParameterArray *mpaPtr)
 
       /* check if mem allocated*/
       rc = CheckMutParaArray(mpaPtr, index);
-      if (rc < 0) ; /* error */
+      if (rc < 0) 
+	  {
+		  fprintf(stderr, "Error found in CheckMutParaArray\n");
+	  } /* error */
       
       mpp = &mpaPtr->data[index];
       
@@ -635,6 +652,74 @@ static int InitMutPara(FILE *fp, mutParameterArray *mpaPtr)
 
     gParam.numTaxaPair = mpaPtr->numElements;
     return (0);
+}
+
+
+
+static int InitConPara(FILE *fp, constrainedParameterArray *cpaPtr)
+{
+  char ln[LNSZ]; // char array with length = 256(LNSZ)
+  char *beginConstrain;
+
+  int index, rc;
+  int tmpCol, numColumns = 0;
+  constrainedParameter *cpp;
+
+  while(fgets(ln, LNSZ, fp))
+    {
+      RmLeadingSpaces(ln);
+
+      if(ln[0]== 0 || ln[0] == '#')
+        continue;
+
+      beginConstrain = strstr(ln, "begin constrain");
+
+      if(beginConstrain != NULL)
+        break;
+    }
+
+  index = 0;
+  do{
+    
+     RmLeadingSpaces(ln);
+
+     // is this check neccesary??
+     if(ln[0] == 0 || ln[0] == '#')
+       continue;
+
+     RmTrailingSpaces(ln);
+
+     tmpCol = RmExtraWhiteSpaces(ln) + 1;
+
+     // printout tmpCol to see the value
+
+     if(! numColumns)
+       numColumns = tmpCol;
+     else if (numColumns != tmpCol)
+       { fprintf(stderr, "The number of columns for mutation data should be %d, but following line has %d columns\n%s", numColumns, tmpCol, ln);
+       exit(-1);
+       }
+
+     // check might not be used
+     rc = CheckConParaArray(cpaPtr, index);
+	 if(rc < 0)
+	 {
+        fprintf(stderr, "Hmm, error found in CheckConParaArray\n");
+	 }
+
+     cpp = &cpaPtr->conData[index];
+
+     rc = ReadConLine(cpp, ln, numColumns);
+     if(rc < 0)
+       {
+         fprintf(stderr, "Hey, error in reading constrain parameters\n%s\n", ln);          
+       } 
+     else 
+       index ++;
+
+  }while(fgets(ln, LNSZ, fp));
+
+  return 0;
 }
 
 
@@ -685,6 +770,54 @@ static int CheckMutParaArray(mutParameterArray *mpaPtr, int index)
   }
   return -1;   /* It should never come here */
 }
+
+
+static int CheckConParaArray(constrainedParameterArray *cpaPtr, int index)
+{
+  int growBy = 10;
+  
+
+  if(index < 0)
+    {
+      fprintf(stderr, "In CheckConArray(), 2nd arg should be non-negative. \n");
+      return -1;
+    }
+
+  if(!cpaPtr)
+    {
+      fprintf(stderr, "In CheckConArray(), NULL pointer is givin\n");
+    }
+
+  if(index + 1 <= cpaPtr->conNumElements)
+  {
+	  return 0;
+  }
+  else if (index + 1 <= cpaPtr->conNumAllocated)
+  {
+	  cpaPtr->conNumElements = index + 1;
+	  return 0;
+  }
+  else
+  {
+	  size_t newNumEle = (1+(index + 1)/growBy) * growBy;
+	  constrainedParameter *cc;
+
+	  cc = (constrainedParameter *)realloc(cpaPtr->conData, sizeof(constrainedParameter)*newNumEle);
+	  if(!cc)
+	  {
+		  fprintf(stderr, "Not enough memory in CheckConParaArray()\n");
+	  }
+
+	  cpaPtr->conData = cc;
+	  cpaPtr->conNumAllocated = newNumEle;
+	  cpaPtr->conNumElements = index + 1;
+
+	  return 0;
+  }
+  return -1;
+}
+
+
 
 /*
  * Take a line which specify the mutation model and sample sizes of a
@@ -749,6 +882,23 @@ static int ReadMutLine(mutParameter *mpp, char *line, int ncol)
   return (rc);
 }
 
+
+static int ReadConLine(constrainedParameter *cpp, char *line, int ncol)
+{
+  int cc; 
+
+  if(ncol == 9) // so far there are nine values
+    {
+      cc = sscanf(line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", 
+                  &cpp->conTau, &cpp->conBottPop1, &cpp->conBottPop2,
+                  &cpp->conBottleTime, &cpp->conMig, &cpp->conTheta,
+                  &cpp->conN1, &cpp->conNanc, &cpp->conRec);
+    }
+
+  return (cc);
+}
+
+
 /*
  * print out the value of parameters, useful for debugging
  */
@@ -782,6 +932,20 @@ void PrintParam (void) {
     fprintf(stderr,"freq:A, C, G, T = %f, %f %f %f\n", 
 	    gMutParam.data[i].freqA, gMutParam.data[i].freqC, 
 	    gMutParam.data[i].freqG, gMutParam.data[i].freqT);
+  }
+
+  fprintf(stderr, "## gConParam, for contraint only ##\n");
+  for(i = 0; i < gConParam.conNumElements; i++)
+  {
+	  fprintf(stderr, "### taxon pair %d ###\n", i+1);
+	  fprintf(stderr, "tau = \t%lf\n", gConParam.conData[i].conTau);
+	  fprintf(stderr, "bottle neck populations = \t%lf %lf\n", gConParam.conData[i].conBottPop1, gConParam.conData[i].conBottPop2);
+	  fprintf(stderr, "bottle neck time = \t%lf\n", gConParam.conData[i].conBottleTime);
+	  fprintf(stderr, "migration rate= \t%lf\n", gConParam.conData[i].conMig);
+	  fprintf(stderr, "theta = \t%lf\n", gConParam.conData[i].conTheta);
+	  fprintf(stderr, "current population sizes = \t%lf\n", gConParam.conData[i].conN1);
+	  fprintf(stderr, "ancestral population size = \t%lf\n", gConParam.conData[i].conNanc);
+	  fprintf(stderr, "recombination rate = \t%lf\n", gConParam.conData[i].conRec);
   }
 }
 

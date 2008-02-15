@@ -30,6 +30,7 @@ typedef struct {
   char configFile[MAX_FILENAME_LEN];
   char priorOutFile[MAX_FILENAME_LEN];
   char scratchFile[MAX_FILENAME_LEN];
+  unsigned int constrain;
 } runParameters;
 
 extern runParameters gParam;
@@ -53,5 +54,25 @@ typedef struct{
 } mutParameterArray;
 
 extern mutParameterArray gMutParam;
+
+typedef struct{
+  double conTau;
+  double conBottPop1;
+  double conBottPop2;
+  double conBottleTime;
+  double conMig; // migration rate
+  double conTheta; 
+  double conN1; //current population size1
+  double conNanc; // ancestral pupulation size
+  double conRec; // recombination rate
+} constrainedParameter;
+
+typedef struct{
+  constrainedParameter *conData;
+  int conNumElements;
+  int conNumAllocated;
+} constrainedParameterArray;
+
+extern constrainedParameterArray gConParam;
 
 #endif

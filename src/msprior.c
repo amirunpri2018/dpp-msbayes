@@ -87,6 +87,9 @@ runParameters gParam;        /* stores upper limits of prior dist'n etc */
 mutParameterArray gMutParam; /* stores mut model & # samples for 
                                 each taxon pair */
 
+constrainedParameterArray gConParam; /* store constrained sub-parameters for
+                                        each taxon pair */ 
+
 int comp_nums(const double *num1, const double *num2)
 {
   if (*num1 <  *num2) return -1;
@@ -316,13 +319,13 @@ int main (int argc, char *argv[])
 
       fprintf(fpTauPsiArray, "%d",numTauClasses);
       if (gParam.numTauClasses > 0) {  /* constrained psi analysis */
-	for (zzz = 0; zzz < numTauClasses; zzz++)
-	  fprintf(fpTauPsiArray, "\t%lf",tauArray[zzz]);
-	for (zzz = 0; zzz < numTauClasses; zzz++)
-	  fprintf(fpTauPsiArray, "\t%d",PSIarray[zzz]);
-      } 
-      fprintf(fpTauPsiArray, "\n");
-    }
+for (zzz = 0; zzz < numTauClasses; zzz++)
+					fprintf(fpTauPsiArray, "\t%lf",tauArray[zzz]);
+					for (zzz = 0; zzz < numTauClasses; zzz++)
+					fprintf(fpTauPsiArray, "\t%d",PSIarray[zzz]);
+					} 
+					fprintf(fpTauPsiArray, "\n");
+					}
 
   fclose(fpTauPsiArray);
   free(tauArray);
