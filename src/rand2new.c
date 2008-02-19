@@ -44,7 +44,7 @@ int seedit (unsigned long seed)
 }
 
 int cleanPRNG(void) {
-  gsl_rng_free(gBaseRand);
+  gsl_rng_free((gsl_rng *) gBaseRand);
   return 0;
 }
 

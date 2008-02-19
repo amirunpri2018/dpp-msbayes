@@ -134,6 +134,13 @@ sub CreateObsSumStats {
     # when we exit or die, automatically delete this temp file
     END{if (defined($tmpFile) && -e $tmpFile) { unlink($tmpFile) || die "Couldn't unlink $tmpFile : $!"}}
     #print "TMP file = $tmpFile\n";  #debug
+
+    my ($scratchfh, $scratchFile);
+    do {$scratchFile = tmpnam()} 
+    until $scratchfh = IO::File->new($scratchFile, O_RDWR|O_CREAT|O_EXCL);
+    $scratchfh->close();
+    # when we exit or die, automatically delete this temp file
+    END{if (defined($scratchFile) && -e $scratchFile) { unlink($scratchFile) || die "Couldn't unlink $scratchFile : $!"}}
     
     # Each row in @master_matrix corresponds to an alignment file
     # For each row, modify the header template with appropriate values of
@@ -217,7 +224,7 @@ sub CreateObsSumStats {
 	     "= $numSeqSites\n";
 	 
 	 ### run sumstat.
-	 my $sumStatsResults = `$sumStatsBin < $tmpFile`;
+	 my $sumStatsResults = `$sumStatsBin -H --tempFile $scratchFile < $tmpFile`;
 	 
 	 if ($sumStatsResults !~ /^\s*$/) {  # ignoring empty returned results
 	     push @sumStatsResultArr, $sumStatsResults;

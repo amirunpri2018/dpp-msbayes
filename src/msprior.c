@@ -116,11 +116,11 @@ int main (int argc, char *argv[])
 
   /* set b_constrain to 1 if constrain */
   if(gParam.constrain > 0 && (gParam.numTauClasses == gParam.constrain))
-  {
-	  b_constrain = 1;
-	  fprintf(stderr, "constrain == true\n");
-  }
-
+    {
+      b_constrain = 1;
+      fprintf(stderr, "constrain == true\n");
+    }
+  
   /* for initiating the gsl random number generator */
   /* initialize PRNG */
   srand (gParam.prngSeed);/* Better way of seeding here ? */
@@ -131,22 +131,20 @@ int main (int argc, char *argv[])
   gBaseRand = gsl_rng_alloc (gsl_rng_mt19937);/* set the base PRNG to
 						 Mersenne Twister */
   gsl_rng_set (gBaseRand, randSeed);/* seed the PRNG */
-
-  if(b_constrain == 0)
-  {
-	  /* fixed numTauClasses configuration */
-	  if (gParam.numTauClasses != 0) {
-		if (gParam.numTauClasses > gParam.numTaxaPair) {
-		  fprintf(stderr, "WARN: numTauClasses (%u) is larger than "
-			  "numTaxaPair (%u). Setting numTauClasses to %u",
-			  gParam.numTauClasses,gParam.numTaxaPair,gParam.numTaxaPair);
-		  gParam.numTauClasses = gParam.numTaxaPair;
-		}
-		numTauClasses = gParam.numTauClasses;
-	  }
-  }else
-  {
-	  numTauClasses = gParam.numTauClasses;
+  
+  if(b_constrain == 0) {
+    /* fixed numTauClasses configuration */
+    if (gParam.numTauClasses != 0) {
+      if (gParam.numTauClasses > gParam.numTaxaPair) {
+	fprintf(stderr, "WARN: numTauClasses (%u) is larger than "
+		"numTaxaPair (%u). Setting numTauClasses to %u",
+		gParam.numTauClasses,gParam.numTaxaPair,gParam.numTaxaPair);
+	gParam.numTauClasses = gParam.numTaxaPair;
+      }
+      numTauClasses = gParam.numTauClasses;
+    }
+  } else {
+    numTauClasses = gParam.numTauClasses;
   }
 
   /* Sizes are set to the number of taxon pairs (Max number of tau)*/
@@ -155,7 +153,7 @@ int main (int argc, char *argv[])
     fprintf(stderr, "ERROR: Not enough memory for tauArray\n");
     exit(EXIT_FAILURE);
   }
-
+  
   PSIarray = calloc(gParam.numTaxaPair, sizeof(int));
   if (PSIarray == NULL) {
     fprintf(stderr, "ERROR: Not enough memory for PSIarray\n");
@@ -167,20 +165,18 @@ int main (int argc, char *argv[])
     fprintf(stderr,"Cannot open the file.\n");
     exit(1);
   }
-
+  
   /* print out the column headers to the tauArray and PSIarray  */
   /* PRI.numTauClass PRI.Tau.1  PRI.Tau.2 PRI.Tau.3 ... PRI.Psi.1 PRI.Psi.2 PRI.Psi.3 ... */
-  fprintf(fpTauPsiArray, "PRI.numTauClass\t");
+  fprintf(fpTauPsiArray, "PRI.numTauClass");
   if (gParam.numTauClasses > 0) {  /* constrained psi analysis */
-    for (zzz = 0; zzz < numTauClasses; zzz++) {
-      fprintf(fpTauPsiArray, "PRI.Tau.%d\t",zzz+1);
-    }
-    for (zzz = 0; zzz < numTauClasses; zzz++) {
-      fprintf(fpTauPsiArray, "PRI.Psi.%d",zzz+1);
-      fprintf(fpTauPsiArray, ((zzz != numTauClasses - 1) ? "\t" : "\n"));	  
-    }
+    for (zzz = 0; zzz < numTauClasses; zzz++)
+      fprintf(fpTauPsiArray, "\tPRI.Tau.%d",zzz+1);
+    for (zzz = 0; zzz < numTauClasses; zzz++)
+      fprintf(fpTauPsiArray, "\tPRI.Psi.%d",zzz+1);
   }
-
+  fprintf(fpTauPsiArray, "\n");
+  
   /* Beginning of the main loop */
   for (rep = 0; rep < gParam.reps; rep++)
     {
@@ -194,198 +190,194 @@ int main (int argc, char *argv[])
        * numTauClasses from a uniform prior dist'n.
        */ 
       if (gParam.numTauClasses == 0) { /* numTauClasses is NOT fixed */
-	       numTauClasses = 1 + gsl_rng_uniform_int(gBaseRand, gParam.numTaxaPair);
+	numTauClasses = 1 + gsl_rng_uniform_int(gBaseRand, gParam.numTaxaPair);
       } 
-
-	  // Randomly generate TauArray only when NOT constrain
-	  if(b_constrain == 0)
-	  {
-		  /* sample tau's from uniform prior dist'n */      
-		  for (u = 0; u < numTauClasses; u++)
-		  {
-			tauArray[u] = gsl_ran_flat (gBaseRand, 0.0, gParam.upperTau);
-	          
-			 //printf("tauArray[%d] : %lf   ", u, tauArray[u]);
-	          
-			if (debug_level) {
-			 fprintf(stderr, "DEBUG:%u of %u categories:\t%lf\n",
-				u, numTauClasses, tauArray[u]);
-			 }
-		  }
+      
+      // Randomly generate TauArray only when NOT constrain
+      if(b_constrain == 0) {
+	/* sample tau's from uniform prior dist'n */      
+	for (u = 0; u < numTauClasses; u++) {
+	  tauArray[u] = gsl_ran_flat (gBaseRand, 0.0, gParam.upperTau);
+	  
+	  //printf("tauArray[%d] : %lf   ", u, tauArray[u]);
+	  
+	  if (debug_level) {
+	    fprintf(stderr, "DEBUG:%u of %u categories:\t%lf\n",
+		    u, numTauClasses, tauArray[u]);
 	  }
-
+	}
+      }
+      
       //qsort(tauArray, (numTauClasses), sizeof(double), comp_nums);
-
-     for (c=0; c < numTauClasses; c++) 
-	     PSIarray[c] = 0;  /* Reset the PSIarray counters */
-
-     for (u = 0; u < gParam.numTaxaPair; u++)
-	 {
-	   //Check upperAncPopSize before doing anything
-	   /* ancestral population size prior */
-	   if(gParam.upperAncPopSize < 0.01) {
-			fprintf(stderr, "The upper bound (%lf) of ancestral pop. size is "
-				"smaller than the lower bound (0.01)\n",
-				gParam.upperAncPopSize);
-			exit(EXIT_FAILURE);
-	   }
+      
+      for (c=0; c < numTauClasses; c++) 
+	PSIarray[c] = 0;  /* Reset the PSIarray counters */
+      
+      for (u = 0; u < gParam.numTaxaPair; u++)
+	{
+	  //Check upperAncPopSize before doing anything
+	  /* ancestral population size prior */
+	  if(gParam.upperAncPopSize < 0.01) {
+	    fprintf(stderr, "The upper bound (%lf) of ancestral pop. size is "
+		    "smaller than the lower bound (0.01)\n",
+		    gParam.upperAncPopSize);
+	    exit(EXIT_FAILURE);
+	  }
 	  
 	  mutParameter taxonPairDat;
-
+	  
 	  /* sample sizes, mutational model for u-th taxon-pair */
 	  taxonPairDat = gMutParam.data[u];
-
-
-
-	  if(b_constrain == 0)
-	  {
-		  /** bottleneck priors **/
-		  /* severity of bottle neck (how small the population become) */
-		  BottStr1 = gsl_ran_flat (gBaseRand, 0.01, 1.0);
-		  BottStr2 = gsl_ran_flat (gBaseRand, 0.01, 1.0);
-		  /* timing of bottle neck */
-		  BottleTime = gsl_ran_flat (gBaseRand, 0.000001, 1.0);
-
-		  /* migration rate prior */
-		  mig = gsl_ran_flat (gBaseRand, 0.0, gParam.upperMig);
-
-		  /* theta prior */
-		  theta = gsl_ran_flat (gBaseRand, gParam.lowerTheta, 
-					gParam.upperTheta);
-
-		  /* population sizes immediately after the separation, and 
-			 what it grows to after the bottleneck (today) */
-		  N1 = gsl_ran_flat (gBaseRand, 0.01, 1.99);
-
-		  N2 = 2.0 - N1;
-
-		  
-		  /* ancestral population size prior */
-		  //if(gParam.upperAncPopSize < 0.01) {
-		  // fprintf(stderr, "The upper bound (%lf) of ancestral pop. size is "
-		  //	"smaller than the lower bound (0.01)\n",
-		  //	gParam.upperAncPopSize);
-		  //exit(EXIT_FAILURE);
-		  //}
-		  
-		    
-		  /*
-				Nmax=((gParam.upperAncPopSize*gParam.upperTheta)*gParam.upperTheta)
-				/theta; 
-				  Nanc = gsl_ran_flat (gBaseRand, 0.01, Nmax);
-		  */
-		    
-		  /* The upper limit of ancestral theta is defined by the product
-			 of upper Theta (e.g. 40) and upper AncPopSize (e.g. 0.5) */
-		  Nanc = gsl_ran_flat(gBaseRand, 0.01, 
-					  gParam.upperAncPopSize*gParam.upperTheta);
-
-		  /* recombination rate */
-		  rec = gsl_ran_flat (gBaseRand, 0.0, gParam.upperRec);
+	  
+	  if (b_constrain == 0)
+	    {
+	      /** bottleneck priors **/
+	      /* severity of bottle neck (how small the population become) */
+	      BottStr1 = gsl_ran_flat (gBaseRand, 0.01, 1.0);
+	      BottStr2 = gsl_ran_flat (gBaseRand, 0.01, 1.0);
+	      /* timing of bottle neck */
+	      BottleTime = gsl_ran_flat (gBaseRand, 0.000001, 1.0);
+	      
+	      /* migration rate prior */
+	      mig = gsl_ran_flat (gBaseRand, 0.0, gParam.upperMig);
+	      
+	      /* theta prior */
+	      theta = gsl_ran_flat (gBaseRand, gParam.lowerTheta, 
+				    gParam.upperTheta);
+	      
+	      /* population sizes immediately after the separation, and 
+		 what it grows to after the bottleneck (today) */
+	      N1 = gsl_ran_flat (gBaseRand, 0.01, 1.99);
+	      
+	      N2 = 2.0 - N1;
+	      	      
+	      /* Wen commented out the following in version 41, is it ok? */
+	      /* ancestral population size prior */
+	      //if(gParam.upperAncPopSize < 0.01) {
+	      // fprintf(stderr, "The upper bound (%lf) of ancestral pop. size is "
+	      //	"smaller than the lower bound (0.01)\n",
+	      //	gParam.upperAncPopSize);
+	      //exit(EXIT_FAILURE);
+	      //}
+	      
+	      
+	      /*
+		Nmax=((gParam.upperAncPopSize*gParam.upperTheta)*gParam.upperTheta)
+		/theta; 
+		Nanc = gsl_ran_flat (gBaseRand, 0.01, Nmax);
+	      */
+	      
+	      /* The upper limit of ancestral theta is defined by the product
+		 of upper Theta (e.g. 40) and upper AncPopSize (e.g. 0.5) */
+	      Nanc = gsl_ran_flat(gBaseRand, 0.01, 
+				  gParam.upperAncPopSize*gParam.upperTheta);
+	      
+	      /* recombination rate */
+	      rec = gsl_ran_flat (gBaseRand, 0.0, gParam.upperRec);
 	    }  // (constrain == 0)
-	    else
-		{
-		  	 
-		  constrainedParameter conTaxonPairDat;
-
+	  else
+	    {
+	      
+	      constrainedParameter conTaxonPairDat;
+	      
 	      /* sample sizes, constrain model for u-th taxon-pair */
 	      conTaxonPairDat = gConParam.conData[u];
-		  
-		  /* all taus will be constrain if b_constrian == true*/
-		  tauArray[u] = conTaxonPairDat.conTau;
-		  
-		  
-		  /** bottleneck priors **/
-		  /* severity of bottle neck (how small the population become) */
-		  BottStr1 = conTaxonPairDat.conBottPop1;
-		  BottStr2 = conTaxonPairDat.conBottPop2;
-		  /* timing of bottle neck */
-		  BottleTime = conTaxonPairDat.conBottleTime;
-
-		  /* migration rate prior */
-		  mig = conTaxonPairDat.conMig;
-
-		  /* theta prior */
-		  theta = conTaxonPairDat.conTheta;
-
-		  /* population sizes immediately after the separation, and 
-			 what it grows to after the bottleneck (today) */
-		  N1 = conTaxonPairDat.conN1;
-
-		  N2 = 2.0 - N1;
-
-		  
-		  /* ancestral population size prior */
-		  //if(gParam.upperAncPopSize < 0.01) {
-		  // fprintf(stderr, "The upper bound (%lf) of ancestral pop. size is "
-		  //	"smaller than the lower bound (0.01)\n",
-		  //	gParam.upperAncPopSize);
-		  //exit(EXIT_FAILURE);
-		  //}
-		  
-		    
-		  /*
-				Nmax=((gParam.upperAncPopSize*gParam.upperTheta)*gParam.upperTheta)
-				/theta; 
-				  Nanc = gsl_ran_flat (gBaseRand, 0.01, Nmax);
-		  */
-		    
-		  /* The upper limit of ancestral theta is defined by the product
-			 of upper Theta (e.g. 40) and upper AncPopSize (e.g. 0.5) */
-		  Nanc = conTaxonPairDat.conNanc;
-
-		  /* recombination rate */
-		  rec = conTaxonPairDat.conRec;
+	      
+	      /* all taus will be constrain if b_constrian == true*/
+	      tauArray[u] = conTaxonPairDat.conTau;
+	      
+	      
+	      /** bottleneck priors **/
+	      /* severity of bottle neck (how small the population become) */
+	      BottStr1 = conTaxonPairDat.conBottPop1;
+	      BottStr2 = conTaxonPairDat.conBottPop2;
+	      /* timing of bottle neck */
+	      BottleTime = conTaxonPairDat.conBottleTime;
+	      
+	      /* migration rate prior */
+	      mig = conTaxonPairDat.conMig;
+	      
+	      /* theta prior */
+	      theta = conTaxonPairDat.conTheta;
+	      
+	      /* population sizes immediately after the separation, and 
+		 what it grows to after the bottleneck (today) */
+	      N1 = conTaxonPairDat.conN1;
+	      
+	      N2 = 2.0 - N1;
+	      
+	      
+	      /* ancestral population size prior */
+	      //if(gParam.upperAncPopSize < 0.01) {
+	      // fprintf(stderr, "The upper bound (%lf) of ancestral pop. size is "
+	      //	"smaller than the lower bound (0.01)\n",
+	      //	gParam.upperAncPopSize);
+	      //exit(EXIT_FAILURE);
+	      //}
+	      
+	      
+	      /*
+		Nmax=((gParam.upperAncPopSize*gParam.upperTheta)*gParam.upperTheta)
+		/theta; 
+		Nanc = gsl_ran_flat (gBaseRand, 0.01, Nmax);
+	      */
+	      
+	      /* The upper limit of ancestral theta is defined by the product
+		 of upper Theta (e.g. 40) and upper AncPopSize (e.g. 0.5) */
+	      Nanc = conTaxonPairDat.conNanc;
+	      
+	      /* recombination rate */
+	      rec = conTaxonPairDat.conRec;
 	    }
 	  
-
-
-		  Nanc = Nanc / theta; /* get the ratio of theta_anc / theta_cur 
-					  This ratio is required for msDQH */
-
-		  tauequalizer = gParam.upperTheta / 2 / theta;
-		   
-		  /* pick a tau for every taxon-pair with replacement from the
-				  array of X taxon-pairs, where X is a uniform discrete RV
-			  from 1 to number of taxon-pairs */
-		  
-         if(b_constrain == 0)
-		 {
-		 // 1-31-2007 it will use new way of picking tau
-		 if( u < numTauClasses)
-			tauClass = u;
-		  else
-			tauClass = gsl_rng_uniform_int(gBaseRand,numTauClasses);
-		  
+	  
+	  
+	  Nanc = Nanc / theta; /* get the ratio of theta_anc / theta_cur 
+				  This ratio is required for msDQH */
+	  
+	  tauequalizer = gParam.upperTheta / 2 / theta;
+	  
+	  /* pick a tau for every taxon-pair with replacement from the
+	     array of X taxon-pairs, where X is a uniform discrete RV
+	     from 1 to number of taxon-pairs */
+	  
+	  if(b_constrain == 0)
+	    {
+	      // 1-31-2007 it will use new way of picking tau
+	      if( u < numTauClasses)
+		tauClass = u;
+	      else
+		tauClass = gsl_rng_uniform_int(gBaseRand,numTauClasses);
+	      
 		  gaussTime= tauArray[tauClass];
-		 	  //printf("picking index: %d, gaussTime: %lf  ", tauClass, tauArray[tauClass]);
-		 }
-		 else
-			 gaussTime = tauArray[u];
-
-		 PSIarray[tauClass] = PSIarray[tauClass] + 1;  
-
-		    
-		  /* use the following if simulating a particular fixed history */
-		  /* gaussTime = tauArray[u]; */
-		    
-		  gaussTime = gaussTime * tauequalizer;
-		    
-		  /* The following 2 if's are weird */
-		  if (gaussTime < 0.0001)
-			gaussTime = 0.0001;
-
-		  BottleTime = BottleTime * 0.95 * gaussTime;
-
-		  if (gaussTime < 0.0001)
-			BottleTime = 0.00005;
-
-		  if(debug_level) 
-			fprintf(stderr, "DEBUG: BottleTime:%lf\tgaussTime:%lf\n",
-				BottleTime, gaussTime);
-		    
-		  /* recombination rate */
-		  //rec = gsl_ran_flat (gBaseRand, 0.0, gParam.upperRec);
+		  //printf("picking index: %d, gaussTime: %lf  ", tauClass, tauArray[tauClass]);
+	    }
+	  else
+	    gaussTime = tauArray[u];
+	  
+	  PSIarray[tauClass] = PSIarray[tauClass] + 1;  
+	  
+	  
+	  /* use the following if simulating a particular fixed history */
+	  /* gaussTime = tauArray[u]; */
+	  
+	  gaussTime = gaussTime * tauequalizer;
+	  
+	  /* The following 2 if's are weird */
+	  if (gaussTime < 0.0001)
+	    gaussTime = 0.0001;
+	  
+	  BottleTime = BottleTime * 0.95 * gaussTime;
+	  
+	  if (gaussTime < 0.0001)
+	    BottleTime = 0.00005;
+	  
+	  if(debug_level) 
+	    fprintf(stderr, "DEBUG: BottleTime:%lf\tgaussTime:%lf\n",
+		    BottleTime, gaussTime);
+	  
+	  /* recombination rate */
+	  //rec = gsl_ran_flat (gBaseRand, 0.0, gParam.upperRec);
 	  
 	  
 	  /* print out the results */
@@ -407,25 +399,25 @@ int main (int argc, char *argv[])
 		   taxonPairDat.freqT);
 	    
 	    printf("%u\n",  gParam.numTaxaPair);  
-	      
+	    
 	    /* These feed into the system command line (msDQH) within
-	            the perl shell msbayes.  Some of these are used directly
-		         by msDQH, but some are also passed on to the sumstats
-			      programs via the msDQH commabnd line, .... like bp[u],
-			      theta, gaussTime, NumPerTax[u], yy, */
+	       the perl shell msbayes.  Some of these are used directly
+	       by msDQH, but some are also passed on to the sumstats
+	       programs via the msDQH commabnd line, .... like bp[u],
+	       theta, gaussTime, NumPerTax[u], yy, */
 	  }
 	}
-
-      fprintf(fpTauPsiArray, "%d",numTauClasses);
+      
+      fprintf(fpTauPsiArray, "%d",gParam.numTauClasses);
       if (gParam.numTauClasses > 0) {  /* constrained psi analysis */
-for (zzz = 0; zzz < numTauClasses; zzz++)
-					fprintf(fpTauPsiArray, "\t%lf",tauArray[zzz]);
-					for (zzz = 0; zzz < numTauClasses; zzz++)
-					fprintf(fpTauPsiArray, "\t%d",PSIarray[zzz]);
-					} 
-					fprintf(fpTauPsiArray, "\n");
-					}
-
+	for (zzz = 0; zzz < numTauClasses; zzz++)
+	  fprintf(fpTauPsiArray, "\t%lf",tauArray[zzz]);
+	for (zzz = 0; zzz < numTauClasses; zzz++)
+	  fprintf(fpTauPsiArray, "\t%d",PSIarray[zzz]);
+      }
+      fprintf(fpTauPsiArray, "\n");
+    }
+  
   fclose(fpTauPsiArray);
   free(tauArray);
   free(PSIarray);

@@ -61,6 +61,7 @@ void printstats (int n, int S, char **, int subn, int npops, int *config,
 		 int TauHyp, int NumTaxa);
 int multiplepopssampledfrom (int nsam, int npops, int *config);
 double thetaW (int, int), mu, N;
+void PrintSumStatNames(void);
 
 /* function prototypes for the functions in this file */
 static char **cmatrix (int nsam, int len);
@@ -491,13 +492,14 @@ static void PrintUsage(char *progname)
     p = progname;
 
   fprintf(stderr,
-          "\nUsage: %s [--help] [--header] [--upper_theta N] [--nadv N] [--tempFile fileName] [< output_line_of_msDQH]\n\n"
+          "\nUsage: %s [--help] [--header] [--name] [--upper_theta N] [--nadv N] [--tempFile fileName] [< output_line_of_msDQH]\n\n"
           "        help: Print this usage function (-h)\n"
 	  "      header: Print column header (-H)\n"
+	  "        name: Print names of available summary statistics (-n)\n"
           " upper_theta: Specify a upper limit of prior distribution for "
-	                 "theta (-T)\n\n"
+	                 "theta (-T)\n"
 	  "        nadv: Specify nadv (-a)\n"
-	  "     tmpFile: Specify a filename which can be used to store temporary data (-t)\n"
+	  "     tmpFile: Specify a filename which can be used to store temporary data (-t)\n\n"
           "stdin is used to read in a single line of msDQH output "
 	  "(output_line_of_msDQH)"
           "\n\n", p);
@@ -509,6 +511,7 @@ static struct option sim_opts[] = {
   { "help", 0, NULL, 'h'},  /* list options */
   { "header",0,NULL, 'H'},
   { "upper_theta", 1, NULL, 'T'},
+  { "name", 0, NULL, 'n'},
   { "nadv", 1, NULL, 'a'},
   { "tempFile", 1, NULL, 't'},
   { NULL, 0, NULL, 0}
@@ -520,13 +523,16 @@ static void ParseCommandLine(int argc, char *argv[])
     int opt, rc;
     int opt_index;
     
-    opt = getopt_long(argc, argv, "hHT:a:t:", sim_opts, &opt_index);
+    opt = getopt_long(argc, argv, "hHnT:a:t:", sim_opts, &opt_index);
     if(opt < 0)
       break;
     
     switch(opt) {
     case 'h':   /* Print usage and exit */
       PrintUsage(argv[0]); /* This function will exit */
+      break;
+    case 'n':
+      PrintSumStatNames();
       break;
     case 'H':   /* Print header */
       gPrintHeader = 1;

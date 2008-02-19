@@ -84,6 +84,8 @@ my $msprior = FindExec("msprior");
 my $msDQH = FindExec("msDQH");
 my $sumstatsvector = FindExec("sumstatsvector");
 
+my $rmTempFiles = 1; # set this to 0 for debugging
+
 # open and close a temp file
 # This is used to store the prior paras from msprior (psiarray and tauarray)
 my $tmpPriorOut, $tmpPriorOutfh;
@@ -91,8 +93,12 @@ do {$tmpPriorOut = tmpnam()} until $tmpPriorOutfh =
     IO::File->new($tmpPriorOut, O_RDWR|O_CREAT|O_EXCL);
 END {                   # delete the temp file when done
     if (defined($tmpPriorOut) && -e $tmpPriorOut) {
-	unlink($tmpPriorOut) || die "Couldn't unlink $tmpPriorOut : $!"
+	if (defined($rmTempFiles)) {
+	    unlink($tmpPriorOut) || die "Couldn't unlink $tmpPriorOut : $!";
+	} else {
+	    print STDERR "FILE: \$tmpPriorOut = $tmpPriorOut\n";
 	}
+    }
 };
 $tmpPriorOutfh->close();
 $options = $options . " --priorOut $tmpPriorOut ";
@@ -106,8 +112,12 @@ do {$tmpMainOut = tmpnam()} until $tmpMainOutfh =
     IO::File->new($tmpMainOut, O_RDWR|O_CREAT|O_EXCL);
 END {                   # delete the temp file when done
     if (defined($tmpMainOut) && -e $tmpMainOut) {
-	unlink($tmpMainOut) || die "Couldn't unlink $tmpMainOut : $!"
+	if (defined($rmTempFiles)) {
+	    unlink($tmpMainOut) || die "Couldn't unlink $tmpMainOut : $!";
+	}  else {
+	    print STDERR "FILE: \$tmpMainOut = $tmpMainOut\n";
 	}
+    }
 };
 $tmpMainOutfh->close();
 
@@ -118,8 +128,12 @@ do {$tmpSumStatVectScratch = tmpnam()} until $tmpSumStatVectScratchFh =
     IO::File->new($tmpSumStatVectScratch, O_RDWR|O_CREAT|O_EXCL);
 END {                   # delete the temp file when done
     if (defined($tmpSumStatVectScratch) && -e $tmpSumStatVectScratch) {
-	unlink($tmpSumStatVectScratch) || die "Couldn't unlink $tmpSumStatVectScratch : $!"
+	if (defined($rmTempFiles)) {
+	    unlink($tmpSumStatVectScratch) || die "Couldn't unlink $tmpSumStatVectScratch : $!";
+	} else {
+	    pritn STDERR "FILE: \$tmpSumStatVectScratch = $tmpSumStatVectScratch\n";
 	}
+    }
 };
 $tmpSumStatVectScratchFh->close();
 
@@ -405,7 +419,7 @@ sub ColCatFiles {
     chomp $numLines2;
 
     if ($numLines1 != $numLines2) {
-	warn "WARN: number of lines differ between $infilename1 and $infilename2\n";
+	warn "WARN: number of lines differ between $infilename1 ($numLines1 lines) and $infilename2 ($numLines2 lines)\n";
 	$retval = 2;
     }
     

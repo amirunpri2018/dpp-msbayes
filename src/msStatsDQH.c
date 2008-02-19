@@ -41,6 +41,7 @@
 #define MAX_LEN_COLUMN_NAME 128  /* Used for header. This is the maximum char length
 				    of names for each column */
 
+
 double nucdiv (int, int, char **);double nucdiv_w (int, int, char **, int, int *);
 double nucdiv_w1(int, int, char **, int, int *);
 double nucdiv_w2(int, int, char **, int, int *);
@@ -67,10 +68,17 @@ void shannonIndex(char **list, int* config, double **shannonIndexArray);
 int charCount(char *arr);
 extern int gPrintHeader; /* boolean 1 means print header (column names), 0 = no header
 			    -H option invoke printing of the header */
-
 static void PrintHeader(char priorNames[][MAX_LEN_COLUMN_NAME], int numPriors, 
 			char sumStatNames[][MAX_LEN_COLUMN_NAME], int numSumStats, 
 			int numTaxonPairs);
+
+/***** MAKE SURE the following two lines are up-to-date *****/
+int numSumStats = 17;
+char ssNameVect[][MAX_LEN_COLUMN_NAME] =
+  {"pi.b", "pi.w", "pi", "wattTheta", "pi.net", "tajD", "tajD.denom", 
+   "pi.wPop2", "pi.wPop1", "wattTheta.Pop2", "wattTheta.Pop1", 
+   "tajD.denomPop2", "tajD.denomPop1", "ShannonsIndex.Between", 
+   "ShannonsIndex.Net", "ShannonsIndex.Pop1", "ShannonsIndex.Pop2"};
 
 struct SumStat
 {	
@@ -125,6 +133,15 @@ static int SS_comp (const void *p1, const void *p2)
   /*return  ( sp1->PI_b) - ( sp2->PI_b); */
 }
 
+
+/* Print out the available summary stats and Exit */
+void PrintSumStatNames (void) {
+  int i;
+  for (i = 0; i < numSumStats; i++) {
+    printf("%s\n", ssNameVect[i]);
+  }
+  exit(0);
+}
 
 /*
   nsam: number of samples
@@ -290,22 +307,24 @@ printstats (int nsam, int segsites, char **list, int nsub, int npops, int *n,
       qsort (SumStat_list, NumTaxa, sizeof SumStat_list[0], SS_comp);
 
       {
-	/* NOTE:  If you modify the order to print out the summary stats and pirors
-	 * or if new summary stats are added, please modify numPriorColumns, numStats,
-	 * priorNameVect, and ssNameVect.  numSumStats should be the number
-	 * of summary statistics used for each taxon pair. ORDER is important.
-	 * For prior names, start with "PRI."
+	/****** NOTE ******
+	 *
+	 * (A) If new summary stat is added or the print order is
+	 *     changed, please modify the global: numStats and
+	 *     ssNameVect (top of this file).  numSumStats should be
+	 *     the number of summary statistics used for each taxon
+	 *     pair.
+	 *
+	 * (B) If new prior is added or the print order is changed,
+	 *     please modify numPriorColumns and priorNameVect.  For
+	 *     prior names, start with "PRI."
+	 *  
+	 * ORDER of names is important!
 	 */
 	if (gPrintHeader) {
 	  int numPriorColumns = 4;
 	  char priorNameVect[][MAX_LEN_COLUMN_NAME] = 
 	    {"PRI.Psi", "PRI.var.t", "PRI.E.t", "PRI.omega"};
-	  int numSumStats = 17;
-	  char ssNameVect[][MAX_LEN_COLUMN_NAME] =
-	    {"pi.b", "pi.w", "pi", "wattTheta", "pi.net", "tajD", "tajD.denom", 
-	     "pi.wPop2", "pi.wPop1", "wattTheta.Pop2", "wattTheta.Pop1", 
-	     "tajD.denomPop2", "tajD.denomPop1", "ShannonsIndex.Between", 
-	     "ShannonsIndex.Net", "ShannonsIndex.Pop1", "ShannonsIndex.Pop2"};
 	  PrintHeader(priorNameVect,numPriorColumns,ssNameVect,numSumStats,STATLOAD);
 	}
 	

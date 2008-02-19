@@ -16,6 +16,7 @@ library(locfit)  # this need to be installed from CRAN
 # There is a setion "Add-on packages" describing how to install packages.
 
 
+#### UPDATE HERE, this is not true any more
 #### Note that the following two vector variables are used in getData()
 #    If the outputs of sumstatsvector (including ordering) is changed,
 #    you can modify these two vectors accordingly, and everything should work.
@@ -25,15 +26,15 @@ library(locfit)  # this need to be installed from CRAN
 # If you change the name here, you need to change a few statements
 # in stdAnalysis()
 # for unconstrained
-params.from.priorDistn.orig <- c("Psi", "var.t", "E.t", "omega")
+#params.from.priorDistn.orig <- c("Psi", "var.t", "E.t", "omega")
 # constrained with 2 psi
-params.from.priorDistn2 <- c("Tau1", "Tau2", "Psi1", "Psi2", "Psi", "var.t", "E.t", "omega")
+#params.from.priorDistn2 <- c("Tau1", "Tau2", "Psi1", "Psi2", "Psi", "var.t", "E.t", "omega")
 
 # If there are 9 taxon pairs, there are 9 columns of "pi.b" stats for
 # each taxon pairs, then 9 columns of "pi.w", ... etc.
 # If you change the names here, don't forget to update the default value
 # of used.stats in stdAnalysis
-summary.stat.names <- c("pi.b", "pi.w", "pi", "wattTheta", "pi.net", "tajD", "tajD.denom", "pi.wPop2", "pi.wPop1", "wattTheta.Pop2", "wattTheta.Pop1", "tajD.denomPop2", "tajD.denomPop1", "ShannonsIndex.Between", "ShannonsIndex.Net", "ShannonsIndex.Pop1", "ShannonsIndex.Pop2"  )
+#summary.stat.names <- c("pi.b", "pi.w", "pi", "wattTheta", "pi.net", "tajD", "tajD.denom", "pi.wPop2", "pi.wPop1", "wattTheta.Pop2", "wattTheta.Pop1", "tajD.denomPop2", "tajD.denomPop1", "ShannonsIndex.Between", "ShannonsIndex.Net", "ShannonsIndex.Pop1", "ShannonsIndex.Pop2"  )
 
 #summary.stat.names <- c("pi.b", "pi.w", "pi", "wattTheta", "pi.net",
 #                            "tajD", "tajD.denom", "pi.wPop2", "pi.wPop1", "wattTheta.Pop2", "wattTheta.Pop1", "tajD.denomPop2", "tajD.denomPop1")
@@ -63,21 +64,31 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
                         tol=0.002,
                         used.stats=c("pi","wattTheta","pi.net","tajD.denom"),
                         rejmethod=T, pre.rejected=F,
-                        return.res=F, constrained=F
+                        return.res=F
                         ) {
-  if(constrained) {
-    params.from.priorDistn <- params.from.priorDistn2
-  } else {
-    params.from.priorDistn <- params.from.priorDistn.orig  
-  }
+#  if(constrained) {
+#    params.from.priorDistn <- params.from.priorDistn2
+#  } else {
+#    params.from.priorDistn <- params.from.priorDistn.orig  
+#  }
   
-  simDat <- getData(sim.infile, params.from.priorDistn)
+  simDat <- getData(sim.infile)
   if(pre.rejected) {
-    prior.dat <- scan(prior.infile)
-    prior.dat <- data.frame(matrix(prior.dat, ncol=length(params.from.priorDistn), byrow=T))
-    names(prior.dat) <- params.from.priorDistn
+    priorHeader <- scan(prior.infile,what="character", nlines=1, quiet=T)
+    if (length(priorHeader) != length(simDat$prior.names)) {
+      cat("ERROR: prior file doesn't have the correct number of columns\n")
+      return(NA)
+    } else if (any(priorHeader != simDat$prior.names)) {
+      cat("ERROR: prior file doesn't match simDat\n")
+      return(NA)
+    }
+    prior.dat <- scan(prior.infile, skip=1, quiet=T)
+    prior.dat <- data.frame(matrix(prior.dat, ncol=length(priorHeader), byrow=T))
+    names(prior.dat) <- priorHeader
   }
   nPairs <- simDat[["numTaxonPairs"]]
+  params.from.priorDistn <- simDat[["prior.names"]]
+  summary.stat.names <- simDat[["summary.stats"]]
   simDat <- simDat[["dat"]]
 
   # construct the column names
@@ -85,7 +96,7 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
                                    1:nPairs, sep="."))
 
   #load OBSERVED summary stat vector
-  obsDat <-getData(obs.infile, params.from.priorDistn)
+  obsDat <-getData(obs.infile)
   if (obsDat[["numTaxonPairs"]] != nPairs) {
     cat("ERROR: The number of taxon pairs are not same between the\n      ",
         "observed data,", obsDat$numTaxonPairs, "pairs, and simulated data,",
@@ -93,146 +104,114 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
     return(NA)
   }
   obsDat <- obsDat[["dat"]]
-  
-  #acceptance/regression, .... ie  the meat
-  print("Working on Step 1")
-  result.omega <- makepdANY(as.vector(obsDat[1,usedColNames],mode="numeric"),
-                        simDat[,"omega"], simDat[,usedColNames], tol,
-                        rep(T,len=nrow(simDat)),rejmethod=rejmethod)
-  print("Working on Step 2")
-  result.Psi <- makepdANY(as.vector(obsDat[1,usedColNames],mode="numeric"),
-                        simDat[,"Psi"], simDat[,usedColNames], tol,
-                        rep(T,len=nrow(simDat)),rejmethod=rejmethod)
-  print("Working on Step 3")
-  result.E.t <- makepdANY(as.vector(obsDat[1,usedColNames],mode="numeric"),
-                        simDat[,"E.t"], simDat[,usedColNames], tol,
-                        rep(T,len=nrow(simDat)),rejmethod=rejmethod)
-  
-  if (constrained) {
-    print("Working on Step 4")
-    result.Tau1 <- makepdANY(as.vector(obsDat[1,usedColNames],mode="numeric"),
-                             simDat[,"Tau1"], simDat[,usedColNames], tol,
-                             rep(T,len=nrow(simDat)),rejmethod=rejmethod)
-  
-    print("Working on Step 5")
-    result.Tau2 <- makepdANY(as.vector(obsDat[1,usedColNames],mode="numeric"),
-                             simDat[,"Tau2"], simDat[,usedColNames], tol,
-                             rep(T,len=nrow(simDat)),rejmethod=rejmethod)
 
-    print("Working on Step 6")
-    result.Psi1 <- makepdANY(as.vector(obsDat[1,usedColNames],mode="numeric"),
-                             simDat[,"Psi1"], simDat[,usedColNames], tol,
-                             rep(T,len=nrow(simDat)),rejmethod=rejmethod)
-    
-    print("Working on Step 7")
-    result.Psi2 <- makepdANY(as.vector(obsDat[1,usedColNames],mode="numeric"),
-                             simDat[,"Psi2"], simDat[,usedColNames], tol,
-                             rep(T,len=nrow(simDat)),rejmethod=rejmethod)
+  # acceptance/regression, .... ie  the meat
+  # The 1st column is PRI.numTauClass, which should be removed from analysis
+  result <- list(prior.names=
+                 params.from.priorDistn[params.from.priorDistn != "PRI.numTauClass"])
+  # The column tells the model of Psi
+  if(simDat[1,"PRI.numTauClass"] != 0) { # constrained
+    constrained <- T
+    # get rid of PRI.Psi, which is always constant in constrained Psi
+    result$prior.names <- result$prior.names[result$prior.names != "PRI.Psi"]
+  } else {
+    constrained <- F
   }
   
-  # Transformations, absorbing boundary at 0.0
-  result.omega$x[which(result.omega$x < 0)] <- 0
-  result.Psi$x[which(result.Psi$x < 1)] <- 1
-  result.E.t$x[which(result.E.t$x < 0)] <- 0
-  result.Psi$x[which(result.Psi$x > nPairs)] <- nPairs
-
+  # set min, max boundary of prior parameters, and verbose print message
+  # PRI.omega >= 0, PRI.E.t >= 0, PRI.Psi > 0
+  min.val <- list(PRI.omega = 0, PRI.E.t = 0, PRI.Psi = 1)
+  max.val <- list(PRI.Psi = nPairs)
+  verbose.print <- list(PRI.omega = "(=Var(t)/E(t))",
+                        PRI.Psi="(= number of possible divtimes)",
+                        PRI.E.t="(= E(t))")
+  # PRI.Tau* >= 0
+  tauNames <- params.from.priorDistn[grep("^PRI[.]Tau", params.from.priorDistn)]
+  if(length(tauNames) > 0) {
+    temp.val <- sapply(rep(0, length(tauNames)), list)
+    names(temp.val) <- tauNames
+    min.val <- c(min.val, temp.val)
+  }
+  # 1 <= PRI.Psi.* <= nPairs - (numTauClasss - 1)
   if(constrained) {
-    result.Tau1$x[which(result.Tau1$x < 0)] <- 0
-    result.Tau2$x[which(result.Tau2$x < 0)] <- 0
+    psiNames <- params.from.priorDistn[grep("^PRI[.]Psi[.]", params.from.priorDistn)]
+    temp.val <- sapply(rep(1, length(psiNames)), list)
+    names(temp.val) <- psiNames
+    min.val <- c(min.val, temp.val)
+    # I could use length of psiNames below, instead of simDat[1,1] to get numTauClass
+    temp.val <- sapply(rep(nPairs - (simDat[1,"PRI.numTauClass"]-1), length(psiNames)), list)
+    names(temp.val) <- psiNames
+    max.val <- c(max.val, temp.val)
     
-    result.Psi1$x[which(result.Psi1$x < 1)] <- 1
-    result.Psi2$x[which(result.Psi2$x < 1)] <- 1
-    
-    result.Psi1$x[which(result.Psi1$x > (nPairs-1))] <- (nPairs-1)
-    result.Psi2$x[which(result.Psi2$x > (nPairs-1))] <- (nPairs-1)
+    temp.val <- sapply(rep("(= number of possible divtimes)", length(psiNames)), list)
+    names(temp.val) <- psiNames
+    verbose.print <- c(verbose.print, temp.val)
   }
-
-  # Print out the results
-  cat("######### results #######\n")
-  cat("### Mode estimation for Omega (=Var(t)/E(t))\n")
-  res.mode <- loc1stats(result.omega$x,prob=0.95)[1]
-  cat("# Mode\n")
-  print(res.mode)
-  cat("# 95 % quantile for Omega (=Var(t)/E(t))\n")  
-  print(quantile(result.omega$x,prob=c(0.025,0.975)))
   
-  cat("\n### Mode estimation for Psi (= # of possible divtimes)\n")
-  res.mode <- loc1stats(result.Psi$x,prob=0.95)[1]
-  cat("# Mode\n")
-  print(res.mode)  
-  cat("# 95 % quantile for Psi (= # of possible divtimes)\n")
-  print(quantile(result.Psi$x,prob=c(0.025,0.975)))
+  # run makepdANY for each para
+  for (i in 1:length(result$prior.names)) {
+    thisPriorName <- result$prior.names[i]
+    # might need to work on constrained vs unconstrained here
+    temp <- list(makepdANY(as.vector(obsDat[1,usedColNames],mode="numeric"),
+                           simDat[,thisPriorName], simDat[,usedColNames], tol,
+                           rep(T,len=nrow(simDat)),rejmethod=rejmethod))
+    names(temp) <- thisPriorName
 
-  cat("\n### Mode estimation for E(t)\n")
-  res.mode<-loc1stats(result.E.t$x,prob=0.95)[1]
-  cat("# Mode\n")
-  print(res.mode)  
-  cat("# 95 % quantile for E(t)")
-  print(quantile(result.E.t$x,prob=c(0.025,0.975)))
-
-  if (constrained) {
-    cat("\n### Mode estimation for Tau1\n")
-    res.mode<-loc1stats(result.Tau1$x,prob=0.95)[1]
-    cat("# Mode\n")
-    print(res.mode)
-    cat("# 95 % quantile for Tau1")
-    print(quantile(result.Tau1$x,prob=c(0.025,0.975)))
+    # absorbing boundary
+    if ( !  is.null(min.val[[thisPriorName]])) {
+      temp[[thisPriorName]]$x[which(temp[[thisPriorName]]$x<min.val[[thisPriorName]])] <- min.val[[thisPriorName]]
+    }
+    if ( !  is.null(max.val[[thisPriorName]])) {
+      temp[[thisPriorName]]$x[which(temp[[thisPriorName]]$x>max.val[[thisPriorName]])] <- max.val[[thisPriorName]]
+    }
     
-    cat("\n### Mode estimation for Tau2\n")
-    res.mode<-loc1stats(result.Tau2$x,prob=0.95)[1]
-    cat("# Mode\n")
-    print(res.mode)
-    cat("# 95 % quantile for Tau2")
-    print(quantile(result.Tau2$x,prob=c(0.025,0.975)))
-
-
-    cat("\n### Mode estimation for Psi1 (= # of possible divtimes)\n")
-    res.mode <- loc1stats(result.Psi1$x,prob=0.95)[1]
-    cat("# Mode\n")
-    print(res.mode)
-    cat("# 95 % quantile for Psi1 (= # of possible divtimes in Tau1)\n")
-    print(quantile(result.Psi1$x,prob=c(0.025,0.975)))
-    
-    cat("\n### Mode estimation for Psi2 (= # of possible divtimes)\n")
-    res.mode <- loc1stats(result.Psi2$x,prob=0.95)[1]
-    cat("# Mode\n")
-    print(res.mode)
-    cat("# 95 % quantile for Psi2 (= # of possible divtimes in Tau2)\n")
-    print(quantile(result.Psi2$x,prob=c(0.025,0.975)))
+    result <- c(result, temp)
   }
 
+  cat("######### results #######\n")
+  # make print loop for Mode and quantile
+  for (i in 1:length(result$prior.names)) {
+    thisPriorName <- result$prior.names[i]
+    name.rm.PRI <- sub("PRI[.]", "", thisPriorName)
+    if(! is.null(verbose.print[[thisPriorName]])) {
+      additional.print <- verbose.print[[thisPriorName]]
+    } else {
+      additional.print <- ""
+    }
+    
+    cat ("### Mode estimation for ", name.rm.PRI, " ", additional.print, "\n");
+    res.mode <- loc1stats((result[[thisPriorName]])$x,prob=0.95)[1]
+    cat ("# Mode\n")
+    print(res.mode)
+    cat ("# 95 % quantile for ", name.rm.PRI, " ", additional.print, "\n");
+    print(quantile((result[[thisPriorName]])$x,prob=c(0.025,0.975)))
+  }
 
   # Print out figures
   pdf(pdf.outfile)
-
-  if (pre.rejected) {
-    if(constrained) {
-      make.hist(prior.dat[,"Tau1"], result.Tau1, title="Most recent Tau")
-      make.hist(prior.dat[,"Tau2"], result.Tau2, title="oldest Tau")
-      make.hist(prior.dat[,"Psi1"], result.Psi1, title="#taxon pairs divergence Tau1")
-      make.hist(prior.dat[,"Psi2"], result.Psi2, title="#taxon pairs divergence Tau2")
-    }
-    make.hist(prior.dat[,"omega"], result.omega, title="Omega (Var(t)/E(t))")
-    make.hist(prior.dat[,"Psi"], result.Psi, title="Psi (# of possible divtimes)")
-    make.hist(prior.dat[,"E.t"], result.E.t, title="E(t)")
-  } else {
-    if (constrained) {
-      make.hist(simDat[,"Tau1"], result.Tau1, title="Most recent Tau")
-      make.hist(simDat[,"Tau2"], result.Tau2, title="oldest Tau")
-      make.hist(simDat[,"Psi1"], result.Psi1, title="#taxon pairs divergence Tau1")
-      make.hist(simDat[,"Psi2"], result.Psi2, title="#taxon pairs divergence Tau2")
+  for (i in 1:length(result$prior.names)) {
+    thisPriorName <- result$prior.names[i]
+    name.rm.PRI <- sub("PRI[.]", "", thisPriorName)
+    if(! is.null(verbose.print[[thisPriorName]])) {
+      additional.print <- verbose.print[[thisPriorName]]
+    } else {
+      additional.print <- ""
     }
 
-    make.hist(simDat[,"omega"], result.omega, title="Omega (Var(t)/E(t))")
-    make.hist(simDat[,"Psi"], result.Psi, title="Psi (# of possible divtimes)")
-    make.hist(simDat[,"E.t"], result.E.t, title="E(t)")
+    this.title <- paste(name.rm.PRI, additional.print, sep=" ")
+    if (pre.rejected) {
+      make.hist(prior.dat[,thisPriorName],result[[thisPriorName]], title=this.title)
+    } else {
+      make.hist(simDat[,thisPriorName],result[[thisPriorName]],title=this.title)
+    }
   }
+  
   # pdf("CrustCOITheta60Na30ssPibPi_jointdots7_18.pdf")
   #plot(result11$x,result22$x,xlim=c(0,0.7),ylim=c(0,2.0),lty=2,lwd=0.5)
-  plot(result.omega$x,result.E.t$x,xlim=c(0,0.7),ylim=c(0,2.0),lty=2,lwd=0.5)
+  plot((result[["PRI.omega"]])$x,(result[["PRI.E.t"]])$x,xlim=c(0,0.7),ylim=c(0,2.0),lty=2,lwd=0.5)
   # CHECK THIS
 
-  plotKernDensity(result.omega,result.E.t,
+  plotKernDensity(result[["PRI.omega"]],result[["PRI.E.t"]],
                   title="Omega and E(t)")
 
   # this plot doesn't seem to work.
@@ -245,7 +224,7 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
   dev.off()
 
   if (return.res)
-    return (list(nPairs=nPairs, simDat=simDat, obsDat=obsDat, result.omega=result.omega, result.Psi=result.Psi, result.E.t=result.E.t))
+    return (list(nPairs=nPairs, simDat=simDat, obsDat=obsDat, result=result))
   
 }
 
@@ -255,30 +234,28 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
 # Returns a list(dat, numTaxonPairs)
 # dat is the data.frame, numTaxonPairs is an integer indicating the number
 # of taxon pairs.
-getData <- function (infile, params.from.priorDistn) {
-#  dat <- read.table(infile, header=F)
-  first.line <- scan(infile, nlines=1)
-  dat <- scan(infile)
+
+getData <- function (infile) {
+  first.line <- scan(infile, what="character", nlines=1, quiet=T) #header
+  dat <- scan(infile, skip=1, quiet=T)
   dat <- data.frame(matrix(dat, ncol=length(first.line), byrow=T))
- # check this
+  names(dat) <- first.line  # assign the column names to the data.frame
+
+  prior.names <- first.line[grep("^PRI[.]", first.line)]
+  num.prior <- length(prior.names)
+  
+  # sum stats column-names (header) have the following form
+  #   c("pi.b.1", "pi.b.2", "pi.b.3", "pi.w.1", "pi.w.2", "pi.w.3", ...)
+  # Here, I'm getting rid of .digits part and taking uniue names.
+  sum.stat.names <- unique(sub("[.][0-9]+$", "", first.line[(num.prior+1):length(first.line)],fixed=F))  
 
   # number of taxon pairs can be calculated from
   nTaxPairs <-
-    (ncol(dat) - length(params.from.priorDistn)) / (length(summary.stat.names))
+    (ncol(dat) - num.prior) / (length(sum.stat.names))
 
-  # Make the column Names
-  # Now columnNames becomes a vector
-  #   c("pi.b.1", "pi.b.2", "pi.b.3", "pi.w.1", "pi.w.2", "pi.w.3", ...)
-  # for 3 taxon pair
-  columnNames <- as.vector(sapply(summary.stat.names, paste,
-                                  1:nTaxPairs, sep="."))
-
-  columnNames <- c(params.from.priorDistn, columnNames)
-  
-  names(dat) <- columnNames  # assign the column names to the data.frame
-  
-  return (list(dat=dat, numTaxonPairs=nTaxPairs))
+  return (list(dat=dat, numTaxonPairs=nTaxPairs, prior.names=prior.names, summary.stats=sum.stat.names))
 }
+
 
 # -----------------------------------------------------------------------
 # 2D Kernel density estimates: q1 X q2
