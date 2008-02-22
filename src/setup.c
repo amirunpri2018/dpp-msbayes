@@ -860,10 +860,13 @@ static int ReadMutLine(mutParameter *mpp, char *line, int ncol)
     mpp->gamma = 999;
 
     if (mpp->numPerTaxa != mpp->sample[0] + mpp->sample[1]) {
+ 
       fprintf(stderr, 
 	      "Error: In the following line, 2nd and 3rd column doesn't add\n"
 	      "up to the 1st column\n%s\n", line);
-      exit (EXIT_FAILURE);
+      exit (EXIT_FAILURE); 
+	  
+	  
     }
   } else if (ncol == 8) {
     rc = sscanf(line, "%u %u %lf %u %lf %lf %lf %s",
