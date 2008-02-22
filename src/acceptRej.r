@@ -188,7 +188,7 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
   }
 
   # Print out figures
-  pdf(pdf.outfile)
+  pdf(pdf.outfile, width=7.5, height=10, paper="letter")
   for (i in 1:length(result$prior.names)) {
     thisPriorName <- result$prior.names[i]
     name.rm.PRI <- sub("PRI[.]", "", thisPriorName)
@@ -199,11 +199,16 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
     }
 
     this.title <- paste(name.rm.PRI, additional.print, sep=" ")
+    old.mfcol <- par()$mfcol
+    par(mfcol=c(3,1))  # 3 plots per page
     if (pre.rejected) {
-      make.hist(prior.dat[,thisPriorName],result[[thisPriorName]], title=this.title)
+      make.hist(prior.dat[,thisPriorName],result[[thisPriorName]], title=this.title, breaks=20)
+      plot.bf(prior.dat[,thisPriorName],result[[thisPriorName]]$x, main=this.title)
     } else {
-      make.hist(simDat[,thisPriorName],result[[thisPriorName]],title=this.title)
+      make.hist(simDat[,thisPriorName],result[[thisPriorName]],title=this.title,breaks=20)
+      plot.bf(simDat[,thisPriorName],result[[thisPriorName]]$x,main=this.title)
     }
+    par(mfcol=old.mfcol)
   }
   
   # pdf("CrustCOITheta60Na30ssPibPi_jointdots7_18.pdf")
@@ -274,21 +279,77 @@ plotKernDensity <- function (res1, res2, title="q1 and q2", xlab="q1", ylab="q2"
         ticktype = "detailed", ltheta = -135, lphi = 145, shade = TRUE)
 }
 
-make.hist <-function(vect, res.makepd, title="", xlim) {
+make.hist <-function(vect, res.makepd, title="", xlim, ...) {
+  #old.mfcol <- par()$mfcol
+  #par(mfcol=c(2,1))
+  hist.col = "gray"
   if(missing(xlim)) {
-    hist(vect,br=15,col="black",prob=TRUE,main=paste(title, "Raw"),
-       xlab=title)
+    hist(vect,br=15,col=hist.col,prob=TRUE,main=paste(title, ": Prior Dist'n"),
+       xlab=title, ...)
   } else {
-    hist(vect,br=15,col="black",xlim=xlim,prob=TRUE,main=paste(title, "Raw"),
-       xlab=title)
+    hist(vect,br=15,col=hist.col,xlim=xlim,prob=TRUE,main=paste(title, ": Prior Dist'n"),
+       xlab=title, ...)
   }
   lines(density(vect,bw=0.1),lty=2)
   if(missing(xlim)) {
-    hist(res.makepd$x,br=15,col="black",prob=TRUE,
-         main=paste(title, "Adj. "), xlab=title)
+    hist(res.makepd$x,br=15,col=hist.col,prob=TRUE,
+         main=paste(title, ": Posterior Dist'n "), xlab=title, ...)
   } else {
-    hist(res.makepd$x,br=15,col="black",xlim=xlim,prob=TRUE,
-         main=paste(title, "Adj. "), xlab=title)
+    hist(res.makepd$x,br=15,col=hist.col,xlim=xlim,prob=TRUE,
+         main=paste(title, ": Posterior Dist'n "), xlab=title, ...)
   }
   lines(density(res.makepd$x,bw=0.1))
+  #par(mfcol=old.mfcol)
+}
+
+
+plot.bf <- function(prior,posterior, ...) {
+  bf.out <- make.bf.vect(prior,posterior)
+  if (is.null(bf.out)) {
+    return(NULL);
+  }
+
+  plot(bf.out$crit.vals, bf.out$bf, type="l",
+       ylim=c(0,min(40, max(bf.out$bf) * 1.1)),
+       xlab="Crit. val",ylab="Bayes Factor",...)
+  line.type = 3
+  abline (1, 0, lty=2)
+  abline(3, 0, lty=line.type)
+  abline(10, 0, lty=line.type)
+  abline(1/3, 0, lty=line.type)
+  abline(1/10, 0, lty=line.type)
+}
+
+# Compares two Model of x < crit.val and x >= crit.val, and
+# calculate the bayes factor.
+# It returns a data.frame with two columns
+make.bf.vect <- function(prior, posterior, crit.vals = NULL, num.points=100) {
+
+  prior.len <- length(prior)
+  posterior.len <- length(posterior)
+  if (prior.len * posterior.len == 0) {  # some error
+    return(NULL);
+  }
+
+  if (is.null(crit.vals)) {
+    temp.pos <- posterior[posterior != max(posterior) &
+                          posterior != min(posterior)]
+     post.range <- range(temp.pos)
+     crit.vals <- seq(post.range[1], post.range[2], length.out=num.points)
+  }
+  
+  bf.vect <- numeric (0)
+  for(i in 1:length(crit.vals)) {
+    prior.below <- length(which(prior < crit.vals[i]))
+    posterior.below <- length(which(posterior < crit.vals[i]))
+    if (prior.below == 0 || posterior.below == posterior.len) {
+      this.bf <- Inf
+    } else {
+      this.bf <- posterior.below * (prior.len-prior.below)/
+        ((posterior.len - posterior.below) * prior.below)
+    }
+    bf.vect <- c(bf.vect, this.bf)
+  }
+
+  return (data.frame(crit.vals=crit.vals, bf=bf.vect))
 }

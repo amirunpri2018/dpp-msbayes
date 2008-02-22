@@ -50,6 +50,7 @@ nss <- length(sumstat[1,])
 
 # wt1 defines the region we're interested in 
     abstol <- quantile(dst,tol)
+# making sure all simulated results are included when tol = 1.
     if(tol == 1) {abstol <- abstol * 1.1}
     wt1 <- dst < abstol
 
@@ -57,12 +58,20 @@ nss <- length(sumstat[1,])
         l1 <- list(x=x[wt1],wt=0)
     }
     else{
+        # this is proportional to k_delta(t) expression (5) of
+        # Beaumont et al (2002)
         regwt <- 1-dst[wt1]^2/abstol^2
 
+        # Note that scaled.sumstat is used instead of difference between
+        # scaled.sumstat and target.s.  Since target.s (constant) is
+        # subtracted from each simulated sumstat in Beaumont et al (2002),
+        # we do not need to include it in the lsfit below.  The estimated
+        # slopes are the same.  However intercept needs to be adjusted
+        # below (see predmean).  predmean = hat(alpha) of the paper.
         fit1 <- lsfit(scaled.sumstat[wt1,],x[wt1],wt=regwt)
-
         predmean <- fit1$coeff %*% c(1,target.s)
 
+        # x, correspond to phi*_i (between expressions (3) and (4) of the paper)
         l1 <- list(x=fit1$residuals+predmean,vals=x[wt1],wt=regwt,ss=sumstat[wt1,],predmean=predmean,fv = x[wt1]-fit1$residuals)
 
     }
