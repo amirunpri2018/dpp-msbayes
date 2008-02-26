@@ -35,17 +35,21 @@ my $usage="Usage: $0 [-hnacr] [-p outPDF] [-s summary_stats] \n" .
     "  -s: statString (e.g. -s '$statString', <=default)\n".
     "      The summary statistics listed here will be used\n".
     "  -a: old analysis with all R processing (nobody needs it)\n" .
-    "  -t: tolerance (a value between 0 an 1, default: $defaultTolerance)\n" 
-#   . "  -c: analysis based on prior constrained by Psi=2 to allow obtaining\n".
-#    "      posteriors of extra hyper-parameters Psi1, Psi2, tau1, and tau2 \n"
+    "  -t: tolerance (a value between 0 an 1, default: $defaultTolerance)\n"  .
+    "  -i: Leave intermediate data files used for R and print out the\n".
+    "      filenames of these temporary files.  By default, these files get\n".
+    "      erased after the analysis.  These files can be useful for\n".
+    "      debugging.  Or these files can be used to conduct more detailed\n".
+    "      analysis or to create custom figures in R.  With the manual R\n".
+    "      analysis, you can source() the file pointed by \$tmpR to set up\n".
+    "      the environment.  A list object \"res\" contains relevant data.\n"
     ;
 
-
 use Getopt::Std;
-getopts('ahndp:rt:s:') || die "$usage\n";
+getopts('ahindp:rt:s:') || die "$usage\n";
 die "$usage\n" if (defined($opt_h));
 
-our($opt_a, $opt_h, $opt_n, $opt_d, $opt_p, $opt_r, $opt_t, $opt_s);
+our($opt_a, $opt_h, $opt_i, $opt_n, $opt_d, $opt_p, $opt_r, $opt_t, $opt_s);
 
 use File::Copy;
 use IO::File;
@@ -55,7 +59,7 @@ use POSIX qw(tmpnam);
 my $mainRscript = "acceptRej.r";
 my $make_pdRscript = "make_pd2005.r";
 my $loc2plotRscript = "loc2plot.r";
-my $rejectionExe = "msReject"; # rejection program
+my $rejectionExe = "msReject";         # rejection program
 my $sumStatExe = "sumstatsvector";
 
 # Adding the following paths to @INC, so we can find the R scripts.
@@ -74,12 +78,17 @@ if (defined($opt_d)) {
     print STDERR "\n";
 }
 
-my $rmTempFiles = 1;  # set this to 0 for debugging
-
 if(defined($opt_n)) {
     PrintSumStatNames();
     exit(0);
 }
+
+###  create a bunch of temp files
+my $rmTempFiles = 1;  # set this to 0 for debugging
+if (defined($opt_i)) {
+    $rmTempFiles = 0;
+}
+
 # open a temporary file to store the dynamically created R script
 do {$tmpR = tmpnam()} until $tmpRfh = 
     IO::File->new($tmpR, O_RDWR|O_CREAT|O_EXCL);
@@ -100,7 +109,7 @@ do {$tmpObs = tmpnam()} until $tmpObsfh =
 END {                   # delete the temp file when done
     if ($rmTempFiles) {
 	if (defined($tmpObs) && -e $tmpObs) {
-	    unlink($tmpObs) || die "Couldn't unlink $tmpObs : $!"
+	    unlink($tmpObs) || die "Couldn't unlink $tmpObs : $!";
 	}
     } else {
 	print STDERR "FILE: \$tmpObs = $tmpObs\n" if (defined($tmpObs));
@@ -115,7 +124,7 @@ do {$tmpSimDat = tmpnam()} until $tmpSimDatfh =
 END {                   # delete the temp file when done
     if ($rmTempFiles) {
 	if (defined($tmpSimDat) && -e $tmpSimDat) {
-	    unlink($tmpSimDat) || die "Couldn't unlink $tmpSimDat : $!"
+	    unlink($tmpSimDat) || die "Couldn't unlink $tmpSimDat : $!";
 	}
     } else {
 	print STDERR "FILE: \$tmpSimDat = $tmpSimDat\n" if (defined($tmpSimDat));
@@ -129,7 +138,7 @@ do {$tmpSimDat2 = tmpnam()} until $tmpSimDat2fh =
 END {                   # delete the temp file when done
     if ($rmTempFiles) {
 	if (defined($tmpSimDat2) && -e $tmpSimDat2) {
-	    unlink($tmpSimDat2) || die "Couldn't unlink $tmpSimDat2 : $!"
+	    unlink($tmpSimDat2) || die "Couldn't unlink $tmpSimDat2 : $!";
 	}
     } else {
 	print STDERR "FILE: \$tmpSimDat2 = $tmpSimDat2\n" if (defined($tmpSimDat2));
@@ -143,12 +152,14 @@ do {$tmpPrior = tmpnam()} until $tmpPriorfh =
 END {                   # delete the temp file when done
     if ($rmTempFiles) {
 	if (defined($tmpPrior) && -e $tmpPrior) {
-	    unlink($tmpPrior) || die "Couldn't unlink $tmpPrior : $!"
+	    unlink($tmpPrior) || die "Couldn't unlink $tmpPrior : $!";
 	}
     } else {
 	print STDERR "FILE: \$tmpPrior = $tmpPrior\n" if (defined($tmpPrior));
     }
 };
+
+#### end of setting-up temp files
 
 if (defined($opt_s)) {
     $statString = MkStatString($opt_s);
@@ -177,10 +188,9 @@ if(defined($opt_p)) {
     $pdfOut=$opt_p;
 }
 CheckNBackupFile($pdfOut);
+
 MkStdAnalysisRScript($tmpRfh);
-
 close($tmpRfh);  # the tmp R script is ready to use
-
 
 if(defined($opt_d)) {
     open RSCRIPT, "<$tmpR" || die ("ERROR: Can't open $tmpR\n");
@@ -268,9 +278,9 @@ for my $pNameIndex ($numExtraPrior..$#priorNames) {
 
 # read in obsData
 open OBS, "<$obsDat" || die "Can't open $obsDat\n";
-my @tmpObs = <OBS>;
+my @obsDataArray = <OBS>;
 close OBS;
-if (@tmpObs != 2) {
+if (@obsDataArray != 2) {
     die "ERROR: Observed data should have two lines: 1 header line and ".
 	"another data line\n";
 }
@@ -278,26 +288,36 @@ if (@tmpObs != 2) {
 if (! defined($opt_a)) {  # use the external acceptRejection C program
     my $tol = (defined($opt_t)) ?  $opt_t :  $defaultTolerance;
     
+    # count the line numbers
+    # my $simLineNum = `wc -l < $simDat`;
+    # die "wc $simDat failed: $?" if $?";
+    # chomp $simLineNum;
+    # $simLineNum --;  # remove the count for header
+    # if ($simLineNum > $numPriorSamples) {
+    #   draw an sorted array of random line number index
+    # }
     ## create the prior columns only file, and a file without header
     open SIMDAT, "<$simDat" || die "Can't open $simDat\n";
-	while (<SIMDAT>) {
-	    if ($. != 1) {  # removing the header
-		print $tmpSimDat2fh "$_";
-	    } else {  # print the header for the output from rejection 
-		print $tmpSimDatfh "$_";
-		$tmpSimDatfh->close();
-	    }
-	    chomp;
-	    my @line = split /\t/;
-	    my @priors = splice @line, 0, $numPriorCols;
-	    print $tmpPriorfh join("\t", @priors), "\n";
+    while (<SIMDAT>) {
+	if ($. != 1) {  # removing the header
+	    print $tmpSimDat2fh "$_";
+	} else {  # print the header for the output from rejection 
+	    print $tmpSimDatfh "$_";
+	    $tmpSimDatfh->close();
 	}
+	# if we want to shrink the prior for R, we can do it here.
+	chomp;
+	my @line = split /\t/;
+	my @priors = splice @line, 0, $numPriorCols;
+	print $tmpPriorfh join("\t", @priors), "\n";
+    }
     close SIMDAT;
     $tmpSimDat2fh->close();
     
     # finding the column numbers to use as the summary statistics
-    # WORK HERE
     my @usedSS = split /\s*,\s*/, $statString;
+    print STDERR "INFO: Using following summary statistics: ";
+    print STDERR join(",", @usedSS);
     my @index=();
     foreach my $ss (@usedSS) {
 	my @tmp = FindMatchingIndex($ss, @sumStatNames); # 0-offset
@@ -323,10 +343,12 @@ if (! defined($opt_a)) {  # use the external acceptRejection C program
     for (my $extra = 0; $extra < $numExtraPrior; $extra++) { # padding
 	print OBS "0\t";
     }
-    print OBS $tmpObs[1];  # only print the data part
+    print OBS $obsDataArray[1];  # only print the data part
     close OBS;
     # the headers are stripped from obsDat and simDat below
-    system ("$rejExe $tmpObs $tmpSimDat2 $tol $columns >> $tmpSimDat");
+    print STDERR "INFO: running $rejExe $tmpObs $tmpSimDat2 $tol $columns >> $tmpSimDat\n";
+    my $rc = system ("$rejExe $tmpObs $tmpSimDat2 $tol $columns >> $tmpSimDat");
+    die "$rejExe ran funny: $?" unles $rc == 0;
 }
 
 # prepare the obsDat for the acceptRej.r
@@ -334,23 +356,25 @@ open OBS, ">$tmpObs" || die "Can't open temporary obs file $tmpObs\n";
 for (my $extra = 0; $extra < $numExtraPrior; $extra++) { # header padding
     print OBS "$priorNames[$extra]\t";
 }
-print OBS $tmpObs[0];  # only print the data part
+print OBS $obsDataArray[0];  # only print the data part
 for (my $extra = 0; $extra < $numExtraPrior; $extra++) { # data padding
     print OBS "0\t";
 }
-print OBS $tmpObs[1];  # only print the data part
+print OBS $obsDataArray[1];  # only print the data part
 close OBS;
 
-my @critVals = (0.01, 0.05, 0.1);
-my @tmpCritVals =  ();
-foreach my $cc (@critVals) {
-    push  @tmpCritVals, ($cc) x $numPriorCols;
-}
+# The following is an attempt to implement Bayes Factor in perl
+# But it's now done in R.
+# my @critVals = (0.01, 0.05, 0.1);
+# my @tmpCritVals =  ();
+# foreach my $cc (@critVals) {
+#     push  @tmpCritVals, ($cc) x $numPriorCols;
+# }
 
 # return the proportion of values below the threshold
 # used to calculate bayes factor
-my @priorLT = 
-    FreqOfValuesLessThan([1..$numPriorCols],\@tmpCritVals, $simDat, 1);
+#my @priorLT = 
+#    FreqOfValuesLessThan([1..$numPriorCols],\@tmpCritVals, $simDat, 1);
 
 # run R
 my @output = `R --quiet --no-save --no-restore --slave < $tmpR`;
@@ -393,7 +417,6 @@ sub ProperMainRScript {
 }
 
 # Making R script to print out stat names
-# WORK HERE, this need to be changed
 sub PrintSumStatNames {
     my $sumStatExe = FindFile($sumStatExe);
     if ($sumStatExe eq '-1') {
@@ -426,17 +449,15 @@ sub MkStdAnalysisRScript {
     
     print $fh ", used.stats=c($statString)";
 
+    if (defined ($opt_i)) {
+	print $fh ", return.res=T";
+    }
+
     if (defined($opt_r)) {
 	print $fh ", rejmethod=T";  # no regression
     } else {
 	print $fh ", rejmethod=F";  # regression
     }
-
-#    if (defined($opt_c)) {
-#	print $fh ", constrained=T";  # constrained
-#    } else {
-#	print $fh ", constrained=F";  # not constrained
-#    }
 
     print $tmpRfh ")\n";
 
@@ -446,12 +467,29 @@ sub MkStdAnalysisRScript {
 sub MkStatString {
     my $ss = shift;
     $ss =~ s/^\s+//; $ss =~ s/\s+$//;
-    if ($ss =~ /"/ || $ss =~ /'/) {  # ' or " is already included, do nothing
-	return $ss;
+    my @arr = split /\s*,\s*/, $ss;
+    my @result =();
+    foreach my $ssName (@arr) {
+	$ssName =~ s/^['"]//;
+	$ssName =~ s/['"]$//;
+	if ($ssName =~ /['"]/) {
+	    die "ERROR: -s $ss was given, make sure the summary stats names ".
+		"are correct, and comma delimited (e.g -s 'pi,pi.b,wattTheta')\n";
+	}
+	$ssName =~ s/^\s+//; $ssName =~ s/\s+$//;
+	next if ($ssName =~ /^$/);
+	push @result, "\"$ssName\"";
     }
-    $ss =~ s/\s*,\s*/","/g;
-    $ss = "\"$ss\"";
+    @result = Unique(@result);
+    $ss = join ",", @result;
     return $ss;
+}
+
+# Receive an array, and extract unique elements
+sub Unique {
+    my %seen = ();
+    my @uniq = grep { ! $seen{$_} ++ } @_;
+    return @uniq;
 }
 
 # This fucntion check if the argument (fileName) exists. If it exists,
@@ -488,6 +526,9 @@ sub FindFile {
     return -1;
 }
 
+# The following function is not used, it was an attempt to implement
+# Bayes Factor.  But BF is done in acceptRej.r now.
+
 ## Read in a tab-delimited text file.
 ## Then it returns the array whose elements are the frequencies
 ## of values in columns less than the critical values.
@@ -503,7 +544,6 @@ sub FindFile {
 ##    freqs of values less than 0.5 in 2nd column,
 ##    freqs of values less than 1   in 1st column,
 ##    freqs of values less than 1   in 2nd column)
-
 sub FreqOfValuesLessThan {
     my($colNumArrRef, $valueArrRef, $filename, $header) = @_;
 
@@ -557,7 +597,6 @@ sub FreqOfValuesLessThan {
 # Read in the 1st line of simDat. The first several items contains  prior columns "PRI."
 # Then the summary statistics are given.  This function separate these,
 # and return two arrays of column names for prior and summary stats
-
 sub GetPriorSumStatNames {
     my $simDatFileName = shift;
     my @priorNames = ();
@@ -570,6 +609,13 @@ sub GetPriorSumStatNames {
     $line1 =~ s/^\s+//;  $line1 =~ s/\s+$//;
     my @header = split /\t/, $line1;
 
+    if ($header[0] =~ /^[.\d]+$/) {
+	die "ERROR: The first line of the input file should contain header.\n".
+	    "You may have created the files with older version of msBayes.pl\n".
+	    "and/or obsSumStats.pl, which is incompatible with this version\n".
+	    "of acceptRej.pl.  Please redo the analysis with the most recent\n".
+	    "version of programs\n".
+    }
     while (my $name = shift @header) {
 	if ($name =~ /^PRI\./) {
 	    push @priorNames, $name;
@@ -630,37 +676,6 @@ sub GetPriorSumStatNames {
     return (\@priorNames, \@header, $maxTaxonID);
 }
 
-
-# Do not need this
-# sub GetPriorSumStatNamesOld {
-#   my @priorNames = ();
-#   my @sumStatNames = ();
-
-#   my $additionalOpt =  (defined($opt_c))? "-c" : "";
-#   open NAMES, "$0 -n $additionalOpt 2> /dev/null |" || die "Can't run $0 -n\n";
-#                                         # running itself to get stat.names.
-#   my $state = 1;
-#   while(<NAMES>) {
-#     chomp;
-#     next if /^\s+$/;
-#     if ($state == 1 && /params.from.priorDistn/) {
-#       $state++; next;
-#     }
-#     if ($state == 2) {
-#       @priorNames = split /\s+/;
-#       $state++; next;
-#     }
-#     if ($state == 3 && /summary.stat.names/) {
-#       $state++; next;
-#     }
-#     if($state == 4) {
-#       @sumStatNames = split /\s+/;
-#       last;
-#     }
-#   }
-#   close NAMES;
-#   return (\@priorNames, \@sumStatNames);
-# }
 
 # Find the elements in @array which matches $target.digits and return the array of index
 # Returns 0-offset index array

@@ -21,16 +21,15 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA
 
-my $usage="Usage: $0 [-hd] [-s seed]\n".
+my $usage="Usage: $0 [-hd] [-s seed] [-r numSims] [-c config] [-o outputFileName]\n".
     "  -h: help\n".
-    "  -d: debug (msprior and msDQH uses the same initial seed = 1)\n".
-    "  -s: set the initial seed (but not verbose like -d)\n" .
-    "      By default (without -s), unique seed is automaically set from time\n".
-    "  -o: output file name\n" .
+    "  -r: number of repetitions".
     "  -c: configuration file for msprior.  Parameters setup interactively,\n".
     "      if this option is not specified\n" .
-    "  -r: number of repetitions";
-
+    "  -o: output file name\n" .
+    "  -s: set the initial seed (but not verbose like -d)\n" .
+    "      By default (without -s), unique seed is automaically set from time\n".
+    "  -d: debug (msprior and msDQH uses the same initial seed = 1)\n";
 
 my $defaultOutFile = "Prior_SumStat_Outfile";
 

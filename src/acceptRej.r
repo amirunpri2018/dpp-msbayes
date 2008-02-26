@@ -213,11 +213,11 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
   
   # pdf("CrustCOITheta60Na30ssPibPi_jointdots7_18.pdf")
   #plot(result11$x,result22$x,xlim=c(0,0.7),ylim=c(0,2.0),lty=2,lwd=0.5)
-  plot((result[["PRI.omega"]])$x,(result[["PRI.E.t"]])$x,xlim=c(0,0.7),ylim=c(0,2.0),lty=2,lwd=0.5)
+  plot((result[["PRI.omega"]])$x,(result[["PRI.E.t"]])$x,lty=2,lwd=0.5)
   # CHECK THIS
 
-  plotKernDensity(result[["PRI.omega"]],result[["PRI.E.t"]],
-                  title="Omega and E(t)")
+  plotKernDensity(result[["PRI.omega"]],result[["PRI.E.t"]], xlab="Omega",
+                  ylab="E(t)", title="Omega and E(t)")
 
   # this plot doesn't seem to work.
   ## pdf("Skink0.5Milltol0.002Na0.5.pdf") 
