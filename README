@@ -257,7 +257,7 @@ The obsSumVect file will then be one long line of columns. The first several col
 
 
 ##################################################################
-#### Step 2 Running the simulations
+#### Step 2 Running the simulations (randomly drawing from the hyper-prior and sub-priors)
 ##################################################################
 
 Now we are ready to run the simulation.  You should run the following
@@ -268,7 +268,7 @@ interactively ask you questions about the settings.  In the batch
 mode, all of the settings are included in master infile
 (SampleSize_MuModel_Vector in the example), and this is more
 convenient to run many simulations or submitting to batch queuing
-system.
+system. The batch mode also allows one to constrain some or all of the sub-parameters if one chooses (see below). 
 
 
 ----- Interactive mode -----
@@ -296,7 +296,7 @@ Upper limit of uniform prior distribution for theta [40.500000]:
 
 Upper limit of uniform prior distribution for tau, time of divergence (tau-max) [10.000000]: 
 
-Upper limit of discrete uniform hyper-prior distribution for number of events (divergence times per Y population pairs),   [1, #population pairs] : 
+Number of categories with different divergenece time.  The value should be between 1 and #taxon pairs.  For example, 2 means that the model is constrained to have two divergence events, and each taxon pairs belongs to either one of the two categories.  Specify 0 (default) if you do not want to constrain the number of categories, and want to draw it from the discrete uniform distribution of [1, #taxon pairs].  [0]:  : 
 
 Upper limit of uniform prior distribution for migration rate [0.000000]: 
 
@@ -306,7 +306,7 @@ Multiplier for the upper limit of uniform prior distribution for ancestral theta
   The upper limit for ancestral theta is determined by this value
   multiplied by the upper limit for (current) theta (40.500000) : 
 
-Number of draws from the Hyperprior (#simulations) [500000]: 
+Number of draws from the Hyper-prior (#simulations) [500000]: 
 
 Filename of master infile (sample sizes, #bp and mutation parameters) [SampleSize_MuModel_Vector]: 
 -------------------------------
@@ -315,7 +315,7 @@ Answer the questions about the prior distributions for parameters and
 number of simulations.  To accept the default values, simply press
 return key.  For now, "Number of Loci" should be 1.  The other
 questions are related to the upper and lower limit of prior
-distributions for parameters.  For the prior distributions, we use
+distributions for parameters.  For the sub-prior distributions, we use
 uniform distributions (lower <= x < upper).  If it does not ask the
 lower limits for certain parameters, lower bound is set to 0.  theta
 is 4 * N * mu, where N is the population size and mu is the per gene
@@ -324,37 +324,42 @@ the prior independently.  tau is the divergence time scaled by 2N
 generations, where 2N is the parameteric mean of theta/mu. Migration
 rate is the number of migrants between a pair of populations per
 generation.  Recombination rate is rate between ends of segment times
-4N.  Multiplier for the upper limit of uniform prior distribution for 
-ancestral theta is determined by this value multiplied by the upper limit 
+4N.  Coefficient for the upper limit of uniform prior distribution for 
+ancestral theta is determined by this coefficient multiplied by the upper limit 
 for (current) theta. For example, if the upper limit of current theta is 
-40 and this multiplier for the upper limit of ancestral theta is 0.5, 
-theta for a particular ancestral population is drawn from a uniform
-distribution [0.01, 40 * 0.5) and is independent of what the drawn 
+40.5 and this coefficient for the upper limit of ancestral theta is 0.5, 
+theta for this particular ancestral population is drawn from a uniform
+distribution [0.01, 40.5 * 0.5) and is independent of what the drawn 
 (current) theta is for that population-pair. Number of of simulations 
 is the number of draws from the hyper-prior.   For details about parameters 
 and hyper-parameters, refer to Hickerson et al. (2006)
 
 
-The simulation could run for a while (over the weekend).  Before this step, you may want
+The simulation could run for a while (over the weekend).  Before this step, you ought
 to enable screen or some other method to log out and let the program
-keep running before this step.  Or after the program start running
+keep running before this step.  Or after the program starts running
 (after you answer the questions), you can press ctrl + z
 simultaneously (to suspend the process), then type
 
 $ bg
 
 Now the program runs in background, and you should be able to log out
-without killing the process.  Or simply you can leave the terminal
-open while the program is running.
+without killing the process.  Or you can leave the terminal
+open while the program is running and hope for the best. 
 
 
 ----- Batch mode -----
 
 If you are happy with interactive mode, you can skip this section.
 
-To run in batch mode, you have to specify the parameter settings in
-the master infile (SampleSize_MuModel_Vector).  Each line contains a
-setting of one parameter.  It uses the syntax of:
+To run in batch mode, you have to specify the sub-prior and hyper-prior settings in
+the master infile (SampleSize_MuModel_Vector). You also have to specify which sub-parameters you want to constrain (assigning values instead of randomly drawing from its corresponding sub-priors. Most of the time you will not want to constrain sub-parameter values. Constraining sub-parameters is useful if the sub-parameters have been pre-estimated or if you want to ascertain the bias of the HABC estimator. 
+
+
+Specify the sub-prior, hyper-prior and sub-parameter constraint settings above the array containing the the sample sizes and HKY mutation model parameters. 
+
+Each line contains a
+setting.  It uses the syntax of:
 
 parameter = value
 
@@ -372,7 +377,7 @@ ok:
 
  reps = 100   # comments here
 
-The recognized options for bounds on the parameters and options  (case-sensitive) are:
+The recognized options for bounds on the parameters and other options  (case-sensitive) are:
 
   numLoci
   lowerTheta
@@ -382,7 +387,7 @@ The recognized options for bounds on the parameters and options  (case-sensitive
   upperMig
   upperRec
   upperAncPopSize
-  reps
+  constrain
   subParamConstrain
 
 For an example of this master infile, see documents/batch.masterIn.
@@ -392,10 +397,90 @@ preparing this extended master infile, you can run it in batch mode by:
 $ msbayes.pl -r 10000 -o Prior_SumStat_Outfile -c batch.masterIn
 
 -c option (+ master infile name: batch.masterIn) indicates that the
-simulation will run in batch mode.  This will run 10000 simulations
+simulation will run in batch mode.  This will run 10000 simulations (# random draws from the prior)
 (-r option), using the setting described in file called batch.masterIn
 (-c option), and output filename is "Prior_SumStat_Outfile" (-o
 option).
+
+----- Batch mode with sub-parameter constraints-----
+
+Normally you will not want to constrain (control) any sub-parameters and instead have these be randomly drawn from their sub-priors. Just skip this next section and keep the default values in batch.masterIn (constrain = 0 and subParamConstrain = 000000000). 
+
+But if you want to constrain all of the sub-parameters, then you have to include:
+
+constrain = 0
+
+and  
+
+subParamConstrain = 111111111  (for constraining all sub-parameters). 
+
+If you want to constrain some but not all of the sub-parameters, then you have to have a "1" for each sub-parameter you want to constrain and a "0" for each sub-parameter you do not want to constrain. 
+
+Although this might seem a little geeky, each "1" corresponds to a particular sub-parameter that you want to constrain to particular assigned values. You include these assigned values in a table of nine columns BELOW the section for the
+table of samples size and mutational models (see Master infile section of Step 1). An example table of values is included in batch.masterIn. 
+
+These nine sub-parameters corresponding to these nine columns are:
+tau	Bott1	Bott2	BottTime	mig	Theta	N-A	N-ANC	recomb
+
+ 	 
+Explicitly these are: 1. tau, divergence time; 2.Bott1, size (relative to N-A) of population-A starting at tau until the time that the bottleneck ends (BottTime); 3. Bott1, relative size (relative to N-B) of population-B starting at tau until the time that the bottleneck ends (BottTime); 4. the time that the bottleneck ends and when exponential growth starts to occur in each of the two sub-populations A and B until the present time (time zero); 5. mig, migration rate between populations A and B; 6. Theta; 7. N-A, relative size of population A at time zero (present time); 8. coefficient of the ancestral population size before the divergence; 9.recombination rate. N-B does not need to be specified because N-B = 2.0 - N-A.     
+
+The default batch.masterIn specifies no constrained sub-parameters and instead instructs msBayes to draw them randomly from their respective sub-priors. The nine columns below the table of samples size and mutational models (corresponding to the nine sub-parameters) are therefore not used in this default case. 
+
+lowerTheta = 0.01
+upperTheta = 40.5
+upperTau = 10.0
+numTauClasses = 3
+upperMig = 0.0
+upperRec = 0.0
+upperAncPopSize = 0.5
+numLoci = 1
+reps = 500000
+constrain = 0
+subParamConstrain = 000000000
+15      10      5       11.60   614     0.323   0.268   0.212   lamarckii.fasta
+16      10      6       13.03   614     0.266   0.215   0.265   erosa.fasta
+22      6       16      27.08   614     0.300   0.241   0.218   clandestina.fasta
+16      5       11      11.11   614     0.261   0.239   0.213   kieneri.fasta
+32      11      21      11.79   614     0.277   0.261   0.217   punctata.fasta
+17      7       10      57.03   614     0.266   0.264   0.245   stolida.fasta
+0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+
+If you want to constrain some of the sub-parameters, then the batch.masterIn could be this (to include constrain = 1 and subParamConstrain = 111101110):
+
+lowerTheta = 0.01
+upperTheta = 40.5
+upperTau = 10.0
+numTauClasses = 3
+upperMig = 0.0
+upperRec = 0.0
+upperAncPopSize = 0.5
+numLoci = 1
+reps = 500000
+constrain = 1
+subParamConstrain = 100001000
+15      10      5       11.60   614     0.323   0.268   0.212   lamarckii.fasta
+16      10      6       13.03   614     0.266   0.215   0.265   erosa.fasta
+22      6       16      27.08   614     0.300   0.241   0.218   clandestina.fasta
+16      5       11      11.11   614     0.261   0.239   0.213   kieneri.fasta
+32      11      21      11.79   614     0.277   0.261   0.217   punctata.fasta
+17      7       10      57.03   614     0.266   0.264   0.245   stolida.fasta
+1.0     0.0     0.0     0.0     0.0     10.1    0.0     0.0     0.0
+1.0     0.0     0.0     0.0     0.0     20.1    0.0     0.0     0.0
+1.0     0.0     0.0     0.0     0.0     30.1    0.0     0.0     0.0
+1.0     0.0     0.0     0.0     0.0     40.1    0.0     0.0     0.0
+1.1     0.0     0.0     0.0     0.0     5.1     0.0     0.0     0.0
+1.2     0.0     0.0     0.0     0.0     25.1    0.0     0.0     0.0
+
+In this case, msBayes will constrain 2 of the 9 sub-parameters (tau and theta) for all 6 taxon pairs 
+
+
+----- Parallel Batch mode -----
 
   Tip: If you want to run in parallel to speed up, batch mode is
   convenient.  However, you need to duplicate the directory for each
@@ -471,8 +556,7 @@ Let's take a look at the options
    "s"ummarry stats option.  For example, you can use -s
    'pi,tajD.denom' to use two stats as the summary (do not forget the
    single quotes).  By default, the program uses "pi", "wattTheta",
-   "pi.net", and "tajD.denom".YOU MAY HAVE TO BE FORCED TO USE pi.b (average pairwise differences between populations), pi and wattTheta IF 
-   SOME POPULATION SAMPLES ONLY INCLUDE 1 SAMPLED INDIVIDUAL.  	
+   "pi.net", and "tajD.denom".YOU MAY HAVE TO BE RESTRICTED TO USE ONLY pi.b (average pairwise differences between populations), pi and wattTheta IF SOME POPULATION SAMPLES ONLY INCLUDE 1 SAMPLED INDIVIDUAL.  	
 
 -n
 
@@ -515,3 +599,11 @@ pi.b pi.w pi wattTheta pi.net tajD tajD.denom
    "msbayes.pl -h" or "obsSumStats.pl -h").
 
 $ acceptRej.pl -h
+
+##################################################################
+#### Optional Step 4:  Constraining Hyper-parameter Psi, number of divergence times
+##################################################################
+
+
+If you complete a msBayes analysis and find that the most probable history involves Psi > 1 (> 1 divergence time across the Y taxon-pairs) given your data, then you might be interested in estimating when these different divergence times were and how many of the taxon-pairs were involved in each of the divergence times. You can then do this by simulating from the prior with Psi constrained to be an integer that is closest to its maximum posterior estimate. For example if the estimate of Omega is 0.37 and the estimate of Psi is 2.14, you can re-run msBayes while constraining Psi to be 2. When you do this (see above for constraining Psi) and then run acceptRej.pl to get the posterior probability distribution, you will obtain additional hyper-parameter estimates for Tau1, Tau2, Psi1, and Psi2. Tau1 and Tau2 correspond to the 2 different divergence times and  Psi1 and Psi2 correspond to the number of taxon-pairs that split at each of these two divergence times. 
+

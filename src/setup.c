@@ -490,10 +490,10 @@ static int InteractiveSetupParams (runParameters * paramPtr)
 
   /* ancPop */
   for(badInput=1; badInput; ) {
-    fprintf (stderr, "Multiplier for the upper limit of uniform prior distribution for ancestral theta "
+    fprintf (stderr, "Coefficient for the upper limit of uniform prior distribution for ancestral theta "
 	     ": [%lf]\n",  paramPtr->upperAncPopSize);
     fprintf (stderr, "  The upper limit for ancestral theta is determined by "
-	     "this value\n  multiplied by the upper limit for (current) theta (%lf) : \n",
+	     "this coefficient\n  multiplied by the upper limit for (current) theta (%lf) : \n",
 	     paramPtr->upperTheta);
     lineLen = GetLine(line, MAX_INPUT_LINE_LENGTH);
     if (lineLen == 1)
