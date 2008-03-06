@@ -449,7 +449,7 @@ static int InteractiveSetupParams (runParameters * paramPtr)
 
   for(badInput=1; badInput; ) {
     fprintf (stderr, 
-	     "Number of categories with different divergenece time.  The value should be between 1 and #taxon pairs.  For example, 2 means that the model is constrained to have two divergence events, and each taxon pairs belongs to either one of the two categories.  Specify 0 (default) if you do not want to constrain the number of categories, and want to draw it from the discrete uniform distribution of [1, #taxon pairs]. "
+	     "Number of divergenece times across all Y of the taxon-pairs (Psi).  The hyper-parameter value should be between 1 and #taxon pairs (Y).  For example, 2 means that the model is constrained to have two divergence times (Psi=2), and each taxon pair formed at either of the two divergence times (each of which are drawn from  a uniform distribution).  Specify 0 (default) if you do not want to constrain Psi (number of divergence times), and want to draw it from the discrete uniform distribution of [1, #taxon pairs]. "
 	     " [%u]: \n", paramPtr->numTauClasses);
     lineLen = GetLine(line, MAX_INPUT_LINE_LENGTH);
     if (lineLen == 1)
