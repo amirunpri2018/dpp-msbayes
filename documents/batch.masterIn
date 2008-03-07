@@ -1,107 +1,21 @@
-# This is an example configuration file you can feed to msprior
-#
-#   msprior -c config.txt
-#
-# or
-#
-#   msbayes.pl -c config.txt
-#
-# If you give this to msbayes.pl with -c, it will pass it to msprior.
-#
-# The lines which START with pound sign (#) are comments, and will be ignored
-# However, you can't use the comments after a valid statement: e.g., the
-# following line is NOT ok:
-#   reps = 100   # comments here
-# Empty lines are ignored.
-#
-# There are 2 sections: (1) parameter settings and (2) settings of mutation 
-# model and sample sizes.
-#
-# The elements of 1st section are always in the form of
-#
-#  parameter = value
-#
-# You can put whatever space or tab between them.
-# The 1st line without "=" is considered as the beginning of the
-# 2nd section.  The 
-
-####  parameter settings
-   # number of loci
-numLoci = 1
-   # lower and upper bound of prior distribution for theta (= 4 N mu)
-lowerTheta = 0.5
-upperTheta = 40.5
-
-   # upper bound of prior distribution for tau (the time of separation) 
+upperTheta = 30.0
 upperTau = 10.0
-
-   # Number of classes with different tau values.  This should be between
-   # 0 and number of taxon pairs (ends inclusive)
-   # set numTauClasses to 0 if you want to draw it from uniform distribution
-numTauClasses = 0
-
-   # upper bound of prior distribution for migration rate.
+numTauClasses = 3
 upperMig = 0.0
-   # otherwise the value will condition the random draws from the hyper-prior (conditional on # tauclases)
-
-   # upper bound of prior distribution for recombination rate.
-upperRec = 200.0
-
-   # upper bound of prior distribution for ancestral population size
-   # upperAncPopSize * upperTheta is used to set the upper limit
-   # of ancestral theta
+upperRec = 0.0
 upperAncPopSize = 0.5
-
-   # number of replicates (simulation runs)
-reps = 500000
-   # the array of sub-parameters that will not be constrained (0) and will be constrained (1). This is used for simulating under a fixed history
-subParamConstrain = 000000000
-
-#these next two values correspond to sub-parameter constraints (read README file). With these default values below, this type of analysis will not be implemented 
-constrain = 0
-subParamConstrain = 000000000
-
-####  sample sizes and mutation model for 8 taxon pairs
-# The first line which does not contain "=" is considered as the beginning
-# of data describing the  mutation model and sample sizes for each taxon pair
-#
-# column
-#  1: number of total sample sequences in the taxon-pair
-#  2: number of sample sequences in taxon 1
-#  3: number of sample sequences in taxon 2
-#  4: transition transversion rate ratio in taxon pair
-#  5: length of sequence in bp
-#  6: base frequeny of A
-#  7: base frequeny of C
-#  8: base frequeny of G
-#  9: taxon name
-#
-# The 1st column is optional since it can be calculated from the summation
-# of the 2nd and 3rd column
-#
-# The following example omits the first column.
-#
-# 2	3	4	5	6	7	8	9
-#
-10	5	0.50	614	0.323	0.268	0.212	lamarckii.fasta
-10	6	0.56	614	0.266	0.215	0.265	erosa.fasta
-6	16	0.31	614	0.300	0.241	0.218	clandestina.fasta
-5	11	2.77	614	0.261	0.239	0.213	kieneri.fasta
-11	21	1.34	614	0.277	0.261	0.217	punctata.fasta
-7	10	0.81	614	0.266	0.264	0.245	stolida.fasta
-# These next nine columns correspond to the constrained values of the sub-parameter values. msBayes is completely ignoring this table because above constrain = 0 and  subParamConstrain = 000000000. 
-0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
-0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
-0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
-0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
-0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
-0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
-#On the other hand, if you have constrain = 1 and subParamConstrain = 110100100, then you would have to specify actual sub-parameters values for all six taxon-pairs within columns 1, 2, 4 and 7 (see README file). For example, with constrain = 1 and subParamConstrain = 110100100 you could have this sub-parameter table be:
-#1.0     0.9     0.0     0.3     0.0     0.0     0.0     0.1     0.0
-#1.0     0.9     0.0     0.4     0.0     0.0     0.0     0.2     0.0
-#1.0     0.8     0.0     0.2     0.0     0.0     0.0     0.3     0.0
-#1.1     0.7     0.0     0.7     0.0     0.0     0.0     0.4     0.0
-#1.1     0.7     0.0     0.6     0.0     0.0     0.0     0.5     0.0
-#1.7     0.2     0.0     0.1     0.0     0.0     0.0     0.5     0.0 
-
-
+numLoci = 1
+constrain = 6
+subParamConstrain = 111111111
+15      10      5       11.60   614     0.323   0.268   0.212   lamarckii.fasta
+16      10      6       13.03   614     0.266   0.215   0.265   erosa.fasta
+22      6       16      27.08   614     0.300   0.241   0.218   clandestina.fasta
+16      5       11      11.11   614     0.261   0.239   0.213   kieneri.fasta
+32      11      21      11.79   614     0.277   0.261   0.217   punctata.fasta
+17      7       10      57.03   614     0.266   0.264   0.245   stolida.fasta
+1.0     0.9     0.1     0.5     0.0     10.1    1.5     0.1     0.0
+1.1     0.8     0.2     0.6     0.0     20.1    1.4     0.2     0.0
+1.2     0.7     0.3     0.7     0.0     30.1    1.3     0.3     0.0
+1.0     0.3     0.7     0.8     0.0     40.1    1.2     0.4     0.0
+1.0     0.3     0.8     0.9     0.0     5.1     1.1     0.5     0.0
+1.0     0.3     0.9     0.3     0.0     25.1    1.0     0.5     0.0
