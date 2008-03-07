@@ -12,8 +12,10 @@
 #define DEFAULT_REPS  500000
 #define DEFAULT_MUT_FILE "SampleSize_MuModel_Vector"
 #define DEFAULT_PRIOR_OUT_FILE "msBayesPriorOut.csv"
+#define DEFAULT_SUBPARAMCONSTRAIN "000000000"
 
 #define MAX_FILENAME_LEN 255
+#define NUMBER_OF_CONPARAM 9
 
 typedef struct {
   double upperTheta;/* upper limit of prior dist'n for theta */
@@ -31,6 +33,7 @@ typedef struct {
   char priorOutFile[MAX_FILENAME_LEN];
   char scratchFile[MAX_FILENAME_LEN];
   unsigned int constrain;
+  char subParamConstrain[NUMBER_OF_CONPARAM];
 } runParameters;
 
 extern runParameters gParam;
