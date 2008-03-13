@@ -324,8 +324,8 @@ int main (int argc, char *argv[])
 		  free(conTauArray);
      }
 
-	  if(psiIndex != (numTauClasses-1) )
-		  fprintf(stderr,"numberPsiArray:%d and numTauClasses:%d have problems\n", psiIndex, numTauClasses );
+     //if(psiIndex != (numTauClasses-1) )
+     //	  fprintf(stderr,"numberPsiArray:%d and numTauClasses:%d have problems\n", psiIndex, numTauClasses );
 
 	  /*
 	  if((dp = fopen("mspriorDebugPrint", "a+b"))==NULL)
