@@ -296,7 +296,7 @@ Upper limit of uniform prior distribution for theta [40.500000]:
 
 Upper limit of uniform prior distribution for tau, time of divergence (tau-max) [10.000000]: 
 
-Number of categories with different divergenece time.  The value should be between 1 and #taxon pairs.  For example, 2 means that the model is constrained to have two divergence events, and each taxon pairs belongs to either one of the two categories.  Specify 0 (default) if you do not want to constrain the number of categories, and want to draw it from the discrete uniform distribution of [1, #taxon pairs].  [0]:  : 
+Number of categories with different divergenece time.  The value should be between 1 and #taxon pairs.  For example, 2 means that the model is constrained to have two divergence events, and each taxon pairs belongs to either one of the two categories.  Specify 0 (default) if you do not want to constrain the number of categories, and want to draw it from the discrete uniform distribution of [1, #taxon pairs].  [0]: 
 
 Upper limit of uniform prior distribution for migration rate [0.000000]: 
 
@@ -402,28 +402,26 @@ simulation will run in batch mode.  This will run 10000 simulations (# random dr
 (-c option), and output filename is "Prior_SumStat_Outfile" (-o
 option).
 
------ Batch mode with sub-parameter constraints-----
+----- Batch mode with sub-parameter constraints (For advanced users)-----
 
-Normally you will not want to constrain (control) any sub-parameters and instead have these be randomly drawn from their sub-priors. Just skip this next section and keep the default values in batch.masterIn (constrain = 0 and subParamConstrain = 000000000). 
+Normally you will not want to constrain (control) any sub-parameters and instead have these parameters randomly drawn from their sub-priors. In this case, just skip this next section and keep the default values in batch.masterIn (constrain = 0 and subParamConstrain = 000000000). 
 
 But if you want to constrain all of the sub-parameters, then you have to include:
 
-constrain = 0
+constrain = 1
 
 and  
 
 subParamConstrain = 111111111  (for constraining all sub-parameters). 
 
-If you want to constrain some but not all of the sub-parameters, then you have to have a "1" for each sub-parameter you want to constrain and a "0" for each sub-parameter you do not want to constrain. 
+Although this might seem a little geeky, each "1" of the subParamConstrain matrix corresponds to a particular sub-parameter that you want to constrain to particular assigned values. Each taxon-pair can have its own sub-parameter value. You include these assigned values in a table of nine columns BELOW the section for the table of samples sizes and mutational models (see Master infile section of Step 1). Leave a "0" for each sub-parameter you do not want to constrain (and instead have it randomly drawn from its sub-prior). An example table of values is included in batch.masterIn. 
 
-Although this might seem a little geeky, each "1" corresponds to a particular sub-parameter that you want to constrain to particular assigned values. You include these assigned values in a table of nine columns BELOW the section for the
-table of samples size and mutational models (see Master infile section of Step 1). An example table of values is included in batch.masterIn. 
+The nine sub-parameters corresponding to these nine columns in the third table of batch.masterIn:
+tau	Bott1	Bott2	BottTime	mig	Theta	N-a	N-ANC	recomb
 
-These nine sub-parameters corresponding to these nine columns are:
-tau	Bott1	Bott2	BottTime	mig	Theta	N-A	N-ANC	recomb
-
+if subParamConstrain = 111111111, then all 9 of these sub-parameters will be constrained across all Y taxon-pairs. On the other hand, if you have subParamConstrain = 1000001000, then only tau and Theta will be constrained 
  	 
-Explicitly these are: 1. tau, divergence time; 2.Bott1, size (relative to N-A) of population-A starting at tau until the time that the bottleneck ends (BottTime); 3. Bott1, relative size (relative to N-B) of population-B starting at tau until the time that the bottleneck ends (BottTime); 4. the time that the bottleneck ends and when exponential growth starts to occur in each of the two sub-populations A and B until the present time (time zero); 5. mig, migration rate between populations A and B; 6. Theta; 7. N-A, relative size of population A at time zero (present time); 8. coefficient of the ancestral population size before the divergence; 9.recombination rate. N-B does not need to be specified because N-B = 2.0 - N-A.     
+Explicitly these 9 sub-parameters are: 1. tau, divergence time (scaled in 2N-ave generations); 2. Bott1, size (relative to N-a) of population-a starting at tau (before present) until the time that the bottleneck ends (BottTime); 3. Bott1, relative size (relative to N-b) of population-b starting at tau until the time that the bottleneck ends (BottTime); 4. BottTime, the time that the bottleneck ends and when exponential growth starts to occur in each of the two sub-populations a (Bott1) and b (Bott2) until the present time (time zero); 5. mig, migration rate between populations a and b; 6. Theta; 7. N-a, relative size of population a at time zero (present time); 8. relative size of the ancestral population size before the divergence; 9.recombination rate. N-b does not need to be specified because N-b = 2.0 - N-a.     
 
 The default batch.masterIn specifies no constrained sub-parameters and instead instructs msBayes to draw them randomly from their respective sub-priors. The nine columns below the table of samples size and mutational models (corresponding to the nine sub-parameters) are therefore not used in this default case. 
 
@@ -538,7 +536,7 @@ Let's take a look at the options
 
    Means that a PDF file with figures will be created in addition to
    the text output "modeOut.txt".  outfig.pdf will contain the various
-   plots, modeOut.txt will be the estimates from the posterior
+   plots (priors, posteriors and bayes factors), modeOut.txt will be the estimates from the posterior
    probability distribution.
 
 -t 0.002
@@ -600,10 +598,20 @@ pi.b pi.w pi wattTheta pi.net tajD tajD.denom
 
 $ acceptRej.pl -h
 
-##################################################################
+
+####################################################################################################################################
 #### Optional Step 4:  Constraining Hyper-parameter Psi, number of divergence times
-##################################################################
+####################################################################################################################################
 
 
-If you complete a msBayes analysis and find that the most probable history involves Psi > 1 (> 1 divergence time across the Y taxon-pairs) given your data, then you might be interested in estimating when these different divergence times were and how many of the taxon-pairs were involved in each of the divergence times. You can then do this by simulating from the prior with Psi constrained to be an integer that is closest to its maximum posterior estimate. For example if the estimate of Omega is 0.37 and the estimate of Psi is 2.14, you can re-run msBayes while constraining Psi to be 2. When you do this (see above for constraining Psi) and then run acceptRej.pl to get the posterior probability distribution, you will obtain additional hyper-parameter estimates for Tau1, Tau2, Psi1, and Psi2. Tau1 and Tau2 correspond to the 2 different divergence times and  Psi1 and Psi2 correspond to the number of taxon-pairs that split at each of these two divergence times. 
+If you complete a msBayes analysis and find that the most probable history involves more than one divergence time or colonization time, (estimate of Omega is >> 0.0 given your data), then you might be interested in estimating when these different divergence times occurred (Tau-1, Tau-2, ... Tau-Psi) and how taxon-pairs diverged at each of these Psi times (Psi-1, Psi2, ...Psi-Psi). You can do this by simulating from the prior with Psi constrained to be the integer that is closest to its maximum posterior estimate. For example if the estimate of Omega is 0.37 and the estimate of Psi is 2.14, you can re-run msBayes (simulate from the prior, step 2 above) while constraining Psi to be 2. 
+
+To constrain Psi:
+----Interactive Mode
+Enter the Psi value when asked
+ [1, #taxon pairs].  [0]: 
+----Batch Mode
+in the batch file , assign the Psi value to numTauClasses (numTauClasses = 3, if you want Psi to be 3). 
+
+If you constrain psi to be 3 and then run acceptRej.pl to get the posterior probability distribution, you will obtain additional hyper-parameter estimates for Tau1, Tau2, Tau3, Psi1, Psi2 and Psi3. Tau1, Tau2, and Tau3 correspond to the 3 different divergence times and  Psi1, Psi2 and Psi3 correspond to the number of taxon-pairs that split at each of these three divergence times. 
 
