@@ -348,7 +348,7 @@ if (! defined($opt_a)) {  # use the external acceptRejection C program
     # the headers are stripped from obsDat and simDat below
     print STDERR "INFO: running $rejExe $tmpObs $tmpSimDat2 $tol $columns >> $tmpSimDat\n";
     my $rc = system ("$rejExe $tmpObs $tmpSimDat2 $tol $columns >> $tmpSimDat");
-    die "$rejExe ran funny: $?" unles $rc == 0;
+    die "$rejExe ran funny: $?" unless $rc == 0;
 }
 
 # prepare the obsDat for the acceptRej.r
@@ -614,7 +614,7 @@ sub GetPriorSumStatNames {
 	    "You may have created the files with older version of msBayes.pl\n".
 	    "and/or obsSumStats.pl, which is incompatible with this version\n".
 	    "of acceptRej.pl.  Please redo the analysis with the most recent\n".
-	    "version of programs\n".
+	    "version of programs\n"
     }
     while (my $name = shift @header) {
 	if ($name =~ /^PRI\./) {
