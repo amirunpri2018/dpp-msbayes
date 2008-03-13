@@ -203,10 +203,10 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
     par(mfcol=c(3,1))  # 3 plots per page
     if (pre.rejected) {
       make.hist(prior.dat[,thisPriorName],result[[thisPriorName]], title=this.title, breaks=20)
-      plot.bf(prior.dat[,thisPriorName],result[[thisPriorName]]$x, main=this.title)
+      plot.bf(prior.dat[,thisPriorName],result[[thisPriorName]]$x, main="Bayes Support for true Hyper-parameter value < threshold")
     } else {
       make.hist(simDat[,thisPriorName],result[[thisPriorName]],title=this.title,breaks=20)
-      plot.bf(simDat[,thisPriorName],result[[thisPriorName]]$x,main=this.title)
+      plot.bf(simDat[,thisPriorName],result[[thisPriorName]]$x,main="Bayes Support for true Hyper-parameter value < threshold")
     }
     par(mfcol=old.mfcol)
   }
@@ -311,7 +311,7 @@ plot.bf <- function(prior,posterior, ...) {
 
   plot(bf.out$crit.vals, bf.out$bf, type="l",
        ylim=c(0,min(40, max(bf.out$bf) * 1.1)),
-       xlab="Crit. val",ylab="Bayes Factor",...)
+       xlab="Hyper Parameter Thresholds",ylab="Bayes Factor",...)
   line.type = 3
   abline (1, 0, lty=2)
   abline(3, 0, lty=line.type)
