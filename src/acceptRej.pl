@@ -255,11 +255,13 @@ if (@sumStatNames != scalar (@$arrRef2)) {
 } elsif ($numTaxonPairs != $numTaxonPairs2) {
     die "ERROR: obsData contains $numTaxonPairs2 taxon pairs and simData".
 	" contains $numTaxonPairs taxon pairs.\n";
-} elsif (@priorNames < scalar(@$arrRef1)) {
-    die "ERROR: Weird, fewer prior columns in simData than in obsData\n".
-	"   Please make sure that these are created by the matching ".
-	"program versions\n";
 }
+# elsif (@priorNames < scalar(@$arrRef1)) {
+#    die "ERROR: Weird, fewer prior columns in simData than in obsData\n".
+#	"   Please make sure that these are created by the matching ".
+#	"program versions\n";
+#}
+
 # making sure summary stats headers are matching bet simDat and obsDat
 for my $hCnt (0..$#sumStatNames) {
     if($sumStatNames[$hCnt] ne $$arrRef2[$hCnt]) {
@@ -267,14 +269,16 @@ for my $hCnt (0..$#sumStatNames) {
 	    "has $$arrRef2[$hCnt]\n";
     }
 }
+
 # Now check the match of prior columns between obsDat and simDat
-my $numExtraPrior = @priorNames - scalar(@$arrRef1);
-for my $pNameIndex ($numExtraPrior..$#priorNames) {
-    if ($priorNames[$pNameIndex] ne $$arrRef1[$pNameIndex-$numExtraPrior]) {
-	die "ERROR: mismatch in column names: $priorNames[$pNameIndex] ".
-	    "in simData and  $$arrRef1[$pNameIndex] in obsData\n";
-    }
-}
+#my $numExtraPrior = @priorNames - scalar(@$arrRef1);
+#for my $pNameIndex ($numExtraPrior..$#priorNames) {
+#    if ($priorNames[$pNameIndex] ne $$arrRef1[$pNameIndex-$numExtraPrior]) {
+#	die "ERROR: mismatch in column names: $priorNames[$pNameIndex] ".
+#	    "in simData and  $$arrRef1[$pNameIndex] in obsData\n";
+#    }
+#}
+
 
 # read in obsData
 open OBS, "<$obsDat" || die "Can't open $obsDat\n";
@@ -284,6 +288,16 @@ if (@obsDataArray != 2) {
     die "ERROR: Observed data should have two lines: 1 header line and ".
 	"another data line\n";
 }
+
+# adjust the column length of obsData
+my @tmpObsVectLine = split /\t/, $obsDataArray[1];
+# removing the prior columns in obsData, and replacing it with 0 with the
+# length matching with the simulated data set.
+splice @tmpObsVectLine, 0, scalar(@$arrRef1), Rep(0, scalar(@priorNames));
+$obsDataArray[1] = join "\t", @tmpObsVectLine;
+$obsDataArray[0] = join "\t", (@priorNames, @sumStatNames);
+$obsDataArray[0] .= "\n";
+
 
 if (! defined($opt_a)) {  # use the external acceptRejection C program
     my $tol = (defined($opt_t)) ?  $opt_t :  $defaultTolerance;
@@ -340,9 +354,9 @@ if (! defined($opt_a)) {  # use the external acceptRejection C program
     
     # Making a temporary obsDat for rejection
     open OBS, ">$tmpObs" || die "Can't open temporary obs file $tmpObs\n";
-    for (my $extra = 0; $extra < $numExtraPrior; $extra++) { # padding
-	print OBS "0\t";
-    }
+#    for (my $extra = 0; $extra < $numExtraPrior; $extra++) { # padding
+#	print OBS "0\t";
+#    }
     print OBS $obsDataArray[1];  # only print the data part
     close OBS;
     # the headers are stripped from obsDat and simDat below
@@ -353,13 +367,13 @@ if (! defined($opt_a)) {  # use the external acceptRejection C program
 
 # prepare the obsDat for the acceptRej.r
 open OBS, ">$tmpObs" || die "Can't open temporary obs file $tmpObs\n";
-for (my $extra = 0; $extra < $numExtraPrior; $extra++) { # header padding
-    print OBS "$priorNames[$extra]\t";
-}
+#for (my $extra = 0; $extra < $numExtraPrior; $extra++) { # header padding
+#    print OBS "$priorNames[$extra]\t";
+#}
 print OBS $obsDataArray[0];  # only print the data part
-for (my $extra = 0; $extra < $numExtraPrior; $extra++) { # data padding
-    print OBS "0\t";
-}
+#for (my $extra = 0; $extra < $numExtraPrior; $extra++) { # data padding
+#    print OBS "0\t";
+#}
 print OBS $obsDataArray[1];  # only print the data part
 close OBS;
 
@@ -707,3 +721,14 @@ sub ColNumTabDelimFile {
   return $numColInfile;
 }
 
+
+# Return an array with $what repeated $times times.
+sub Rep {
+    my ($what, $times) = @_;
+
+    my @result = ();
+    foreach my $i (0..($times-1)) {
+	push @result, $what;
+    }
+    return @result;
+}
