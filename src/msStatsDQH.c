@@ -976,7 +976,7 @@ void shannonIndex(char **list, int* config, double **shannonIndexArray)
     int sizeOfSp1, sizeOfSp2;
     sizeOfSp1 = config[0]; sizeOfSp2 = config[1];
 
-    double freqSp1, freqSp2, pool = 0;
+    double freqSp1, freqSp2 ;
 	
       
     freqSp1 = (double)sizeOfSp1/((double)(sizeOfSp1+sizeOfSp2));
@@ -989,6 +989,9 @@ void shannonIndex(char **list, int* config, double **shannonIndexArray)
 
     hashtab_t *subPop1 = ht_init(sizeOfSp1, NULL);
     hashtab_t *subPop2 = ht_init(sizeOfSp2, NULL);
+
+	
+
 
     // AlCount1 is an integer array of size of sub-population 1  
     int *AlCount1;
@@ -1017,8 +1020,8 @@ void shannonIndex(char **list, int* config, double **shannonIndexArray)
            j++;
         }
       else if(  ht_search(subPop1, list[i], charCount(list[i]))!=NULL   )
-	  {
-	      (*((int*)ht_search(subPop1, list[i], charCount(list[i]))))++;
+	 { 
+      	(*((int*)ht_search(subPop1, list[i], charCount(list[i]))))++;
 	  }
    }
    
@@ -1039,6 +1042,8 @@ void shannonIndex(char **list, int* config, double **shannonIndexArray)
 	  }
    }
 
+
+
    //initialize the hashtable iterator
    hashtab_iter_t sp1i;
    ht_iter_init(subPop1, &sp1i);
@@ -1048,7 +1053,7 @@ void shannonIndex(char **list, int* config, double **shannonIndexArray)
    
 
    // calculate sHua1 
-   double temp;
+   double temp, temp2;
 
    for(;sp1i.key !=NULL;ht_iter_inc(&sp1i))
    {
@@ -1065,6 +1070,77 @@ void shannonIndex(char **list, int* config, double **shannonIndexArray)
      sHa2 +=  (-(log(temp)/log((double)2)*temp));
    }
 
+   hashtab_t *pool = ht_init(sizeOfSp1+sizeOfSp2, NULL);
+
+   double *poolCount;
+   poolCount = (double *)malloc((sizeOfSp1+sizeOfSp2)*sizeof(double));
+   for(i=0;i<(sizeOfSp1+sizeOfSp2);i++)
+      poolCount[i] = 0;
+   int poolIndex = 0;
+
+
+
+   //initialize the hashtable iterator
+   //hashtab_iter_t sp1i;
+   ht_iter_init(subPop1, &sp1i);
+   
+   //common allels of both subPop1 and subPop2
+   for(;sp1i.key != NULL; ht_iter_inc(&sp1i))
+   {
+	   //hashtab_iter_t sp2i;
+       ht_iter_init(subPop2, &sp2i);
+
+	   for(;sp2i.key != NULL; ht_iter_inc(&sp2i))
+	   {
+		   if(strcmp(((char *)(sp1i.key)), ((char *)(sp2i.key))) == 0)
+		   {
+			   temp = (double)(*((int*)(sp1i.value)));
+			   temp2 = (double)(*((int*)(sp2i.value)));
+               poolCount[poolIndex] = (temp / (sizeOfSp1))*freqSp1 + (temp2 / (sizeOfSp2))*freqSp2;
+		       ht_insert(pool, sp1i.key, charCount(sp1i.key), (poolCount+poolIndex), (int)sizeof((*(poolCount+poolIndex))));
+			   poolIndex ++;
+
+			   ht_remove(subPop1,sp1i.key,charCount(sp1i.key));	   
+			   ht_remove(subPop2,sp2i.key,charCount(sp2i.key));	  
+
+			   break;
+			   
+		   }
+	   }
+   }
+  
+   //hashtab_iter_t sp1i;
+   ht_iter_init(subPop1, &sp1i);
+
+   //hashtab_iter_t sp2i;
+   ht_iter_init(subPop2, &sp2i);
+
+   for(;sp1i.key!=NULL; ht_iter_inc(&sp1i))
+   {   
+	   temp = (double)(*((int*)(sp1i.value)));
+	   poolCount[poolIndex] = (temp/(sizeOfSp1))*freqSp1;
+	   ht_insert(pool, sp1i.key, charCount(sp1i.key), (poolCount+poolIndex), (int)sizeof((*(poolCount+poolIndex))));
+	   poolIndex++;
+   }
+
+   for(;sp2i.key!=NULL; ht_iter_inc(&sp2i))
+   {   
+	   temp2 = (double)(*((int*)(sp2i.value)));
+	   poolCount[poolIndex] = (temp2/(sizeOfSp2))*freqSp2;
+	   ht_insert(pool, sp2i.key, charCount(sp2i.key), (poolCount+poolIndex), (int)sizeof((*(poolCount+poolIndex))));
+	   poolIndex++;
+   }
+
+   hashtab_iter_t pi;
+   ht_iter_init(pool, &pi);
+
+   for(;pi.key != NULL; ht_iter_inc(&pi))
+   {
+	   temp = (double)(*((double*)(pi.value)));
+	   sHu += (-(( log(temp)/log((double)2) )*temp));
+   }
+
+   /*
    // reinitialize hash_table iterator
    ht_iter_init(subPop1, &sp1i);
    ht_iter_init(subPop2, &sp2i);
@@ -1082,21 +1158,21 @@ void shannonIndex(char **list, int* config, double **shannonIndexArray)
                  pool = freqSp1*temp + freqSp2*temp2;
 	   }
 	   else if((sp1i.key!=NULL)&&(sp2i.key==NULL))
-	     {   temp =  (double)(*((int*)(sp1i.value)));
-	     temp = temp/(double)sizeOfSp1;
+	     {  temp =  (double)(*((int*)(sp1i.value)));
+	        temp = temp/(double)sizeOfSp1;
 	        pool = freqSp1*temp;
 	     }
 	   else if((sp2i.key!=NULL)&&(sp1i.key==NULL))
 	     {   temp2 = (double)(*((int*)(sp2i.value)));
 	         temp2 = temp2/(double)sizeOfSp2;
-	     pool = freqSp2*temp2;
+	         pool = freqSp2*temp2;
              }
        sHu += (-(log(pool)/log((double)2)*pool));
        //fprintf(testShannon, "pool: %f, freqSp1: %f, freqSp2: %f \n", (float)pool, (float)freqSp1, (float)freqSp2); 
     }
-
+	*/
    // calculate sHua
-  sHua = sHu - freqSp1*sHa1 - freqSp2*sHa2;
+  sHua = sHu - (freqSp1*sHa1) - (freqSp2*sHa2);
   
   // throw values into double array shannonIndexArray
   *(*shannonIndexArray+0) = sHa1, *(*shannonIndexArray+1) = sHa2,  *(*shannonIndexArray+2) = sHu, *(*shannonIndexArray+3) = sHua;
@@ -1104,7 +1180,9 @@ void shannonIndex(char **list, int* config, double **shannonIndexArray)
 
    free(AlCount1);
    free(AlCount2);
+   free(poolCount);
  
+   ht_destroy(pool);
    ht_destroy(subPop1);
    ht_destroy(subPop2);
 	
