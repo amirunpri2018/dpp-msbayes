@@ -84,7 +84,7 @@ if(defined($opt_n)) {
 }
 
 ###  create a bunch of temp files
-my $rmTempFiles = 1;  # set this to 0 for debugging
+my $rmTempFiles = 0;  # set this to 0 for debugging
 if (defined($opt_i)) {
     $rmTempFiles = 0;
 }
@@ -331,7 +331,7 @@ if (! defined($opt_a)) {  # use the external acceptRejection C program
     # finding the column numbers to use as the summary statistics
     my @usedSS = split /\s*,\s*/, $statString;
     print STDERR "INFO: Using following summary statistics: ";
-    print STDERR join(",", @usedSS);
+    print STDERR join(",", @usedSS), "\n";
     my @index=();
     foreach my $ss (@usedSS) {
 	my @tmp = FindMatchingIndex($ss, @sumStatNames); # 0-offset

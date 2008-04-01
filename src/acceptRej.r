@@ -178,13 +178,39 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
     } else {
       additional.print <- ""
     }
-    
-    cat ("### Mode estimation for ", name.rm.PRI, " ", additional.print, "\n");
-    res.mode <- loc1stats((result[[thisPriorName]])$x,prob=0.95)[1]
-    cat ("# Mode\n")
-    print(res.mode)
-    cat ("# 95 % quantile for ", name.rm.PRI, " ", additional.print, "\n");
-    print(quantile((result[[thisPriorName]])$x,prob=c(0.025,0.975)))
+
+    # When constarined with large numTauClasses, PRI.Psi.1 become
+    # mostly 1, and locfit has following problem, see help(locfit.raw)
+    # Warning: procv: density estimate, empty integration region
+    # Error: newsplit: out of vertex space Error: Descend tree proble
+    # So, simply printing the posterior mean, and mode from
+    # accepted values
+    if (length(grep("^PRI\\.Psi\\.[0-9]+$", thisPriorName)) == 1) {
+      cat ("### Posterior distribution for ", name.rm.PRI, " ", additional.print, "\n");
+      cat ("## With local-linear regression (by default)\n")
+      res.mean <- mean((result[[thisPriorName]])$x)
+      cat ("# Posterior Mean (not Mode)\n")
+      print(res.mean)
+      cat ("# 95 % quantile for ", name.rm.PRI, " ", additional.print, "\n");
+      print(quantile((result[[thisPriorName]])$x,prob=c(0.025,0.975)))
+      
+      cat("## simple rejection method, CAUTION: not using local-linear regression\n");
+      cat ("# posterior distribution\n")
+      post.distn.accRej <- table(result[[thisPriorName]]$vals)
+      temp.pd.ar <- c("frequencies", post.distn.accRej)
+      names(temp.pd.ar)[1] <- name.rm.PRI
+      print(temp.pd.ar)
+      cat ("# Mode (from simple rejection method):\n")
+      print(names(which(post.distn.accRej == max(post.distn.accRej))))
+    } else {
+      cat ("### Mode estimation for ", name.rm.PRI, " ", additional.print, "\n");
+      res.mode <- loc1stats((result[[thisPriorName]])$x,prob=0.95)[1]
+      cat ("# Mode\n")
+      print(res.mode)
+      cat ("# 95 % quantile for ", name.rm.PRI, " ", additional.print, "\n");
+      print(quantile((result[[thisPriorName]])$x,prob=c(0.025,0.975)))
+    }
+    cat("\n")
   }
 
   # Print out figures
