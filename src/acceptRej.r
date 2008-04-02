@@ -143,7 +143,7 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
     names(temp.val) <- psiNames
     max.val <- c(max.val, temp.val)
     
-    temp.val <- sapply(rep("(= number of possible divtimes)", length(psiNames)), list)
+    temp.val <- sapply(rep("(= number of taxon pairs that divergence at corresponding tau)", length(psiNames)), list)
     names(temp.val) <- psiNames
     verbose.print <- c(verbose.print, temp.val)
   }
