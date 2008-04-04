@@ -59,7 +59,7 @@ loc2mode <- function(x,y,alpha=0.5,xlim,...)
 }
 
 
-loc1stats <- function(x,prob,alpha=0.5,xlim,...)
+loc1stats <- function(x,prob=0.95,alpha=0.5,xlim,...)
 {
         if(missing(xlim)) fit <- locfit(~x,alpha=alpha)
         else fit <- locfit(~x,alpha=alpha,xlim=xlim)
@@ -69,8 +69,9 @@ loc1stats <- function(x,prob,alpha=0.5,xlim,...)
         if(length(x.mode)>1)x.mode <- x.mode[1]
         lev <- sort(fx)[floor(prob*length(x))]
        
-		print("log difference from max is ")
-        print(log(x.modef)-log(lev))
+        cat("INFO: loca1stats: difference in log(prob. density) between the ",
+            "max (mode) and the ends of confidence interval (at p=", prob,
+            ") is ", log(x.modef)-log(lev), ".\n", sep="")
 		
         l1 <- list()
         l1[[1]] <- x.mode

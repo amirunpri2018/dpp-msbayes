@@ -120,7 +120,7 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
   
   # set min, max boundary of prior parameters, and verbose print message
   # PRI.omega >= 0, PRI.E.t >= 0, PRI.Psi > 0
-  min.val <- list(PRI.omega = 0, PRI.E.t = 0, PRI.Psi = 1)
+  min.val <- list(PRI.Psi = 1, PRI.var.t = 0, PRI.E.t = 0, PRI.omega = 0 )
   max.val <- list(PRI.Psi = nPairs)
   verbose.print <- list(PRI.omega = "(=Var(t)/E(t))",
                         PRI.Psi="(= number of possible divtimes)",
@@ -179,6 +179,9 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
       additional.print <- ""
     }
 
+    cat ("##### Summary of posterior distribution #####\n")
+    cat ("#####",name.rm.PRI, additional.print, "#####\n")
+
     # When constarined with large numTauClasses, PRI.Psi.1 become
     # mostly 1, and locfit has following problem, see help(locfit.raw)
     # Warning: procv: density estimate, empty integration region
@@ -186,28 +189,47 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
     # So, simply printing the posterior mean, and mode from
     # accepted values
     if (length(grep("^PRI\\.Psi\\.[0-9]+$", thisPriorName)) == 1) {
-      cat ("### Posterior distribution for ", name.rm.PRI, " ", additional.print, "\n");
-      cat ("## With local-linear regression (by default)\n")
-      res.mean <- mean((result[[thisPriorName]])$x)
-      cat ("# Posterior Mean (not Mode)\n")
-      print(res.mean)
-      cat ("# 95 % quantile for ", name.rm.PRI, " ", additional.print, "\n");
+      cat ("### With local-linear regression (by default)\n")
+      mean.median.vect <- c(mean((result[[thisPriorName]])$x),
+                                 median((result[[thisPriorName]])$x))
+      names(mean.median.vect) <- c("mean", "median")
+      print(mean.median.vect)
+      cat ("## Mean/Median\n")
+      print(mean.median.vect)
+      
+      cat ("## 95 % quantile\n")
       print(quantile((result[[thisPriorName]])$x,prob=c(0.025,0.975)))
       
-      cat("## simple rejection method, CAUTION: not using local-linear regression\n");
-      cat ("# posterior distribution\n")
+      cat("### With simple rejection method, CAUTION: not using local-linear regression\n");
+      cat ("## posterior distribution\n")
       post.distn.accRej <- table(result[[thisPriorName]]$vals)
       temp.pd.ar <- c("frequencies", post.distn.accRej)
       names(temp.pd.ar)[1] <- name.rm.PRI
       print(temp.pd.ar)
-      cat ("# Mode (from simple rejection method):\n")
+      cat ("## Mode (from simple rejection method):\n")
       print(names(which(post.distn.accRej == max(post.distn.accRej))))
-    } else {
-      cat ("### Mode estimation for ", name.rm.PRI, " ", additional.print, "\n");
-      res.mode <- loc1stats((result[[thisPriorName]])$x,prob=0.95)[1]
-      cat ("# Mode\n")
-      print(res.mode)
-      cat ("# 95 % quantile for ", name.rm.PRI, " ", additional.print, "\n");
+    } else {  # Do regular summary, Not PRI.Psi.*
+      cat ("### Mode\n")
+      # With locfit 1.5_4, newsplit error of locfit() will stop the
+      # analysis.  So I'm doing the error handling by myself with try().
+      res.mode <- try(loc1stats((result[[thisPriorName]])$x,prob=0.95),silent=T)
+      if(class(res.mode) == "try-error") {
+        cat("NA\n")
+        cat("** locfit failed to find mode, this occurs frequently with an " ,
+            "extreme\n** L-shaped posterior distribution, and the mode is ",
+            "at the boundary (e.g. 0)\n", sep="")
+      } else {
+        cat ("MODE:\n" )
+        res.mode <- res.mode[1]
+        print(res.mode)
+      }
+      cat ("### Mean/Median\n")
+      mean.median.vect <- c(mean((result[[thisPriorName]])$x),
+                                 median((result[[thisPriorName]])$x))
+      names(mean.median.vect) <- c("mean", "median")
+      print(mean.median.vect)
+      
+      cat ("### 95 % quantile\n")
       print(quantile((result[[thisPriorName]])$x,prob=c(0.025,0.975)))
     }
     cat("\n")
@@ -242,9 +264,11 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
   plot((result[["PRI.omega"]])$x,(result[["PRI.E.t"]])$x,lty=2,lwd=0.5)
   # CHECK THIS
 
-  plotKernDensity(result[["PRI.omega"]],result[["PRI.E.t"]], xlab="Omega",
-                  ylab="E(t)", title="Omega and E(t)")
-
+  rc <- try(plotKernDensity(result[["PRI.omega"]],result[["PRI.E.t"]],
+                            xlab="Omega", ylab="E(t)", title="Omega and E(t)"))
+  if(class(rc) == "try-error") {
+    warning("WARN: plotKernDensity failed for some reason, so the kernel density plot was not created\n")
+  }
   # this plot doesn't seem to work.
   ## pdf("Skink0.5Milltol0.002Na0.5.pdf") 
   #  loc2plot(result.omega$x,result.Psi$x,cprob=0.6,alpha=0.4,xlab="omega", ylab="Psi")

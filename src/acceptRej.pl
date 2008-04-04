@@ -84,7 +84,7 @@ if(defined($opt_n)) {
 }
 
 ###  create a bunch of temp files
-my $rmTempFiles = 0;  # set this to 0 for debugging
+my $rmTempFiles = 1;  # set this to 0 for debugging
 if (defined($opt_i)) {
     $rmTempFiles = 0;
 }
