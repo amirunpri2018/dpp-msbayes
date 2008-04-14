@@ -251,9 +251,37 @@ if (@obsDataArray != 2) {
 
 # adjust the column length of obsData
 my @tmpObsVectLine = split /\t/, $obsDataArray[1];
+my @tmpObsHeader = split /\t/, $obsDataArray[0];
+my %obsHash = ();
+foreach my $index (0..$#tmpObsHeader) {
+    if (defined($obsHash{$tmpObsHeader[$index]})) {
+	die "ERROR: Processing observed summary stat data, and the  ".
+	    "header doesn't contain unique column names: $tmpObsHeader[$index]";
+    }
+    $obsHash{$tmpObsHeader[$index]} = $tmpObsVectLine[$index];
+}
+
+
 # removing the prior columns in obsData, and replacing it with 0 with the
 # length matching with the simulated data set.
-splice @tmpObsVectLine, 0, scalar(@$arrRef1), Rep(0, scalar(@priorNames));
+#splice @tmpObsVectLine, 0, scalar(@$arrRef1), Rep(0, scalar(@priorNames));
+
+# Making sure the columns in obsData are consistent with simulated data set.
+# When fake observed data are created with different model, PRI.* columns
+# may not match.  If obsData are missing columns, dummy 0 are inserted.
+# This should not influence the subsequent calculation
+@tmpObsVectLine = ();
+foreach my $cname (@priorNames, @sumStatNames) {
+    if (defined($obsHash{$cname})) {
+	push @tmpObsVectLine, $obsHash{$cname};
+    } else {
+	if ($cname !~ /^PRI\./) {  # it should never come here
+	    die "ERROR: summary statistics for observerd and simulated data ".
+		"do not match\n";
+	}
+	push @tmpObsVectLine, 0; # pushing in dummy 0
+    }
+}
 $obsDataArray[1] = join "\t", @tmpObsVectLine;
 $obsDataArray[0] = join "\t", (@priorNames, @sumStatNames);
 $obsDataArray[0] .= "\n";
