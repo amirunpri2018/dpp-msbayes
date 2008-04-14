@@ -145,7 +145,6 @@ END {                   # delete the temp file when done
     }
 };
 
-
 # open a temp file to extract the prior columns.
 do {$tmpPrior = tmpnam()} until $tmpPriorfh = 
     IO::File->new($tmpPrior, O_RDWR|O_CREAT|O_EXCL);
@@ -209,41 +208,17 @@ if(defined($opt_d)) {
 	unless ($checkR == 0);
 }
 
-## preprocess the obs data
-## Sometime the obs data isn't in 1 line, so converting this to 1 line (same
-## format as the simulated data).
-# I'm making this obsolete.  People should be using obsSumStats.pl
-# So there shouldn't be multiple line obs file.  Now it should have only
-# two lines: header and data
-#
-# my @obsDatRaw = ();
-#if (! defined($opt_n)) {
-#    open OBS, "<$obsDat" || die "Can't open $obsDat\n";
-#    my $tmpObsDat = "";
-#    while(<OBS>) {
-#	s/^\s+//; s/\s+$//;
-#	if ($. == 1) {
-#	    $tmpObsDat =  $_;
-#	} else {
-#	    $tmpObsDat = $tmpObsDat . "\t$_";
-#	}
-#    }
-#    close OBS;
-#    @obsDatRaw = split /\t/, $tmpObsDat;
-#}
-# done with preproscess the obs data
-
 ## preprocess the simDat
 
 ## find the number of columns
 my $numColInfile = ColNumTabDelimFile($simDat);
 
-# getting column structures from R
+# getting column names/structures
 my ($arrRef1, $arrRef2, $numTaxonPairs) = GetPriorSumStatNames($simDat);
 my @priorNames = @$arrRef1;
 my @sumStatNames = @$arrRef2;
 my $numPriorCols = scalar(@priorNames);
-    
+
 # processing the header of obsData
 my $numTaxonPairs2;
 ($arrRef1, $arrRef2, $numTaxonPairs2) = GetPriorSumStatNames($obsDat);
@@ -256,11 +231,6 @@ if (@sumStatNames != scalar (@$arrRef2)) {
     die "ERROR: obsData contains $numTaxonPairs2 taxon pairs and simData".
 	" contains $numTaxonPairs taxon pairs.\n";
 }
-# elsif (@priorNames < scalar(@$arrRef1)) {
-#    die "ERROR: Weird, fewer prior columns in simData than in obsData\n".
-#	"   Please make sure that these are created by the matching ".
-#	"program versions\n";
-#}
 
 # making sure summary stats headers are matching bet simDat and obsDat
 for my $hCnt (0..$#sumStatNames) {
@@ -269,16 +239,6 @@ for my $hCnt (0..$#sumStatNames) {
 	    "has $$arrRef2[$hCnt]\n";
     }
 }
-
-# Now check the match of prior columns between obsDat and simDat
-#my $numExtraPrior = @priorNames - scalar(@$arrRef1);
-#for my $pNameIndex ($numExtraPrior..$#priorNames) {
-#    if ($priorNames[$pNameIndex] ne $$arrRef1[$pNameIndex-$numExtraPrior]) {
-#	die "ERROR: mismatch in column names: $priorNames[$pNameIndex] ".
-#	    "in simData and  $$arrRef1[$pNameIndex] in obsData\n";
-#    }
-#}
-
 
 # read in obsData
 open OBS, "<$obsDat" || die "Can't open $obsDat\n";
@@ -312,12 +272,26 @@ if (! defined($opt_a)) {  # use the external acceptRejection C program
     # }
     ## create the prior columns only file, and a file without header
     open SIMDAT, "<$simDat" || die "Can't open $simDat\n";
+    my $savedHeader = "";
     while (<SIMDAT>) {
-	if ($. != 1) {  # removing the header
+	if ($. != 1) {  # creating a file without the header for rejection
+	    if (/PRI\.numTauClass/) {  # multiple concatenated sims
+		if ($_ eq $savedHeader) { # ignore the line
+		    next;
+		} else {
+		    die "ERROR: You concatenated the multiple simulation ".
+			"results.  But the headers do not match (indicating ".
+			"that the simulations weren't run with the same ".
+			"parameters). 1st header was\n\n$savedHeader\n".
+			"The header at line $. was\n\n$_\n";
+		}
+	    }
 	    print $tmpSimDat2fh "$_";
-	} else {  # print the header for the output from rejection 
+	} else {  # 1st line, prepare the header for the output of rejection 
 	    print $tmpSimDatfh "$_";
 	    $tmpSimDatfh->close();
+	    $savedHeader= $_;  # used to check multiple headers when
+	                       # multipe simulations are concatenated
 	}
 	# if we want to shrink the prior for R, we can do it here.
 	chomp;
@@ -363,6 +337,30 @@ if (! defined($opt_a)) {  # use the external acceptRejection C program
     print STDERR "INFO: running $rejExe $tmpObs $tmpSimDat2 $tol $columns >> $tmpSimDat\n";
     my $rc = system ("$rejExe $tmpObs $tmpSimDat2 $tol $columns >> $tmpSimDat");
     die "$rejExe ran funny: $?" unless $rc == 0;
+} else {  # Not using preprocessing by rejection
+    open SIMDAT, "<$simDat" || die "Can't open $simDat\n";
+    my $savedHeader = "";
+    while (<SIMDAT>) {
+	if ($. != 1) {
+	    if (/PRI\.numTauClass/) {  # multiple concatenated sims
+		if ($_ eq $savedHeader) { # ignore the line
+		    next;
+		} else {
+		    die "ERROR: You concatenated the multiple simulation ".
+			"results.  But the headers do not match (indicating ".
+			"that the simulations weren't run with the same ".
+			"parameters). 1st header was\n\n$savedHeader\n".
+			"The header at line $. was\n\n$_\n";
+		}
+	    }
+	} else {  # 1st line, prepare the header for the output of rejection 
+	    $savedHeader= $_;  # used to check multiple headers when
+	                       # multipe simulations are concatenated
+	}
+	print $tmpSimDatfh "$_";
+	$tmpSimDatfh->close();
+    }
+    close SIMDAT;
 }
 
 # prepare the obsDat for the acceptRej.r
@@ -449,7 +447,7 @@ sub MkStdAnalysisRScript {
     print $fh "$mainRScript\n";
     
     if(defined($opt_a)) {
-      print $fh "res <- stdAnalysis(\"$tmpObs\", \"$simDat\", pdf.outfile=\"$pdfOut\",pre.rejected=F";
+      print $fh "res <- stdAnalysis(\"$tmpObs\", \"$tmpSimDat\", pdf.outfile=\"$pdfOut\",pre.rejected=F";
 
     } else {
       print $fh "res <- stdAnalysis(\"$tmpObs\", \"$tmpSimDat\", \"$tmpPrior\",pdf.outfile=\"$pdfOut\",pre.rejected=T";
