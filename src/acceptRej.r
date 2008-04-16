@@ -215,7 +215,7 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
       res.mode <- try(loc1stats((result[[thisPriorName]])$x,prob=0.95),silent=T)
       if(class(res.mode) == "try-error") {
         cat("NA\n")
-        cat("** locfit failed to find mode, this occurs frequently with an " ,
+        cat("** locfit failed to find mode, this occurs with an " ,
             "extreme\n** L-shaped posterior distribution, and the mode is ",
             "at the boundary (e.g. 0)\n", sep="")
       } else {
@@ -267,7 +267,8 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
   rc <- try(plotKernDensity(result[["PRI.omega"]],result[["PRI.E.t"]],
                             xlab="Omega", ylab="E(t)", title="Omega and E(t)"))
   if(class(rc) == "try-error") {
-    warning("WARN: plotKernDensity failed for some reason, so the kernel density plot was not created\n")
+    cat("WARN: plotKernDensity failed for some reason, so the kernel density ",
+        "plot was not created\n", file=stderr())
   }
   # this plot doesn't seem to work.
   ## pdf("Skink0.5Milltol0.002Na0.5.pdf") 
@@ -317,8 +318,21 @@ getData <- function (infile) {
 # -----------------------------------------------------------------------
 # horizontal view
 plotKernDensity <- function (res1, res2, title="q1 and q2", xlab="q1", ylab="q2") {
-  bwq1 <- dpik(res1$x)
-  bwq2 <- dpik(res2$x)
+  bwq1 <- try(dpik(res1$x),silent=T)
+  bwq2 <- try(dpik(res2$x),silent=T)
+  # I think bandwidth choice by dpik may fail if there aren't enough unique
+  # values (e.g. mostly 0), I'm not sure following is ok or not, but
+  # bw.nrd0 seems to be more robust
+  if(class(bwq1) == "try-error") {
+    cat("INFO: In plotKernDensity(), simpler bandwidth selection used for ",
+            xlab, "\n", file=stderr())
+    bwq1 <- bw.nrd0(res1$x)
+  }
+  if(class(bwq2) == "try-error") {
+    cat("INFO: In plotKernDensity(), simpler bandwidth selection used for ",
+            ylab, "\n", file=stderr())
+    bwq2 <- bw.nrd0(res1$x)
+  }  
   x <- cbind(res1$x, res2$x)
   est <- bkde2D(x, bandwidth=c(bwq1,bwq2))
   par(ask = FALSE)
@@ -334,18 +348,18 @@ make.hist <-function(vect, res.makepd, title="", xlim, ...) {
   #par(mfcol=c(2,1))
   hist.col = "gray"
   if(missing(xlim)) {
-    hist(vect,br=15,col=hist.col,prob=TRUE,main=paste(title, ": Prior Dist'n"),
+    hist(vect,col=hist.col,prob=TRUE,main=paste(title, ": Prior Dist'n"),
        xlab=title, ...)
   } else {
-    hist(vect,br=15,col=hist.col,xlim=xlim,prob=TRUE,main=paste(title, ": Prior Dist'n"),
+    hist(vect,col=hist.col,xlim=xlim,prob=TRUE,main=paste(title, ": Prior Dist'n"),
        xlab=title, ...)
   }
   lines(density(vect,bw=0.1),lty=2)
   if(missing(xlim)) {
-    hist(res.makepd$x,br=15,col=hist.col,prob=TRUE,
+    hist(res.makepd$x,col=hist.col,prob=TRUE,
          main=paste(title, ": Posterior Dist'n "), xlab=title, ...)
   } else {
-    hist(res.makepd$x,br=15,col=hist.col,xlim=xlim,prob=TRUE,
+    hist(res.makepd$x,col=hist.col,xlim=xlim,prob=TRUE,
          main=paste(title, ": Posterior Dist'n "), xlab=title, ...)
   }
   lines(density(res.makepd$x,bw=0.1))
@@ -353,14 +367,20 @@ make.hist <-function(vect, res.makepd, title="", xlim, ...) {
 }
 
 
-plot.bf <- function(prior,posterior, ...) {
+plot.bf <- function(prior,posterior,...) {
   bf.out <- make.bf.vect(prior,posterior)
   if (is.null(bf.out)) {
     return(NULL);
   }
-
+  # finding some reasonable y.lim for the plot, all values here are arbitrary
+  y.max <- 40
+  if (max(bf.out$bf) * 1.1 < 40) {
+    y.max <- max(bf.out$bf)* 1.1
+  } else if (mean(bf.out$bf > 40) > 0.6) {
+    y.max <- sort(bf.out$bf)[ceiling(length(bf.out$bf) * 0.4)] * 1.1
+  }
   plot(bf.out$crit.vals, bf.out$bf, type="l",
-       ylim=c(0,min(40, max(bf.out$bf) * 1.1)),
+       ylim=c(0,y.max), 
        xlab="Hyper Parameter Thresholds",ylab="Bayes Factor",...)
   line.type = 3
   abline (1, 0, lty=2)
@@ -380,7 +400,35 @@ make.bf.vect <- function(prior, posterior, crit.vals = NULL, num.points=100) {
   if (prior.len * posterior.len == 0) {  # some error
     return(NULL);
   }
+  
+  if (is.null(crit.vals)) {
 
+    post.range <- range(posterior)
+
+    # A single value of posterior is observed (e.g. at the boundary)
+    if(post.range[1] == post.range[2]) {
+      if(post.range[1] == 0) {
+        post.range <- c(-0.01, 0.01)
+      } else  {
+        post.range <- c(0.99, 1.01) * post.range[1]
+      }
+    }
+
+    # following is probably not required
+    pri.min <- min(prior)
+    if (post.range[1] <= pri.min) {
+      if(pri.min >= post.range[2]) {  # impossible, but better check
+        cat("WARN: In make.bf.vect(), weird prior/posterior range encountered\n",
+            file=stderr())
+        return(NULL)
+      }
+      post.range[1] <- pri.min
+    }
+    crit.vals <- seq(post.range[1], post.range[2], length.out=num.points+2)
+    # get rid of the ends to avoid bf = Inf
+    crit.vals <- crit.vals[2:(length(crit.vals) - 1)]
+  }
+  
   if (is.null(crit.vals)) {
     temp.pos <- posterior[posterior != max(posterior) &
                           posterior != min(posterior)]
