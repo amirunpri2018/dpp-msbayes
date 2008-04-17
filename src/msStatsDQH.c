@@ -1175,8 +1175,9 @@ void shannonIndex(char **list, int* config, double **shannonIndexArray)
   sHua = sHu - (freqSp1*sHa1) - (freqSp2*sHa2);
   
   // throw values into double array shannonIndexArray
-  *(*shannonIndexArray+0) = sHa1, *(*shannonIndexArray+1) = sHa2,  *(*shannonIndexArray+2) = sHu, *(*shannonIndexArray+3) = sHua;
+  //*(*shannonIndexArray+0) = sHa1, *(*shannonIndexArray+1) = sHa2,  *(*shannonIndexArray+2) = sHu, *(*shannonIndexArray+3) = sHua;
 
+  *(*shannonIndexArray+0) = sHu, *(*shannonIndexArray+1) = sHua,  *(*shannonIndexArray+2) = sHa1, *(*shannonIndexArray+3) = sHa2;
 
    free(AlCount1);
    free(AlCount2);
