@@ -1,11 +1,11 @@
 upperTheta = 30.0
 upperTau = 10.0
-numTauClasses = 3
+numTauClasses = 0
 upperMig = 0.0
 upperRec = 0.0
 upperAncPopSize = 0.5
 numLoci = 1
-constrain = 6
+constrain = 0
 subParamConstrain = 111111111
 15      10      5       11.60   614     0.323   0.268   0.212   lamarckii.fasta
 16      10      6       13.03   614     0.266   0.215   0.265   erosa.fasta
