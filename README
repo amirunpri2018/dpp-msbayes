@@ -4,22 +4,42 @@ using hierarchical ABC
 Pronounced "em es bayzzz"
 
 
+TABLE OF CONTENTS
+
+1. Overview
+2. Installation
+3. Tutorial
+
+a. Creation of input files
+b. Running the simulations (random draws from the hyper-prior)
+c. Post processing of simulated data (obtaining the posterior)
+d. Optional Step:  Constraining Hyper-parameter Psi, number of divergence times
+e. Optional Step:  Batch mode with sub-parameter constraints (For advanced users)
+
+4. Recommended settings 
+5. Converting divergence time estimates into Earth years
+6. Trouble Shooting
+
+##################################################################
+## Overview
+##################################################################
+
+
 Overview: msBayes implements a comparative phylogeographic analysis of multiple co-distributed taxon-pairs using a hierarchical approximate Bayesian computation (HABC) model.  
 
-From DNA sequence data, one can:
-1. test if the taxon-pairs formed at the same time (tau) using the Bayes factor and estimating the hyper-parameters Psi and Omega (Psi = # of different events per Y taxon-pairs and Omega = Var(tau)/E(tau) )
-2. estimate when the simultaneous divergence or colonization occurred by estimating the Mean divergence time
+Here is what you can do:
+1. test if the taxon-pairs formed at the same time (tau) using the Bayes factor and estimates of the hyper-parameters Psi and Omega (Psi = # of different events per Y taxon-pairs and Omega = Var(tau)/E(tau) ). It is assumed that ancestral populations are split into pairs of populations. The sizes of these ancestral and descendent populations are free to vary and therefore isolation by colonization is allowed within the general model.
+2. estimate when the simultaneous divergence or colonization occurred by estimating the mean divergence time
+3. calculate a number of summary statistics from all of the Y taxon-pairs
 If simultaneous divergence/colonization is not supported given the data, one can:
-3. estimate how many divergence/colonization events occurred and when they occurred
-4. estimate how many taxon-pairs formed at divergence/colonization each event and identify which of the taxon-pairs were formed at each of the events
-5. calculate a number of summary statistics from all of the Y taxon-pairs
-
+4. estimate how many divergence/colonization events occurred and when they occurred
+5. estimate how many taxon-pairs formed at each of the divergence/colonization events and identify which of the taxon-pairs were formed at each of the events
 6. One can also conduct simulations rather then use the simulations for HABC estimation   
 
-In the example used in this document, we have sequence data from 6
+In the example used in this document, we use sequence data from 6
 population-pairs. These data were kindly provided by Chris Meyer and are
 mtDNA sequences collected from 6 population pairs of cowrie mollusks
-that span the Indo-Pacific boundary.
+that span a Indo-Pacific boundary.
 
 For the full description of method see:
 
@@ -31,10 +51,10 @@ and
 2007 Hickerson, M.J., E, Stahl, and N. Takebayeyashi. msBayes: Pipeline for testing comparative phylogeographic histories using hierarchical approximate Bayesian computation. BMC Bioinformatics. 8:268
 
 
-This program runs on the command line on a unix/linux or Mac OS-X
+This program runs on the command line using a unix/linux or Mac OS-X
 Terminal.app.  In this document, we use "$" to indicate the command
 line prompt (your actual command line prompt may differ). The line
-which start from "$" is the line which you should type in the command
+which starts from "$" is the line which you should type in the command
 line, but do NOT type in "$" character, and start type the commands
 following the "$" character.
 
@@ -72,23 +92,25 @@ There are three steps involved in analyzing data with msBayes.
 2. Run coalescent simulations with population/demographic parameters sampled
    from prior distributions
 3. Analyze the simulation results to sample and plot posterior
-   distributions using ABC (approximate Bayesian computation)
-
+   distributions using HABC (hierarchical approximate Bayesian computation)
+Optional
+4. Constraining Hyper-parameter Psi, number of divergence times
+5. Batch mode with sub-parameter constraints (For advanced users)
 
 ##################################################################
 ## Step 1 ## Creation of input files
 ##################################################################
 
+Step 1 Creation of the input files is the most time-consuming part (even though msbayes uses standard FASTA files for each taxon-pair). 
+
 msBayes requires several text files as the inputs: (1) one master
-infile, which describes the sample sizes and number of base pairs and
-mutational model (ts/tv) for each population-pair and (2) an aligned DNA sequence file for each
-population-pair in FASTA format (so our example with 6
-population-pairs requires 6 aligned files).  The following section
+infile, which describes the sample sizes, number of base pairs, nucleotide frequencies, and the ts/tv ratio for each population-pair and (2) an aligned DNA sequence file for each population-pair in FASTA format (so our example with 6
+population-pairs requires 6 aligned FASTA files).  The following section
 describes the format of these files.
 
 ** the Master infile, and the aligned sequence files should be in one
    directory.  Here, I assume that you have created these files in
-   your Documents/IndoPacific inside of your home directory.
+   your Documents/IndoPacific inside of your home directory. They can also be in the /src directory
 
    You can create the empty directory with mouse (GUI), but if you
    want to create it from the command line, "mkdir name_of_dir" can be
@@ -131,9 +153,9 @@ Each column contains the following information:
    3: number of sample sequences in taxon 2 (from area 2)
    4: transition transversion rate ratio in population-pair
    5: length of sequence in bp
-   6: base frequeny of A
-   7: base frequeny of C
-   8: base frequeny of G
+   6: base frequency of A
+   7: base frequency of C
+   8: base frequency of G
    9: population pair name (filename which contains the sequence data, see next
       step for the explanation)
 
@@ -257,10 +279,12 @@ The obsSumVect file will then be one long line of columns. The first several col
 
 
 ##################################################################
-#### Step 2 Running the simulations (randomly drawing from the hyper-prior and sub-priors)
+
+#### Step 2  Running the simulations (random draws from the hyper-prior)
+
 ##################################################################
 
-Now we are ready to run the simulation.  You should run the following
+Now we are ready to run the prior simulations.  You should run the following
 command from the directory containing the master infile (and aligned
 sequence files).  There are two ways of running the simulations:
 interactive and batch mode.  In interactive mode, the programs will
@@ -335,8 +359,7 @@ is the number of draws from the hyper-prior.   For details about parameters
 and hyper-parameters, refer to Hickerson et al. (2006)
 
 
-The simulation could run for a while (over the weekend).  Before this step, you ought
-to enable screen or some other method to log out and let the program
+The simulation could run for a while (over the weekend).  Before this step, you ought to enable screen or some other method to log out and let the program
 keep running before this step.  Or after the program starts running
 (after you answer the questions), you can press ctrl + z
 simultaneously (to suspend the process), then type
@@ -352,8 +375,7 @@ open while the program is running and hope for the best.
 
 If you are happy with interactive mode, you can skip this section.
 
-To run in batch mode, you have to specify the sub-prior and hyper-prior settings in
-the master infile (SampleSize_MuModel_Vector). You also have to specify which sub-parameters you want to constrain (assigning values instead of randomly drawing from its corresponding sub-priors. Most of the time you will not want to constrain sub-parameter values. Constraining sub-parameters is useful if the sub-parameters have been pre-estimated or if you want to ascertain the bias of the HABC estimator. 
+To run in batch mode, you have to specify the sub-prior and hyper-prior settings in the master infile (SampleSize_MuModel_Vector). You also have to specify which sub-parameters you want to constrain (assigning values instead of randomly drawing from its corresponding sub-priors). Most of the time you will not want to constrain sub-parameter values. Constraining sub-parameters is useful if the sub-parameters have been pre-estimated or if you want to ascertain the bias of the HABC estimator. 
 
 
 Specify the sub-prior, hyper-prior and sub-parameter constraint settings above the array containing the the sample sizes and HKY mutation model parameters. 
@@ -396,86 +418,14 @@ preparing this extended master infile, you can run it in batch mode by:
 
 $ msbayes.pl -r 10000 -o Prior_SumStat_Outfile -c batch.masterIn
 
--c option (+ master infile name: batch.masterIn) indicates that the
-simulation will run in batch mode.  This will run 10000 simulations (# random draws from the prior)
-(-r option), using the setting described in file called batch.masterIn
-(-c option), and output filename is "Prior_SumStat_Outfile" (-o
-option).
+-c option indicates that the simulation will run in batch mode using prior specifications within the the batch.masterIn file 
 
------ Batch mode with sub-parameter constraints (For advanced users)-----
+-r option: This will run 10000 simulations (# random draws from the prior) using the prior specifications in the batch.masterIn file 
 
-Normally you will not want to constrain (control) any sub-parameters and instead have these parameters randomly drawn from their sub-priors. In this case, just skip this next section and keep the default values in batch.masterIn (constrain = 0 and subParamConstrain = 000000000). 
+-o option: This is the huge prior file that contains the prior. The size of this prior is set by the number of simulations you choose to run
 
-But if you want to constrain all of the sub-parameters, then you have to include:
+constrain: Set this to 0 unless you want to constrain sub-parameter values (Advanced users only. See Below)
 
-constrain = 1
-
-and  
-
-subParamConstrain = 111111111  (for constraining all sub-parameters). 
-
-Although this might seem a little geeky, each "1" of the subParamConstrain matrix corresponds to a particular sub-parameter that you want to constrain to particular assigned values. Each taxon-pair can have its own sub-parameter value. You include these assigned values in a table of nine columns BELOW the section for the table of samples sizes and mutational models (see Master infile section of Step 1). Leave a "0" for each sub-parameter you do not want to constrain (and instead have it randomly drawn from its sub-prior). An example table of values is included in batch.masterIn. 
-
-The nine sub-parameters corresponding to these nine columns in the third table of batch.masterIn:
-tau	Bott1	Bott2	BottTime	mig	Theta	N-a	N-ANC	recomb
-
-if subParamConstrain = 111111111, then all 9 of these sub-parameters will be constrained across all Y taxon-pairs. On the other hand, if you have subParamConstrain = 1000001000, then only tau and Theta will be constrained 
- 	 
-Explicitly these 9 sub-parameters are: 1. tau, divergence time (scaled in 2N-ave generations); 2. Bott1, size (relative to N-a) of population-a starting at tau (before present) until the time that the bottleneck ends (BottTime); 3. Bott1, relative size (relative to N-b) of population-b starting at tau until the time that the bottleneck ends (BottTime); 4. BottTime, the time that the bottleneck ends and when exponential growth starts to occur in each of the two sub-populations a (Bott1) and b (Bott2) until the present time (time zero); 5. mig, migration rate between populations a and b; 6. Theta; 7. N-a, relative size of population a at time zero (present time); 8. relative size of the ancestral population size before the divergence; 9.recombination rate. N-b does not need to be specified because N-b = 2.0 - N-a.     
-
-The default batch.masterIn specifies no constrained sub-parameters and instead instructs msBayes to draw them randomly from their respective sub-priors. The nine columns below the table of samples size and mutational models (corresponding to the nine sub-parameters) are therefore not used in this default case. 
-
-lowerTheta = 0.01
-upperTheta = 40.5
-upperTau = 10.0
-numTauClasses = 3
-upperMig = 0.0
-upperRec = 0.0
-upperAncPopSize = 0.5
-numLoci = 1
-reps = 500000
-constrain = 0
-subParamConstrain = 000000000
-15      10      5       11.60   614     0.323   0.268   0.212   lamarckii.fasta
-16      10      6       13.03   614     0.266   0.215   0.265   erosa.fasta
-22      6       16      27.08   614     0.300   0.241   0.218   clandestina.fasta
-16      5       11      11.11   614     0.261   0.239   0.213   kieneri.fasta
-32      11      21      11.79   614     0.277   0.261   0.217   punctata.fasta
-17      7       10      57.03   614     0.266   0.264   0.245   stolida.fasta
-0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
-0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
-0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
-0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
-0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
-0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
-
-If you want to constrain some of the sub-parameters, then the batch.masterIn could be this (to include constrain = 1 and subParamConstrain = 111101110):
-
-lowerTheta = 0.01
-upperTheta = 40.5
-upperTau = 10.0
-numTauClasses = 3
-upperMig = 0.0
-upperRec = 0.0
-upperAncPopSize = 0.5
-numLoci = 1
-reps = 500000
-constrain = 1
-subParamConstrain = 100001000
-15      10      5       11.60   614     0.323   0.268   0.212   lamarckii.fasta
-16      10      6       13.03   614     0.266   0.215   0.265   erosa.fasta
-22      6       16      27.08   614     0.300   0.241   0.218   clandestina.fasta
-16      5       11      11.11   614     0.261   0.239   0.213   kieneri.fasta
-32      11      21      11.79   614     0.277   0.261   0.217   punctata.fasta
-17      7       10      57.03   614     0.266   0.264   0.245   stolida.fasta
-1.0     0.0     0.0     0.0     0.0     10.1    0.0     0.0     0.0
-1.0     0.0     0.0     0.0     0.0     20.1    0.0     0.0     0.0
-1.0     0.0     0.0     0.0     0.0     30.1    0.0     0.0     0.0
-1.0     0.0     0.0     0.0     0.0     40.1    0.0     0.0     0.0
-1.1     0.0     0.0     0.0     0.0     5.1     0.0     0.0     0.0
-1.2     0.0     0.0     0.0     0.0     25.1    0.0     0.0     0.0
-
-In this case, msBayes will constrain 2 of the 9 sub-parameters (tau and theta) for all 6 taxon pairs 
 
 
 ----- Parallel Batch mode -----
@@ -507,7 +457,7 @@ $ cat out1 ../IndoPacific2/out2 > Prior_SumStat_outfile
 
 
 ##################################################################
-#### Step 3:  post processing of simulated data
+#### Step 3:  post processing of simulated data (obtaining the posterior)
 ##################################################################
 
 Next step is to construct the posterior probability distribution
@@ -604,14 +554,196 @@ $ acceptRej.pl -h
 ####################################################################################################################################
 
 
-If you complete a msBayes analysis and find that the most probable history involves more than one divergence time or colonization time, (estimate of Omega is >> 0.0 given your data), then you might be interested in estimating when these different divergence times occurred (Tau-1, Tau-2, ... Tau-Psi) and how taxon-pairs diverged at each of these Psi times (Psi-1, Psi2, ...Psi-Psi). You can do this by simulating from the prior with Psi constrained to be the integer that is closest to its maximum posterior estimate. For example if the estimate of Omega is 0.37 and the estimate of Psi is 2.14, you can re-run msBayes (simulate from the prior, step 2 above) while constraining Psi to be 2. 
+If you complete a msBayes analysis and find that the most probable history involves more than one divergence time or colonization time, (estimate of Omega is >> 0.0 given your data), then you might be interested in estimating when these different divergence events occurred (Tau-1, Tau-2, ... Tau-Psi) and how many taxon-pairs diverged at each of these Psi times (Psi-1, Psi2, ...Psi-Psi). You can do this by simulating from the prior with Psi constrained to be the integer that is closest to its maximum posterior estimate. For example if the estimate of Omega is 0.37 and the estimate of Psi is 2.14, you can re-run msBayes (simulate from the prior, step 2 above) while constraining Psi to be 2. 
 
 To constrain Psi:
 ----Interactive Mode
 Enter the Psi value when asked
  [1, #taxon pairs].  [0]: 
+Here you would enter 2 (if you want to constrain Psi to be 2)
 ----Batch Mode
-in the batch file , assign the Psi value to numTauClasses (numTauClasses = 3, if you want Psi to be 3). 
+in the batch file (batch.masterIn) , assign the Psi value to numTauClasses (numTauClasses = 2, if you want Psi to be 2). 
 
 If you constrain psi to be 3 and then run acceptRej.pl to get the posterior probability distribution, you will obtain additional hyper-parameter estimates for Tau1, Tau2, Tau3, Psi1, Psi2 and Psi3. Tau1, Tau2, and Tau3 correspond to the 3 different divergence times and  Psi1, Psi2 and Psi3 correspond to the number of taxon-pairs that split at each of these three divergence times. 
+
+####################################################################################################################################
+#### Optional Step 5: Batch mode with sub-parameter constraints (For advanced users)
+####################################################################################################################################
+
+
+
+Normally you will not want to constrain (control) any sub-parameters and instead have these parameters randomly drawn from their sub-priors. In this case, just skip this next section and keep the default values in batch.masterIn (constrain = 0 and subParamConstrain = 000000000). 
+
+But if you want to constrain all of the sub-parameters, then you have to include:
+
+constrain = 1
+
+and  
+
+subParamConstrain = 111111111  (for constraining all sub-parameters). 
+
+Although this might seem a little geeky, each "1" of the subParamConstrain matrix corresponds to a particular sub-parameter that you want to constrain to particular assigned values. Each taxon-pair can have its own sub-parameter value. You include these assigned values in a table of nine columns BELOW the section for the table of samples sizes and mutational models (see Master infile section of Step 1). Leave a "0" for each sub-parameter you do not want to constrain (and instead have it randomly drawn from its sub-prior). An example table of values is included in batch.masterIn. 
+
+The nine sub-parameters corresponding to these nine columns in the third table of batch.masterIn:
+tau	Bott1	Bott2	BottTime	mig	Theta	N-a	N-ANC	recomb
+
+if subParamConstrain = 111111111, then all 9 of these sub-parameters will be constrained across all Y taxon-pairs. On the other hand, if you have subParamConstrain = 1000001000, then only tau and Theta will be constrained 
+ 	 
+Explicitly these 9 sub-parameters are: 1. tau, divergence time (scaled in 2N-ave generations); 2. Bott1, size (relative to N-a) of population-a starting at tau (before present) until the time that the bottleneck ends (BottTime); 3. Bott1, relative size (relative to N-b) of population-b starting at tau until the time that the bottleneck ends (BottTime); 4. BottTime, the time that the bottleneck ends and when exponential growth starts to occur in each of the two sub-populations a (Bott1) and b (Bott2) until the present time (time zero); 5. mig, migration rate between populations a and b; 6. Theta; 7. N-a, relative size of population a at time zero (present time); 8. relative size of the ancestral population size before the divergence; 9.recombination rate. N-b does not need to be specified because N-b = 2.0 - N-a.     
+
+The default batch.masterIn specifies no constrained sub-parameters and instead instructs msBayes to draw them randomly from their respective sub-priors. The nine columns below the table of samples size and mutational models (corresponding to the nine sub-parameters) are therefore not used in this default case. 
+
+lowerTheta = 0.01
+upperTheta = 40.5
+upperTau = 10.0
+numTauClasses = 3
+upperMig = 0.0
+upperRec = 0.0
+upperAncPopSize = 0.5
+numLoci = 1
+reps = 500000
+constrain = 0
+subParamConstrain = 000000000
+15      10      5       11.60   614     0.323   0.268   0.212   lamarckii.fasta
+16      10      6       13.03   614     0.266   0.215   0.265   erosa.fasta
+22      6       16      27.08   614     0.300   0.241   0.218   clandestina.fasta
+16      5       11      11.11   614     0.261   0.239   0.213   kieneri.fasta
+32      11      21      11.79   614     0.277   0.261   0.217   punctata.fasta
+17      7       10      57.03   614     0.266   0.264   0.245   stolida.fasta
+0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+
+If you want to constrain some of the sub-parameters, then the batch.masterIn could be this (to include constrain = 1 and subParamConstrain = 111101110):
+
+lowerTheta = 0.01
+upperTheta = 40.5
+upperTau = 10.0
+numTauClasses = 3
+upperMig = 0.0
+upperRec = 0.0
+upperAncPopSize = 0.5
+numLoci = 1
+reps = 500000
+constrain = 1
+subParamConstrain = 100001000
+15      10      5       11.60   614     0.323   0.268   0.212   lamarckii.fasta
+16      10      6       13.03   614     0.266   0.215   0.265   erosa.fasta
+22      6       16      27.08   614     0.300   0.241   0.218   clandestina.fasta
+16      5       11      11.11   614     0.261   0.239   0.213   kieneri.fasta
+32      11      21      11.79   614     0.277   0.261   0.217   punctata.fasta
+17      7       10      57.03   614     0.266   0.264   0.245   stolida.fasta
+1.0     0.0     0.0     0.0     0.0     10.1    0.0     0.0     0.0
+1.0     0.0     0.0     0.0     0.0     20.1    0.0     0.0     0.0
+1.0     0.0     0.0     0.0     0.0     30.1    0.0     0.0     0.0
+1.0     0.0     0.0     0.0     0.0     40.1    0.0     0.0     0.0
+1.1     0.0     0.0     0.0     0.0     5.1     0.0     0.0     0.0
+1.2     0.0     0.0     0.0     0.0     25.1    0.0     0.0     0.0
+
+In this case, msBayes will constrain 2 of the 9 sub-parameters (tau and theta) for all 6 taxon pairs 
+
+
+##################################################################
+##################################################################
+
+ Recommended settings
+
+##################################################################
+##################################################################
+
+------ Running the prior ------
+
+These below are a good place to start. 
+
+lowerTheta = 0.01
+upperTheta = 75.0
+upperTau = 5.0
+numTauClasses = 0
+upperMig = 0.0
+upperRec = 0.0
+upperAncPopSize = 0.5
+numLoci = 1
+reps = 1000000
+constrain = 0
+
+upperTheta :
+upperTheta is somewhat dependent on how many base pairs are analyzed from a locus (and the variability in base pairs across taxon-pairs). The more base pairs, the higher upperTheta should be. It is prudent to try a couple of different upperTheta values (i.e. 50.0, 100.0, and 150.0). For a typical quickly evolving mtDNA gene such as cyt B, a general rule of thumb would be upperTheta =50.0 if you have 500 base pairs, upperTheta=100.0 if you have 1000 base pairs and so on. But you should try different values regardless. Furthermore, if the number of base pairs varies widely across the co-distributed taxon-pairs, use the longest locus as a guide. Overall, having widely different numbers of base-pairs across taxon-pairs is a less desirable situation.  
+
+upperAncPopSize:
+This is an important parameter because it affects the variance in coalescent times that occurs in an ancestral population. One can use some prior knowledge about the geologic or oceanographic history as a guide.
+	As upperAncPopSize increases, the genetic divergence between sister populations is not only expected to become larger but is also expected to become more variable. This means that if ancestral population sizes are large in all co-distributed sister population pairs and divergence times are simultaneous, pairwise genetic divergences between the sister population pairs will be highly variable. 
+	If one knows something about the geologic and/or oceanographic history, one can use it as a guide. For example, if historical divergence events (vicariant events) involved a scenario where ancestral populations where bisected by a barrier, then one could try using upperAncPopSize=1.0. On the other hand, if one thinks that a typical ancestral population was not the sum of the two descendent populations, then one can try using 0.25 and/or 0.5.  
+
+reps: (draws from the hyper-prior)
+
+Make sure there is plenty of room in your hard drive because a prior can become large (several GB). 1,000,000 reps is a good place to start and can be finished in a day to a few days depending on how many taxon-pairs you have.
+
+------ Obtaining the Posterior ------
+
+Tolerance (-t):
+A minimum number of accepted draws would be 500. Therefore, if you simulated 1,000,000 draws from the hyper-prior, it would be hazardous to use a tolerance lower than 0.0005. Instead, it would be prudent to try a few different tolerances (e.g. 0.0005, 0.001, and 0.002).  
+
+Summary Statistics (-s):
+If there are > 1 one individuals collected from all of the co-distributed taxon-pairs, it is suggested to use either the default (no –s needed) or –s ‘pi.net, pi.wPop2, pi.wPop1, wattTheta.Pop2, wattTheta.Pop1, tajD.denomPop2, tajD.denomPop1’. Here “1” and “2” refer to descendent populations 1 and 2. Do not use any of the Shannon’s index summary statistics unless you are using a post-divergence migration model (Huang et al. in prep.).
+
+The default summary statistics vector can not be used if some of the taxon-pairs have extremely low sample sizes (1 individual collected from a descendent population) or no intra-population genetic variation. If this low sample size only occurs in a descendent population on one side of the putative historical barrier (population 1, but not 2), then one can try using –s ‘pi.b, pi.wPop2, pi, wattTheta.Pop2, wattTheta, tajD.denomPop2, tajD.denom’ for a summary statistic vector. 
+
+Overall, it is a good idea to try several summary statistic vectors 
+
+
+##################################################################
+##################################################################
+
+Converting divergence time estimates into Earth years
+
+##################################################################
+##################################################################
+
+
+Use the following R script
+
+rm(list=ls(all=TRUE))
+
+GenTime<-		#generation time
+Theta_AVE<- 37.5	# Half the upper bound of the Theta prior
+Et<-1.5		# estimate of tau in time units of 4N-ave generations (output of 			#msbayes)  	
+Mu <- 0.0000225    # per locus per generation mutatuion rate 
+			# If locus varies in number of base-pairs, then this value would be the average rate across loci (it is best if number of basepairs is relatively uniform across taxon-pairs)
+
+
+
+Generations<- Et*(Theta_AVE/Mu)
+Earth_Years<-Generations*GenTime
+
+##################################################################
+##################################################################
+
+Trouble Shooting
+
+##################################################################
+##################################################################
+	
+1.	Generating the infile and making the observed summary statistic vector
+
+		a. Make sure those line breaks are unix in all files
+		b. Are the sample sizes correct? 
+
+   2. Generating the hyper-prior
+	
+		a.	Did you compile?
+		b.	Are you in the /src directory
+
+3.	Getting the posterior
+
+		a. Try an alternative set of summary statistics	
+		b. Did you run out of room on your hard drive?	
+
+
+
+
+
+
 
