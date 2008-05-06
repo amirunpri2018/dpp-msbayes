@@ -1024,7 +1024,8 @@ static int ReadMutLine(mutParameter *mpp, char *line, int ncol)
 
   
 #ifdef W_GAMMA
-  if (ncol == 10) {
+ 
+   if (ncol == 10) {
     rc = sscanf(line, "%u %u %u %lf %lf %u %lf %lf %lf %s",
 	   &mpp->numPerTaxa, &mpp->sample[0], &mpp->sample[1],
 	   &mpp->tstv[0], &mpp->gamma, &mpp->seqLen,
@@ -1044,8 +1045,9 @@ static int ReadMutLine(mutParameter *mpp, char *line, int ncol)
     mpp->numPerTaxa = mpp->sample[0] + mpp->sample[1];
   } else {
     return (-1);
-  }
+  } 
 #else  /* basically sscanf and ncol == are different */
+
   if (ncol == 9) {
     rc = sscanf(line, "%u %u %u %lf %u %lf %lf %lf %s",
 	   &mpp->numPerTaxa, &mpp->sample[0], &mpp->sample[1],
@@ -1054,10 +1056,13 @@ static int ReadMutLine(mutParameter *mpp, char *line, int ncol)
     mpp->gamma = 999;
 
     if (mpp->numPerTaxa != mpp->sample[0] + mpp->sample[1]) {
+ 
       fprintf(stderr, 
 	      "Error: In the following line, 2nd and 3rd column doesn't add\n"
 	      "up to the 1st column\n%s\n", line);
-      exit (EXIT_FAILURE);
+      exit (EXIT_FAILURE); 
+	  
+	  
     }
   } else if (ncol == 8) {
     rc = sscanf(line, "%u %u %lf %u %lf %lf %lf %s",
@@ -1069,6 +1074,8 @@ static int ReadMutLine(mutParameter *mpp, char *line, int ncol)
   } else {
     return (-1);
   }
+  
+  
 #endif
   
   mpp->freqT = 1 - mpp->freqA - mpp->freqC - mpp->freqG;
