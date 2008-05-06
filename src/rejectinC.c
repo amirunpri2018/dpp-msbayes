@@ -58,15 +58,16 @@ main( int argc, char *argv[])
 	x = (double *)malloc( (unsigned)ncolumns*sizeof( double) ) ;
 	s = (double *)malloc( (unsigned)ncolumns*sizeof( double) ) ;
 	normobs = (double *)malloc( (unsigned)ncolumns*sizeof( double) ) ;
+	if (inputstring==NULL || obs==NULL || vec==NULL || count==NULL ||
+	    x==NULL || s==NULL) {
+	  fprintf(stderr, "No memory in msReject\n");
+	  exit(EXIT_FAILURE);
+	}
 	for (i=0;i<ncolumns;i++) {
 	  x[i]=s[i]=0.;
 	  count[i]=0;
 	}
 	linecount=0;
-
-
-/*  	fprintf(stderr,"GOT HERE\t\targ process \n"); */
-/*  	    fprintf(stderr,"GOT IN HERE\n"); */
 
 	if ((pfin = fopen(argv[1], "r"))==NULL) {
 	  fprintf(stderr,"Cannot open the observed data stats file %s.\n",argv[1]);
@@ -89,10 +90,6 @@ main( int argc, char *argv[])
 	  }
 	}
 	inputstring =definstr;
-/* 	printf("obs:"); */
-/* 	for (c=0;c<ncolumns;c++) */
-/* 	  printf("\t%lf", obs[c]); */
-/* 	printf("\n"); */
 
 	if (freopen(argv[2], "r", pfin)==NULL) {
 	  fprintf(stderr,"Cannot open the simulated data stats file %s.\n",argv[2]);
@@ -110,7 +107,6 @@ main( int argc, char *argv[])
 	    }
 	    vec[c] = atof(dum);
 	    if (finite(vec[c])) {
-//  	      fprintf(stderr,"%1d,%lf\t",c,vec[c]);
 	      x[c] += vec[c];
 	      s[c] += vec[c]*vec[c] ;
 	      ++count[c];
@@ -128,12 +124,10 @@ main( int argc, char *argv[])
 	  s[c] /= (double)count[c] ;
 	  s[c] -= x[c]*x[c] ;
 	  s[c] = sqrt( s[c]*(double)count[c]/((double)count[c]-1.0) ) ;
-// 	  printf("c=%d\tx:\t%lf\tsd:\t%lf\tn:\t%d\n",c, x[c], s[c], count[c]); 
 	  normobs[c] = obs[c]- x[c];
 	  normobs[c] /= s[c];
 	}
 
-/* 	fprintf(stderr,"GOT HERE\n"); */
 	tolerated = (long)(tolerance * (double)linecount + DBL_EPSILON) ;
 	besteuclid = (double *)malloc((unsigned)tolerated * sizeof(double));
 	bestvec = (double **)malloc((unsigned)tolerated * sizeof(double *));
@@ -151,7 +145,6 @@ main( int argc, char *argv[])
 	}
 	while( fgets(inputstring, 99999, pfin)!= NULL ) {
 	  euclid=0.;
-/*   	fprintf(stderr,"GOT HERE\t\treading file \n"); */
 	  for (c=i=0;c<ncolumns;c++) {
 	    while(i<=columns[c]) {
 	      sscanf(inputstring, "%s", dum);
@@ -168,13 +161,11 @@ main( int argc, char *argv[])
 	      fprintf(stderr,"WARNING: Nan or inf in simulated stats file %s, line %ld, column %d. Arbitrarily, the Euclidean distance of this simulation replicate to the observed has been incremented by 3 for this statistic.\n",argv[2],linecount,columns[c]);
 	      normalizedvec = 3.;
 	    }
-/*  	    if (count>755) fprintf(stderr,"dum=%s, vec[c]=%f, ",dum,vec[c]); */
 	    euclid += (normalizedvec-normobs[c])*(normalizedvec-normobs[c]);
-/* 	    fprintf(stderr,"%1d,%lf\n",c,vec[c]); */
 	  }
 	  inputstring =definstr;
 	  euclid = sqrt(euclid);
-/*   	  fprintf(stderr,"GOT HERE- reading file, count=%d- testing euclid=%f vs bestvec \n",count,euclid); */
+
 	  if (linecount==0) {
 	    besteuclid[0]=euclid;
 	    for(c=0;c<ncolumns;c++) bestvec[0][c]=vec[c];
@@ -183,41 +174,28 @@ main( int argc, char *argv[])
 	    for (li=0;li<(linecount<tolerated?linecount:tolerated);li++) {
 	      if (euclid<besteuclid[li]) break;
 	    }
-/* 	    fprintf(stderr,"GOT HERE\t\treading file- shifting bestvec \n"); */
+
 	    for (lii=(linecount<tolerated?linecount:tolerated)-1;lii>li;lii--) {
 	      besteuclid[lii]=besteuclid[lii-1];
 	      for(c=0;c<ncolumns;c++) bestvec[lii][c]=bestvec[lii-1][c];
 	      strcpy(bestline[lii],bestline[lii-1]);
 	    }
-/* 	    fprintf(stderr,"GOT HERE\t\treading file- assigning euclid in bestvec \n"); */
+
 	    if (li<tolerated) {
 	      besteuclid[li]=euclid;
 	      for(c=0;c<ncolumns;c++) {
-/* 		fprintf(stderr,"GOT HERE\t\treading file- assignED euclid in bestvec 1, %d,%d\n",li,c); */
-/* 	          fprintf(stderr,"                   TEST bestvec: %f \n",bestvec[li][c]); */
-/* 	          fprintf(stderr,"                   TEST vec: %f\n",vec[c]); */
 		bestvec[li][c]=vec[c];
 	      }
 	      strcpy(bestline[li],inputstring);
 	    }
-/* 	    fprintf(stderr,"GOT HERE\t\treading file- assignED euclid in bestvec 2 \n"); */
 	  }
 	  ++linecount;
 	}
 
-/* 	exit(1); */
-
-/*  	printf("\n\t\t"); */
-/* 	for(c=0;c<ncolumns;c++) printf("%f\t",obs[c]); */
-/* 	for(c=0;c<ncolumns;c++) printf("%f\t",normobs[c]); */
-/*  	printf("\n"); */
 	for(li=0;li<tolerated;li++) {
-/* 	  printf("%f\t",besteuclid[li]); */
-/* 	  for(c=0;c<ncolumns;c++) printf("%f\t",bestvec[li][c]); */
-/* 	  printf("\n"); */
 	  printf("%s", bestline[li]);
 	}
-/* 	printf("\n"); */
+	
 	exit (0);
 }
 

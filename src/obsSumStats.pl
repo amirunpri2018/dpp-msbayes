@@ -85,7 +85,7 @@ die "$usage\n" if (defined($opt_h));
 
 my $sumStatsBin = FindFile($sumStatsBinName);  # locate the binary
 if ($sumStatsBin eq '-1') {
-    die "Can't find $sumStatsBinName in directories:\n", jion(":", @INC), "\n";
+    die "Can't find $sumStatsBinName in directories:\n", join(":", @INC), "\n";
 }
 
 if (@ARGV > 0) {
@@ -276,10 +276,16 @@ sub ReadInMaster {
     my @master_matrix;
     my $numCol = -1;
     my $paraConfSect = 1;
+    my $warnFlag = 1;
     while (<INPUT>) {
 	s/#.*$//;  # remove any thing after "#", which indicates comments
 	next if (/^\s*$/);
-
+	if ($warnFlag) {   # Maybe we should handle line ending better at some point
+	    if (/\r\n$/) {
+		warn "WARN: the file $filename appear to have DOS style line ending, it may not work correctly if it's not converted to unix style newline characters\n";
+	    }
+	    $warnFlag == 0;
+	}
 	# There could be parameter config lines for msprior in the
 	# beginning of this file, which should be ignored.  These are
 	# in the format of "parameterName = value", so they are

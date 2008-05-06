@@ -290,14 +290,6 @@ $obsDataArray[0] .= "\n";
 if (! defined($opt_a)) {  # use the external acceptRejection C program
     my $tol = (defined($opt_t)) ?  $opt_t :  $defaultTolerance;
     
-    # count the line numbers
-    # my $simLineNum = `wc -l < $simDat`;
-    # die "wc $simDat failed: $?" if $?";
-    # chomp $simLineNum;
-    # $simLineNum --;  # remove the count for header
-    # if ($simLineNum > $numPriorSamples) {
-    #   draw an sorted array of random line number index
-    # }
     ## create the prior columns only file, and a file without header
     open SIMDAT, "<$simDat" || die "Can't open $simDat\n";
     my $savedHeader = "";
@@ -364,7 +356,21 @@ if (! defined($opt_a)) {  # use the external acceptRejection C program
     # the headers are stripped from obsDat and simDat below
     print STDERR "INFO: running $rejExe $tmpObs $tmpSimDat2 $tol $columns >> $tmpSimDat\n";
     my $rc = system ("$rejExe $tmpObs $tmpSimDat2 $tol $columns >> $tmpSimDat");
-    die "$rejExe ran funny: $?" unless $rc == 0;
+    unless ($rc == 0) {
+	print STDERR "ERROR: $rejExe ran funny: $?\n";
+	print STDERR "ERROR: Did you make sure that tolerance ($tol) * ".
+	    "(number of sim runs) is\nERROR: greater than 100 or so?\n";
+	die;
+    }
+    # checking that there are decent number of accepted points
+    $rc = `wc -l < $tmpSimDat`;
+    die "wc $tmpSimDat failed: $?\n" if $?;
+    chomp $rc;
+    if ($rc < 100) {
+	warn "WARN: With tolerance of $tol, there are only $rc sampling " .
+	    "points.\nWARN: If you encouter a problem, you may need to run ".
+	    "more simulations\nWARN: or use a higher tolerance (-t option).\n";
+    }
 } else {  # Not using preprocessing by rejection
     open SIMDAT, "<$simDat" || die "Can't open $simDat\n";
     my $savedHeader = "";

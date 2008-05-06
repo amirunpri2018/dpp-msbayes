@@ -87,7 +87,7 @@ my $rmTempFiles = 1; # set this to 0 for debugging
 
 # open and close a temp file
 # This is used to store the prior paras from msprior (psiarray and tauarray)
-my $tmpPriorOut, $tmpPriorOutfh;
+my ($tmpPriorOut, $tmpPriorOutfh);
 do {$tmpPriorOut = tmpnam()} until $tmpPriorOutfh = 
     IO::File->new($tmpPriorOut, O_RDWR|O_CREAT|O_EXCL);
 END {                   # delete the temp file when done
@@ -121,7 +121,7 @@ END {                   # delete the temp file when done
 $tmpMainOutfh->close();
 
 # This is used by sumstats to store temporary output.  It used to be
-# "PARarray-E", but now we are using temp file.  Better for NFS home
+# "PARarray-E", but now we are using temp file.  Better for NFS /home
 my ($tmpSumStatVectScratch, $tmpSumStatVectScratchFh);
 do {$tmpSumStatVectScratch = tmpnam()} until $tmpSumStatVectScratchFh = 
     IO::File->new($tmpSumStatVectScratch, O_RDWR|O_CREAT|O_EXCL);
@@ -130,7 +130,7 @@ END {                   # delete the temp file when done
 	if (defined($rmTempFiles)) {
 	    unlink($tmpSumStatVectScratch) || die "Couldn't unlink $tmpSumStatVectScratch : $!";
 	} else {
-	    pritn STDERR "FILE: \$tmpSumStatVectScratch = $tmpSumStatVectScratch\n";
+	    print STDERR "FILE: \$tmpSumStatVectScratch = $tmpSumStatVectScratch\n";
 	}
     }
 };
@@ -180,12 +180,7 @@ while (<RAND>) {
     # Printing the header at the right time
     my $headerOpt = ($counter == $numTaxaPair) ? "-H":"";
 
-#    print("$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 6 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $tmpVal 1 Nc $Nanc $numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonPairID 1 Nc $Nanc $numTaxaPair | $sumstatsvector -T $upperTheta $headerOpt >> $tmpMainOut"); print ("\n");
-
     system("$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 6 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $tmpVal 1 Nc $Nanc $numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonPairID 1 Nc $Nanc $numTaxaPair | $sumstatsvector -T $upperTheta --tempFile $tmpSumStatVectScratch $headerOpt >> $tmpMainOut");
-
-#   system("$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 6 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $tmpVal 1 Nc $Nanc $numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonPairID 1 Nc $Nanc $numTaxaPair >> $tmpMainOut");
-
 
 # minor change 9/8/06; $N1 $N1 $N2 $N2 to $N1 $BottStr1 $N2 $BottStr2
 
