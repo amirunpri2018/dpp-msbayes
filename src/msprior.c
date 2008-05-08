@@ -110,7 +110,7 @@ int main (int argc, char *argv[])
  void display_nums(int *, int);
  int comp_nums(const double *, const double *);
  FILE *fpTauPsiArray;
- //FILE *dp;
+ 
  int b_constrain = 0;
  int *subParamConstrainConfig = NULL;
  int counter = 0;
@@ -124,19 +124,7 @@ int main (int argc, char *argv[])
 	  //initialize constrain indicator
      b_constrain = 1;
 
-	  /*
-	  dp = fopen("mspriorDebugPrint", "w");
-	  if(dp != NULL)
-	  {
-		  fprintf(dp, "b_constrain = %d\n", b_constrain);
-		  fclose(dp);
-	  }
-	  else
-	  {   
-		  fprintf(stderr, "Can not open file mspriorDebugPrint 1\n");
-		  exit(1);
-	  }
-     */
+    
 	  //initialize subParamConstrainConfig array
 	  subParamConstrainConfig = calloc(NUMBER_OF_CONPARAM, sizeof(int));
 	  if(subParamConstrainConfig == NULL)
@@ -145,21 +133,7 @@ int main (int argc, char *argv[])
 		  exit(EXIT_FAILURE);
 	  }
 
-	  /*
-	  dp = fopen("mspriorDebugPrint", "a+b");
-	  if(dp != NULL)
-	  {
-		  fprintf(dp, "subParamConstrainConfig array allocated\n");
-		  fclose(dp);
-	  }
-	  else
-	  {   
-		  fprintf(stderr, "Can not open file mspriorDebugPrint 2\n");
-		  exit(1);
-	  }
-     */
-	 
-
+	
 	  int i = 0;
 
 	  for(i=0;i<strlen(gParam.subParamConstrain);i++)
@@ -171,25 +145,7 @@ int main (int argc, char *argv[])
 		 else if(a == '0')
 		  subParamConstrainConfig[i] = 0;
 	  }
-
-
-     /*
-     dp = fopen("mspriorDebugPrint","a+b");
-	  if(dp != NULL)
-	   {
-		   
-		   for(i=0;i<strlen(gParam.subParamConstrain);i++)
-			   fprintf(dp,"subParamConstrainConfig[%d]: %d\t",i,subParamConstrainConfig[i]);
-		   fprintf(dp,"\n");
-		   
-		   fclose(dp);
-	   }
-	  else 
-	   {
-		   fprintf(stderr, "Can not open file mspriorDebugPrint 3\n");
-		   exit(1);
-	   }
-	  */ 
+ 
    }
 
  /* for initiating the gsl random number generator */
@@ -327,21 +283,7 @@ int main (int argc, char *argv[])
      //if(psiIndex != (numTauClasses-1) )
      //	  fprintf(stderr,"numberPsiArray:%d and numTauClasses:%d have problems\n", psiIndex, numTauClasses );
 
-	  /*
-	  if((dp = fopen("mspriorDebugPrint", "a+b"))==NULL)
-	  {
-		  fprintf(stderr, "Can not open file mspriroDebugPrint 4\n");
-		  exit(1);
-	  }
-
-	  for(u = 0; u < numTauClasses; u++)
-		  fprintf(dp,"tauArray[%d]: %lf\t", u, tauArray[u]);
-	  fprintf(dp, "\n");
-
-	  fclose(dp);
-     */
-
-
+     
     int tauPsiIndex = 0;
 	 int tauCounter = 1;
      for (u = 0; u < gParam.numTaxaPair; u++)
@@ -443,37 +385,8 @@ int main (int argc, char *argv[])
 	      
 	      /* recombination rate */
 		   if(subParamConstrainConfig[8] ==  1)
-	      rec = conTaxonPairDat.conRec;
-
-		   /*
-		    if((dp = fopen("mspriorDebugPrint", "a+b"))==NULL)
-		   {
-			   fprintf(stderr, "Can not open file mspriorDebugPrint 5\n");
-			   exit(1);
-		   }
-
-		   fprintf(dp, "tau: %lf, BottStr1: %lf, BottStr2: %lf, BottleTime: %lf, mig: %lf, theta: %lf, N1: %lf, N2: %lf, Nanc: %lf, rec: %lf\n",
-			            conTaxonPairDat.conTau, conTaxonPairDat.conBottPop1, conTaxonPairDat.conBottPop2, conTaxonPairDat.conBottleTime, conTaxonPairDat.conMig, conTaxonPairDat.conTheta, 
-						conTaxonPairDat.conN1, 2-conTaxonPairDat.conN1,conTaxonPairDat.conNanc, conTaxonPairDat.conRec );
-		 
-	      fclose(dp);
-		  */
-
-		   /*
-		   if((dp = fopen("mspriorDebugPrint", "a+b"))==NULL)
-		   {
-			   fprintf(stderr, "Can not open file mspriorDebugPrint 5\n");
-			   exit(1);
-		   }
-
-		   fprintf(dp, "BottStr1: %lf, BottStr2: %lf, BottleTime: %lf, mig: %lf, theta: %lf, N1: %lf, N2: %lf, Nanc: %lf, rec: %lf\n",
-			            BottStr1,BottStr2,BottleTime, mig, theta, N1, 2-N1, Nanc, rec );
-		 
-	      fclose(dp);
-	      */
-	      
-	    
-		  }
+	      rec = conTaxonPairDat.conRec; 
+	   }
 	  
 	  N2 = 2.0 - N1;
 	  Nanc = Nanc / theta; /* get the ratio of theta_anc / theta_cur 

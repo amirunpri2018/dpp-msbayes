@@ -38,8 +38,7 @@
 
 int setup_done = 0;
 int debug_level = 0;
-static int kittenCount = 0;
-static int pigCount = 0;
+
 
 //FILE *squirrel1;
 //squirrel1 = fopen("squirrel", "w");
@@ -98,9 +97,6 @@ void LoadConfiguration(int argc, char *argv[])
 {
   FILE *fp;
 
-  //FILE *bunny;
-  int i = 0;
-
   int rc;
 
   /* initialize the parameters with 0 */
@@ -131,25 +127,8 @@ void LoadConfiguration(int argc, char *argv[])
 
     SetupParams(fp, &gParam);
 	fclose(fp);
-
-	/*
-	// bunny, see whether gParam works or not
-	bunny = fopen("bunny", "w");
-
-    fprintf(bunny, "lowerTheta %lf,upperTheta %lf, upperTau %lf, numTauClasses %u, upperMig %lf, upperRec %lf, upperAncPopSize %lf, reps %llu, numLoci %u, constrain %u, subParamConstrain %s\n", 
-		            gParam.lowerTheta, gParam.upperTheta,
-	                gParam.upperTau, gParam.numTauClasses, 
-	                gParam.upperMig, gParam.upperRec,
-			        gParam.upperAncPopSize, gParam.reps,
-                    gParam.numLoci, gParam.constrain, 
-					gParam.subParamConstrain);
-
-
-    fclose (bunny);
-	*/
 	
-    
-  } else {
+    } else {
     InteractiveSetupParams(&gParam);
   }
   
@@ -173,24 +152,6 @@ void LoadConfiguration(int argc, char *argv[])
   }
  
   fclose(fp);
-   
-  /*
-  bunny = fopen("bunny", "a+b");
-  
-  fprintf(bunny, "InitMutParameter, size of mutParameter = %d \n", gMutParam.numElements);
-  for(i = 0; i< gMutParam.numElements;i++)
-  {
-       fprintf(bunny, "numPerTaxa %d, sample[0] %d, sample[1] %d, tstv[0] %lf, tstv[1] %lf, seqLen %d, freqA %lf, freqC %lf freqG %lf, freqT %lf,, gamma %lf \n",
-	      	          (gMutParam.data[i]).numPerTaxa, (gMutParam.data[i]).sample[0], (gMutParam.data[i]).sample[1],
-	                  (gMutParam.data[i]).tstv[0], (gMutParam.data[i]).tstv[1], (gMutParam.data[i]).seqLen,
-	                  (gMutParam.data[i]).freqA, (gMutParam.data[i]).freqC, (gMutParam.data[i]).freqG, (gMutParam.data[i]).freqT,
-					  (gMutParam.data[i]).gamma);
-  }
-  
-  
-
-  fclose(bunny);
-  */
 
 
   if(gParam.constrain > 0)
@@ -205,23 +166,7 @@ void LoadConfiguration(int argc, char *argv[])
       {
 	     (stderr, "Unable to read in constrain paramters from %s\n", gParam.configFile);
       }
-
-	/*
-    bunny = fopen("bunny","a+b");
-    if(bunny != NULL)
-      {
-	fprintf(bunny, "numberof elememts in gConparam:%d\n", gConParam.conNumElements);
-	for(i=0;i<gConParam.conNumElements;i++)
-	  fprintf(bunny, "tau: %lf, bottPop1: %lf, bottPop2: %lf, bottleTime: %lf, mig: %lf, theta: %lf, N1: %lf, nanc: %lf, rec: %lf\n", (gConParam.conData[i]).conTau, (gConParam.conData[i]).conBottPop1, (gConParam.conData[i]).conBottPop2, (gConParam.conData[i]).conBottleTime, (gConParam.conData[i]).conMig,(gConParam.conData[i]).conTheta,(gConParam.conData[i]).conN1, (gConParam.conData[i]).conNanc, (gConParam.conData[i]).conRec);
-	fclose(bunny);
-      }
-    else
-      {
-        fprintf(stderr, "Can not open file bunny\n");
-        exit(1);
-      }	
-    */
-  }
+   }
 }
 
 /*
@@ -619,8 +564,6 @@ static void SetupParams (FILE *fp, runParameters * paramPtr)
 {
   int retVal;
   
-  //FILE *squirrel;
-
   unsigned long r;
   
   r = paramPtr->reps;  /* save this in case this is set by command line */
@@ -654,17 +597,6 @@ static void SetupParams (FILE *fp, runParameters * paramPtr)
     paramPtr->reps = r;
   }
 
-  /*
-  squirrel = fopen("squirrel", "w");
-  fprintf(squirrel, "SetupParam\n lowerTheta %lf,upperTheta %lf, upperTau %lf, numTauClasses %d, upperMig %lf, upperRec %lf, upperAncPopSize %lf, reps %llu, numLoci %d, constrain %d, subParamConstrain %s\n", 
-		            paramPtr->lowerTheta, paramPtr->upperTheta,
-	                paramPtr->upperTau, paramPtr->numTauClasses, 
-	                paramPtr->upperMig, paramPtr->upperRec,
-			        paramPtr->upperAncPopSize, paramPtr->reps,
-                    paramPtr->numLoci, paramPtr->constrain, paramPtr->subParamConstrain);
-
-  fclose(squirrel);
-  */
   return;
 }
 
@@ -685,22 +617,7 @@ static int InitMutPara(FILE *fp, mutParameterArray *mpaPtr)
 	int index, rc;
 	mutParameter *mpp;
 
-	/*
-	FILE *doggy;
-	doggy = fopen("doggy", "w");
-    if(doggy == NULL)
-	{
-		fprintf(stderr, "Cant open file doggy\n");
-		exit(1);
-	}
-	else
-	{
-	     fprintf(doggy, "Hi\n");
-	     fclose(doggy);
-	}
-	*/
-
-
+   
     while ( fgets(ln, LNSZ, fp) ) {  /* read init file */
       RmLeadingSpaces(ln);
 
@@ -723,21 +640,6 @@ static int InitMutPara(FILE *fp, mutParameterArray *mpaPtr)
 
       tmpCol = RmExtraWhiteSpaces(ln) + 1;
 
-	  /*
-	  doggy = fopen("doggy", "a+b");
-
-	  if(doggy != NULL)
-	  {
-      
-	     fprintf(doggy, "line: %s\n, col: %d\n ", ln, tmpCol);
-	  }
-	  else
-	  {
-		  fprintf(stderr, "Can not open file doggy(a+b)\n");
-		  exit(1);
-	  }
-	  fclose(doggy);
-	  */
 
       /* make sure the number of columns are correct */
 #ifdef W_GAMMA
@@ -776,24 +678,6 @@ static int InitMutPara(FILE *fp, mutParameterArray *mpaPtr)
 	index ++;
       }
 
-	  /*
-	  doggy = fopen("doggy", "a+b");
-	  if(doggy != NULL)
-	  {
-		  fprintf(doggy, "index %d numPerTaxa %u,sample[0] %u, sample[1] %u,tstv[0] %lf,gamma %lf, seqLen %u, feqA %lf, feqC %lf, feqG %lf \n",
-		   index,
-		   (mpaPtr->data[index-1]).numPerTaxa, (mpaPtr->data[index-1]).sample[0],(mpaPtr->data[index-1]).sample[1],
-		   (mpaPtr->data[index-1]).tstv[0], (mpaPtr->data[index-1]).gamma, (mpaPtr->data[index-1]).seqLen,
-		   (mpaPtr->data[index-1]).freqA, (mpaPtr->data[index-1]).freqC, (mpaPtr->data[index-1]).freqG);
-		  //fclose(doggy); 
-	  }else
-	  {
-		  fprintf(stderr, "Can not open file doggy ");
-		  exit(1);
-	  }
-	  fclose(doggy);
-	  */
-
     } while ( fgets(ln, LNSZ, fp) && (strstr(ln, ".fasta") != NULL) );
 
     gParam.numTaxaPair = mpaPtr->numElements;
@@ -811,25 +695,10 @@ static int InitConPara(FILE *fp, constrainedParameterArray *cpaPtr)
   int tmpCol, numColumns = 0;
   constrainedParameter *cpp;
 
-  //FILE *InitCon;
 
   while(fgets(ln, LNSZ, fp))
     {
       RmLeadingSpaces(ln);
-
-	  /*
-      InitCon = fopen("initCon","a+b");
-      if(InitCon != NULL)
-	{
-	  fprintf(InitCon, "ln: %s\n",ln);
-          fclose(InitCon);
-        }
-      else
-	{
-	  fprintf(stderr, "Can not open file initCon\n");
-          exit(1);
-        }
-		*/
 
       if(ln[0]== 0 || ln[0] == '#')
         continue;
@@ -853,20 +722,7 @@ static int InitConPara(FILE *fp, constrainedParameterArray *cpaPtr)
      tmpCol = RmExtraWhiteSpaces(ln) + 1;
 
      // printout tmpCol to see the value
-	 /*
-	 InitCon = fopen("initCon", "a+b");
-	 if(InitCon != NULL)
-	 {
-		 fprintf(InitCon, "line: %s, col :%d\n", ln, tmpCol);
-		 
-	 }
-	 else 
-	 {
-		 fprintf(stderr, "Can not open file InitCon\n");
-	 }
-	 fclose(InitCon);
-	 */
-
+    
      if(! numColumns)
        numColumns = tmpCol;
      else if (numColumns != tmpCol)
@@ -890,24 +746,6 @@ static int InitConPara(FILE *fp, constrainedParameterArray *cpaPtr)
        } 
      else 
        index ++;
-
-	 /*
-     InitCon = fopen("initCon", "a+b");
-     if(InitCon != NULL)
-     {
-	    fprintf(InitCon,"%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf\n", 
-	 				  (cpaPtr->conData[index-1]).conTau, (cpaPtr->conData[index-1]).conBottPop1, (cpaPtr->conData[index-1]).conBottPop2,
-					  (cpaPtr->conData[index-1]).conBottleTime, (cpaPtr->conData[index-1]).conMig, (cpaPtr->conData[index-1]).conTheta,
-					  (cpaPtr->conData[index-1]).conN1, (cpaPtr->conData[index-1]).conNanc, (cpaPtr->conData[index-1]).conRec );
-     }
-     else
-     {
-	   fprintf(stderr, "Hey, can not open file initCon");
-	   exit(1);
-     }
-
-     fclose(InitCon);
-	 */
 
   }while(fgets(ln, LNSZ, fp));
 
@@ -1020,7 +858,6 @@ static int ReadMutLine(mutParameter *mpp, char *line, int ncol)
   /* probably we should check integer, double is correct in the file */
   int rc;
   char dummyTaxonPairName[1024];
-  //pigCount ++;
 
   
 #ifdef W_GAMMA
@@ -1080,47 +917,6 @@ static int ReadMutLine(mutParameter *mpp, char *line, int ncol)
   
   mpp->freqT = 1 - mpp->freqA - mpp->freqC - mpp->freqG;
 
-  /*
-  FILE *pig;
-
-  if(pigCount == 1)
-  {
-	  pig = fopen("pig", "w");
-	  if(pig != NULL)
-		  fprintf(pig, "pigCount = %d, first time open file pig\n", pigCount);
-	  else
-	  {
-		  fprintf(stderr, "Can not open file pig the first time\n");
-		  exit(1);
-	  }
-  }
-  else{
-	  pig = fopen("pig", "a+b");
-	  if(pig != NULL)
-		  fprintf(pig, "pigCount = %d\n", pigCount);
-	  else
-	  {
-		  fprintf(stderr, "Can not open file pig\n");
-		  exit(1);
-	  }
-  }
-
-  
-  if(pig != NULL)
-  {
-     fprintf(pig, "numPerTaxa %u,sample[0] %u, sample[1] %u,tstv[0] %lf,gamma %lf, seqLen %u, feqA %lf, feqC %lf, feqG %lf \n",
-	 mpp->numPerTaxa, mpp->sample[0],mpp->sample[1],
-	 mpp->tstv[0], mpp->gamma, mpp->seqLen,
-     mpp->freqA, mpp->freqC, mpp->freqG);
-	  
-  }else
-	  {
-		  fprintf(stderr, "Can not open file doggy ");
-		  exit(1);
-	  }
-
-  fclose(pig);
-  */
   
   return (rc);
 }
@@ -1130,7 +926,7 @@ static int ReadConLine(constrainedParameter *cpp, char *line, int ncol)
 {
 
   int cc; 
-  //kittenCount ++;
+ 
 
   if(ncol == 9) // so far there are nine values
     {
@@ -1139,50 +935,8 @@ static int ReadConLine(constrainedParameter *cpp, char *line, int ncol)
                   &cpp->conBottleTime, &cpp->conMig, &cpp->conTheta,
                   &cpp->conN1, &cpp->conNanc, &cpp->conRec);
     }
-
-  /*
-  FILE *kitten;
-
-  if(kittenCount == 1)
-  {
-	  kitten = fopen("kitten", "w");
-	  if(kitten != NULL)
-		  fprintf(kitten, "kittenCount = %d, first time open file kitten\n", kittenCount);
-	  else
-	  {
-		  fprintf(stderr, "Can not open file kitten the first time\n");
-		  exit(1);
-	  }
-  }
-  else{
-	  kitten = fopen("kitten", "a+b");
-	  if(kitten != NULL)
-		  fprintf(kitten, "kittenCount = %d\n", kittenCount);
-	  else
-	  {
-		  fprintf(stderr, "Can not open file kitten\n");
-		  exit(1);
-	  }
-  }
-
- 
-  if(kitten != NULL)
-  {
-	  fprintf(kitten,"%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", 
-					  cpp->conTau, cpp->conBottPop1, cpp->conBottPop2,
-					  cpp->conBottleTime, cpp->conMig, cpp->conTheta,
-					  cpp->conN1, cpp->conNanc, cpp->conRec );
-  }
-  else
-  {
-	  fprintf(stderr, "Hey, can not open file kitten");
-	  exit(1);
-  }
-
-  fclose(kitten);
-  */
-
-  return (cc);
+  
+   return (cc);
 }
 
 
