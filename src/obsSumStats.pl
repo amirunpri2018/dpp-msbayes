@@ -284,7 +284,7 @@ sub ReadInMaster {
 	    if (/\r\n$/) {
 		warn "WARN: the file $filename appear to have DOS style line ending, it may not work correctly if it's not converted to unix style newline characters\n";
 	    }
-	    $warnFlag == 0;
+	    $warnFlag = 0;
 	}
 	# There could be parameter config lines for msprior in the
 	# beginning of this file, which should be ignored.  These are

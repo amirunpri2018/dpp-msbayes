@@ -42,9 +42,8 @@
 				    of names for each column */
 
 
-double nucdiv (int, int, char **);double nucdiv_w (int, int, char **, int, int *);
-double nucdiv_w1(int, int, char **, int, int *);
-double nucdiv_w2(int, int, char **, int, int *);
+double nucdiv (int, int, char **);
+double nucdiv_w (int, int, char **, int, int *, int);
 double nucdiv_bw (int, int, char **, int, int *);
 double tajddenominator (int, int, double);
 double tajddenominator2(int, int, double) ;
@@ -201,9 +200,10 @@ printstats (int nsam, int segsites, char **list, int nsub, int npops, int *n,
       /*yyy ABOVE  Eli 05/15/06 yyy*/
       tW2 = (double) thetaW(n[1], segwithin[1]);
       tW1 = (double) thetaW(n[0], segwithin[0]);
-      pi_w = (double) nucdiv_w (nsam, segsites, list, npops, n) / BasePairs;
-      pi_w2 = (double) nucdiv_w2(nsam, segsites, list, npops, n);
-      pi_w1 = (double) nucdiv_w1(nsam, segsites, list, npops, n);
+      /* -1 signals Average of pi's within subpop */
+      pi_w = (double) nucdiv_w (nsam, segsites, list, npops, n, -1) / BasePairs;
+      pi_w2 = (double) nucdiv_w(nsam, segsites, list, npops, n, 1);
+      pi_w1 = (double) nucdiv_w(nsam, segsites, list, npops, n, 0);
       
       pi_b = (double) nucdiv_bw (nsam, segsites, list, npops, n) / BasePairs;
       Fst = 1. - pi_w / pi_b;
@@ -486,25 +486,6 @@ pairwisediffc_w (int ss, int nsam, char **list, int np, int *n, int pop)
   return (diffc);
 }
 
-  int
-pairwisediffc_w12(int ss, int nsam, char **list, int np, int *n, int pop)
-{
-  int n1,n2,diffc=0;
-  int popi,startn=0;
-  int s;
-  if (n[pop]>1) {
-    /*    for (popi=0;popi<pop;popi++) startn += n[popi];*/    
-    for (popi=pop;popi<pop;popi++) startn += n[popi]; 
-    for(n1=startn;n1<(startn+n[pop]-1);n1++)
-      for(n2=n1+1;n2<(startn+n[pop]);n2++) {
-        for(s=0;s<ss;s++)
-          if (list[n1][s]!=list[n2][s]) diffc++;
-      }
-  }
-
-  return(diffc);
-}
-
 
 int
 pairwisediffc_b (int ss, int nsam, char **list, int np, int *n, int pop1,
@@ -558,55 +539,22 @@ segsubs( int *segw, int segsites, char **list, int np, int *n)
 /*yyy ABOVE  Eli 05/15/06 yyy*/
 
 
-	double
-nucdiv_w2( int nsam, int segsites, char **list, int np, int *n)
-{
-	int pop, pairwisediffc_w12(int, int, char**, int, int *, int);
-	double pi, nd  ;
-	double num_comps;
-
-	pi = 0.0 ;
-
-	nd = nsam;
-	num_comps = 0.;
-   	pop=1;
-	pi = pairwisediffc_w12(segsites,nsam,list,np,n,pop) ;
-	/* printf("piW: %lf\n", pi);   */
-        num_comps = (double)n[pop]*((double)n[pop]-1.)/2. ;
-
-	pi /= num_comps;
-        /*printf("piW-FINAL: %lf\n", pi);  */
-	return( pi ) ;
-}
-
-        double
-nucdiv_w1( int nsam, int segsites, char **list, int np, int *n)
-{
-  int pop, pairwisediffc_w12(int, int, char**, int, int *, int);
-  double pi, nd  ;
-  double num_comps;
-
-  pi = 0.0 ;
-
-  nd = nsam;
-  num_comps = 0.;
-  pop=0;
-  pi = pairwisediffc_w12(segsites,nsam,list,np,n,pop) ;
-  /* printf("piW: %lf\n", pi);   */
-  num_comps = (double)n[pop]*((double)n[pop]-1.)/2. ;
-
-  pi /= num_comps;
-  /*printf("piW-FINAL: %lf\n", pi);  */
-  return( pi ) ;
-}
-
-
-
-
+/*
+ * Calculate the pi (per gene and not per site) within sub populations.
+ * Specify the index (0-offset) of sub population from which pi are calculated
+ * in targetPop.
+ *
+ * If a negative value of targetPop is given, it calculate the pi within subpop
+ * for each sub population and average is taken:  Let's say two subpops with
+ * n0 and n1 samples, and pi's within each subpops are pi0 and pi1.
+ * Weighted average is (C(n0,2) * n0 + C(n1,2) * n1) /(C(n0,2)+C(n1,2)),
+ * where C(x,y) denote combinatorial: Choose y from x. 
+ */
 double
-nucdiv_w (int nsam, int segsites, char **list, int np, int *n)
+nucdiv_w (int nsam, int segsites, char **list, int np, int *n, int targetPop)
 {
   int pop, pairwisediffc_w (int, int, char **, int, int *, int);
+  int beginPop, endPop;
   double pi, nd;
   double num_comps;
 
@@ -614,14 +562,21 @@ nucdiv_w (int nsam, int segsites, char **list, int np, int *n)
 
   nd = nsam;
   num_comps = 0.;
-  for (pop = 0; pop < np; pop++)
-    {
-      pi += pairwisediffc_w (segsites, nsam, list, np, n, pop);
-      /* printf("piW: %lf\n", pi);  test print */
-      num_comps += (double) n[pop] * ((double) n[pop] - 1.) / 2.;
-    }
+
+  if (targetPop < 0) {
+    beginPop = 0;
+    endPop = np;
+  } else {
+    beginPop = targetPop;
+    endPop = targetPop + 1;
+  }
+
+  for (pop = beginPop; pop < endPop; pop++) {
+    pi += pairwisediffc_w (segsites, nsam, list, np, n, pop);
+    num_comps += (double) n[pop] * ((double) n[pop] - 1.) / 2.;
+  }
+  
   pi /= num_comps;
-  /*printf("piW-FINAL: %lf\n", pi);  test print */
   return (pi);
 }
 
@@ -780,59 +735,24 @@ thetaW (int n, int S)
 }
 
 
-/* Calcuate the average pairwise differences */
-
-/*
+/* This calculate overall average pairwise differences (pi per gene)
+ * ignoring sub population designation  */
 double
-nucdiv (int nsam, int segsites, char **list)
-{
-  int s, frequency (char, int, int, char **);	
-  double pi,  denom;
-  char dummy = '?';
-  pi = 0.0;
-  for (s = 0; s < segsites; s++)
-    {
-	
-
-	   
-      pi += frequency (dummy, s, nsam, list);	
-    }
-  denom = nsam * (nsam - 1) / 2;   
-  pi = pi / denom;
-
-
-  return (pi);
-}	*/
-/* denomis  # of ways to choose a pair: nsam choose 2 */
-      /* frequency() returns the number of pair wise differences at site s from all pairwise comparison */
-
-
-        double
 nucdiv( int nsam, int segsites, char **list)
 {
-	
-	int s, n, i ;/*7/27/04; Hickerson*/
-	double pi, p1, nd, nnm1, denom  ;
-        char  dummy;
-	pi = 0.0 ;
-        denom = 0.0;
-	nd = nsam;
-	nnm1 = nd/(nd-1.0) ;
-   	for( s = 0; s <segsites; s++){
-                /*printf("s: %d", s);*/
-		n=0;
-				p1 = frequency(dummy, s, nsam,list) ; /*7/27/04; Hickerson*/
-                pi = pi + p1; /*7/27/04; Hickerson*/
-                /*printf("pi: %lf\n", pi);  test print*/  	
-                }
-                denom = 0.0;
-                for( i=0; i<nsam; i++){/*7/27/04; Hickerson*/
-                    denom = i + denom;
-                    }
-                    pi = pi/denom;
-                       /*printf("piFINAL: %lf\n", pi);  test print */
-                    
-	return( pi ) ;
+  int s;
+  double pi=0.0, denom;
+  char  dummy;
+
+  for( s = 0; s <segsites; s++){
+    pi += frequency(dummy, s, nsam,list) ;
+    /* frequency() returns the number of pair wise differences at site s 
+     * from all pairwise comparison */
+  }
+  
+  /* denom is  # of ways to choose a pair: nsam choose 2 */
+  denom = nsam * (nsam - 1) / 2;
+  return( pi/denom ) ;
 }
 
 
@@ -867,21 +787,15 @@ frequency (char base, int site, int nsam, char **list)
 
   denom = 0;
 
-  for (n = 0; n < nsam; n++)
-    {				/*7/27/04; Hickerson */
-      allele1 = list[n][site];	/*7/27/04; Hickerson */
-
-      /*printf("n: %d\t site; %d\t nsam: %d\t allele1: %c\n", n, site, nsam, allele1);  test print */
-
-
-      for (i = n; i < nsam; i++)
-	{			/*7/27/04; Hickerson */
-	  if (list[i][site] != allele1)
-	    count = count + 1;	/*7/27/04; Hickerson */
-	}
-
+  for (n = 0; n < nsam; n++) {
+    allele1 = list[n][site];
+    
+    for (i = n; i < nsam; i++) {
+      if (list[i][site] != allele1)
+	count = count + 1;
     }
-
+    
+  }
   return (count);
 }
 
