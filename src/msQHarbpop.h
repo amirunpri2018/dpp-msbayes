@@ -7,20 +7,23 @@
 
 
 /* msQH.c:main(),*, QHsubs.c:*   */
-struct QHparameters {
-  int output; /* dumb internal flag for outputing sequence versus polymorphic sites */
-  double Rtstv, Ytstv, freqA,freqC,freqG,freqT,obsfreq[4];
-  double alpha, siterate; /* if alpha (gamma parameter) ==0, then no rate heterogeneity */
+struct QHparameters
+{
+  int output;			/* dumb internal flag for outputing sequence versus polymorphic sites */
+  double Rtstv, Ytstv, freqA, freqC, freqG, freqT, obsfreq[4];
+  double alpha, siterate;	/* if alpha (gamma parameter) ==0, then no rate heterogeneity */
   char *MRCAseq, *treeseq;
   //  int *segbool; /* for QHPms.c */
 };
-struct Dintervalparams {
+struct Dintervalparams
+{
   double Dtpast;
-  int npops, Mpattern ;
+  int npops, Mpattern;
   double *Nrecent, *Npast;
   double **M, **a;
 };
-struct parameters {
+struct parameters
+{
   int nsam, segsites, nsites, *config;
   int D, Dintn, seQmut;
   long howmany;
@@ -31,17 +34,19 @@ struct parameters {
 
 
 /* in msQH.c:gensam(),makegametes(), streec.c:streec(),*   */
-struct node{
-	int abv;
-	int ndes;
-	float time;
-	};
+struct node
+{
+  int abv;
+  int ndes;
+  float time;
+};
 
-struct segl {
-	int beg;
-	struct node *ptree;
-	int next;
-	};
+struct segl
+{
+  int beg;
+  struct node *ptree;
+  int next;
+};
 
 
 int pick2 (int n, int *i, int *j);

@@ -34,7 +34,7 @@
 #include "whiteSpaces.h"
 #include "initvars.h"
 
-#define LNSZ 256     /* max length of a line */
+#define LNSZ 256		/* max length of a line */
 
 int setup_done = 0;
 int debug_level = 0;
@@ -43,18 +43,18 @@ int debug_level = 0;
 //FILE *squirrel1;
 //squirrel1 = fopen("squirrel", "w");
 
-static void ParseCommandLine(int argc, char *agv[]);
-static int InteractiveSetupParams(runParameters *paramPtr);
-static void SetupParams(FILE *fp, runParameters *paramPtr);
-static int SetConfigFile(char *fName);
-static int SetPriorOutFile(char *fName);
-void PrintParam(void);
-static int InitMutPara(FILE *fp, mutParameterArray *mutParaArray);
-static int CheckMutParaArray(mutParameterArray *mpaPtr, int index);
-static int ReadMutLine(mutParameter *mpp, char *line, int ncol);
-static int InitConPara(FILE *fp, constrainedParameterArray *conParaArray);
-static int CheckConParaArray(constrainedParameterArray *cpaPtr, int index);
-static int ReadConLine(constrainedParameter *cpa, char *line, int ncol);
+static void ParseCommandLine (int argc, char *agv[]);
+static int InteractiveSetupParams (runParameters * paramPtr);
+static void SetupParams (FILE * fp, runParameters * paramPtr);
+static int SetConfigFile (char *fName);
+static int SetPriorOutFile (char *fName);
+void PrintParam (void);
+static int InitMutPara (FILE * fp, mutParameterArray * mutParaArray);
+static int CheckMutParaArray (mutParameterArray * mpaPtr, int index);
+static int ReadMutLine (mutParameter * mpp, char *line, int ncol);
+static int InitConPara (FILE * fp, constrainedParameterArray * conParaArray);
+static int CheckConParaArray (constrainedParameterArray * cpaPtr, int index);
+static int ReadConLine (constrainedParameter * cpa, char *line, int ncol);
 
 /*
  * The functions in this file is to set global parameters gParam and gMutParam.
@@ -93,21 +93,22 @@ static int ReadConLine(constrainedParameter *cpa, char *line, int ncol);
  * Loads all the appropriate configuration data to gParam and
  * gMutParam exit on failure.
  */
-void LoadConfiguration(int argc, char *argv[])
+void
+LoadConfiguration (int argc, char *argv[])
 {
   FILE *fp;
 
   int rc;
 
   /* initialize the parameters with 0 */
-  memset(&gParam, 0, sizeof(runParameters));
-  memset(&gMutParam, 0, sizeof(gMutParam));
-  memset(&gConParam, 0, sizeof(gConParam));
+  memset (&gParam, 0, sizeof (runParameters));
+  memset (&gMutParam, 0, sizeof (gMutParam));
+  memset (&gConParam, 0, sizeof (gConParam));
 
   /* Process the options */
-  ParseCommandLine(argc, argv);
+  ParseCommandLine (argc, argv);
 
-   //bunny = fopen("bunny", "w");
+  //bunny = fopen("bunny", "w");
 
   /*
    * Load the parameteters for this simulation.  
@@ -115,58 +116,64 @@ void LoadConfiguration(int argc, char *argv[])
    * If a file isn't specified (with -c), then we'll try to
    *   get the parameters interactively.
    */
-  if(gParam.prngSeed == 0)
-    gParam.prngSeed = -1;   
-  if(gParam.configFile[0]) {
-    fp = fopen(gParam.configFile, "r");
-    if(!fp) {
-      fprintf(stderr, "Unable to open %s for reading\n",
-        gParam.configFile);
-      exit(EXIT_FAILURE);
+  if (gParam.prngSeed == 0)
+    gParam.prngSeed = -1;
+  if (gParam.configFile[0])
+    {
+      fp = fopen (gParam.configFile, "r");
+      if (!fp)
+	{
+	  fprintf (stderr, "Unable to open %s for reading\n",
+		   gParam.configFile);
+	  exit (EXIT_FAILURE);
+	}
+
+      SetupParams (fp, &gParam);
+      fclose (fp);
+
+    }
+  else
+    {
+      InteractiveSetupParams (&gParam);
     }
 
-    SetupParams(fp, &gParam);
-	fclose(fp);
-	
-    } else {
-    InteractiveSetupParams(&gParam);
-  }
-  
   /* rand num seed */
-  if(gParam.prngSeed < 0)
-    (void)time(&gParam.prngSeed);
+  if (gParam.prngSeed < 0)
+    (void) time (&gParam.prngSeed);
 
-  /* read in mutation model and populate gMutParam*/
-  fp = fopen(gParam.configFile, "r");
-  if(!fp) {
-    fprintf(stderr, "Unable to open %s for reading\n",
-	    gParam.configFile);
-    exit(EXIT_FAILURE);
-  }
+  /* read in mutation model and populate gMutParam */
+  fp = fopen (gParam.configFile, "r");
+  if (!fp)
+    {
+      fprintf (stderr, "Unable to open %s for reading\n", gParam.configFile);
+      exit (EXIT_FAILURE);
+    }
 
-  rc = InitMutPara(fp, &gMutParam);
-  if (rc != 0) {
-    fprintf(stderr, "Unable to read in muataion parameters from %s\n",
-	    gParam.configFile);
-    exit(EXIT_FAILURE);
-  }
- 
-  fclose(fp);
+  rc = InitMutPara (fp, &gMutParam);
+  if (rc != 0)
+    {
+      fprintf (stderr, "Unable to read in muataion parameters from %s\n",
+	       gParam.configFile);
+      exit (EXIT_FAILURE);
+    }
+
+  fclose (fp);
 
 
-  if(gParam.constrain > 0)
-  {
-    //reopen file so it will be read from beginning
-    fp = fopen(gParam.configFile, "r");
+  if (gParam.constrain > 0)
+    {
+      //reopen file so it will be read from beginning
+      fp = fopen (gParam.configFile, "r");
 
-    rc = InitConPara(fp, &gConParam);
-    fclose(fp);
-   
-    if(rc != 0)
-      {
-	     (stderr, "Unable to read in constrain paramters from %s\n", gParam.configFile);
-      }
-   }
+      rc = InitConPara (fp, &gConParam);
+      fclose (fp);
+
+      if (rc != 0)
+	{
+	  (stderr, "Unable to read in constrain paramters from %s\n",
+	   gParam.configFile);
+	}
+    }
 }
 
 /*
@@ -175,18 +182,19 @@ void LoadConfiguration(int argc, char *argv[])
  * Return -1 on error,
  *         0 on success.
  */
-static int SetConfigFile(char *fName)
+static int
+SetConfigFile (char *fName)
 {
   int len;
 
-  if(!fName || !fName[0])
+  if (!fName || !fName[0])
     return -1;
 
-  len = strlen(fName);
-  if((len + 1) >= MAX_FILENAME_LEN)
+  len = strlen (fName);
+  if ((len + 1) >= MAX_FILENAME_LEN)
     return -1;
-  
-  strncpy(gParam.configFile, fName, MAX_FILENAME_LEN);
+
+  strncpy (gParam.configFile, fName, MAX_FILENAME_LEN);
 
   setup_done = 1;
   return 0;
@@ -198,18 +206,19 @@ static int SetConfigFile(char *fName)
  * Return -1 on error,
  *         0 on success.
  */
-static int SetPriorOutFile(char *fName)
+static int
+SetPriorOutFile (char *fName)
 {
   int len;
 
-  if(!fName || !fName[0])
+  if (!fName || !fName[0])
     return -1;
 
-  len = strlen(fName);
-  if((len + 1) >= MAX_FILENAME_LEN)
+  len = strlen (fName);
+  if ((len + 1) >= MAX_FILENAME_LEN)
     return -1;
-  
-  strncpy(gParam.priorOutFile, fName, MAX_FILENAME_LEN);
+
+  strncpy (gParam.priorOutFile, fName, MAX_FILENAME_LEN);
 
   return 0;
 }
@@ -217,7 +226,8 @@ static int SetPriorOutFile(char *fName)
 /*
  * Print out the usage, and exit
  */
-static void PrintUsage(char *progname)
+static void
+PrintUsage (char *progname)
 {
   char *p;
 
@@ -225,24 +235,24 @@ static void PrintUsage(char *progname)
    * Strip the path from the program name for when we
    * print the usage.
    */
-  p = strrchr(progname, '/');
-  if(p)
+  p = strrchr (progname, '/');
+  if (p)
     p++;
   else
     p = progname;
 
-  fprintf(stderr,
-	  "\nUsage: %s [--help] [--reps N] [--debug N] [--seed N] "
-	  "[--config <filename>] [--priorOut <filename>]\n\n"
-	  "       help: Print this usage function (-h)\n"
-	  "       reps: Run N replications (-r)\n"
-	  "      debug: Set the debug level to N (larger N => more info) (-d)\n"
-	  "       seed: Set the pseudo-random number generator seed to N (-s)\n"
-	  "     config: Specify a configuration file (-c)\n"
-	  "     priorOut: Specify output file (-p)\n\n"
-	  "If config file is not given, the parameter values are set "
-	  "interactively.\n\n", p);
-  exit(EXIT_FAILURE);
+  fprintf (stderr,
+	   "\nUsage: %s [--help] [--reps N] [--debug N] [--seed N] "
+	   "[--config <filename>] [--priorOut <filename>]\n\n"
+	   "       help: Print this usage function (-h)\n"
+	   "       reps: Run N replications (-r)\n"
+	   "      debug: Set the debug level to N (larger N => more info) (-d)\n"
+	   "       seed: Set the pseudo-random number generator seed to N (-s)\n"
+	   "     config: Specify a configuration file (-c)\n"
+	   "     priorOut: Specify output file (-p)\n\n"
+	   "If config file is not given, the parameter values are set "
+	   "interactively.\n\n", p);
+  exit (EXIT_FAILURE);
 }
 
 /*
@@ -250,97 +260,114 @@ static void PrintUsage(char *progname)
  *
  */
 static struct option sim_opts[] = {
-  { "help", 0, NULL, 'h' },       /* list available options */
-  { "debug", 1, NULL, 'd' },      /* specify debug level */
-  { "seed", 1, NULL, 's'},        /* specify the prng seed */
-  /*  { "interactive", 0, NULL, 'i' },*/ /* interactive mode */
-  { "reps", 1, NULL, 'r' },       /* how many reps */
-  { "config", 1, NULL, 'c' },     /* which config file to use */
-  { "priorOut", 1, NULL, 'p'},     /* prior output file */
-  { NULL, 0, NULL, 0 }
+  {"help", 0, NULL, 'h'},	/* list available options */
+  {"debug", 1, NULL, 'd'},	/* specify debug level */
+  {"seed", 1, NULL, 's'},	/* specify the prng seed */
+  /*  { "interactive", 0, NULL, 'i' }, *//* interactive mode */
+  {"reps", 1, NULL, 'r'},	/* how many reps */
+  {"config", 1, NULL, 'c'},	/* which config file to use */
+  {"priorOut", 1, NULL, 'p'},	/* prior output file */
+  {NULL, 0, NULL, 0}
 };
 
-static void ParseCommandLine(int argc, char *argv[])
+static void
+ParseCommandLine (int argc, char *argv[])
 {
-  while(1) {
-    int rc;
-    long rcl;
-    int opt;
-    int opt_index;
-    
-    opt = getopt_long(argc, argv, "hd:s:r:c:p:", sim_opts, &opt_index);
-    if(opt < 0)
-      break;
+  while (1)
+    {
+      int rc;
+      long rcl;
+      int opt;
+      int opt_index;
 
-    switch(opt) {
-      case 'h':   /* Print usage and exit */
-        PrintUsage(argv[0]); /* This function will exit */
-        break;
-      case 'd':   /* set the debug level */
-        if(!optarg) {
-          fprintf(stderr, "Must select debug level\n");
-          PrintUsage(argv[0]);
-        }
-        rc = (int)strtol(optarg, NULL, 10);
-        if(errno || (rc < 0)) {
-          fprintf(stderr, "Invalid debug level: %s\n", optarg);
-          PrintUsage(argv[0]);
-        }
-        debug_level = rc;
-        break;
-      case 's':  /* set the PRNG seed */
-        if (!optarg) {
-	  fprintf(stderr, "Must select a pseudo-ransom number seed with -s\n");
-	  PrintUsage(argv[0]);
-	}
-	rcl = strtol(optarg, NULL, 10);
-	if(errno) {
-          fprintf(stderr, "Invalid pseudo-ransom number seed: %s\n", optarg);
-          PrintUsage(argv[0]);
-        }
-	gParam.prngSeed = rcl;
+      opt = getopt_long (argc, argv, "hd:s:r:c:p:", sim_opts, &opt_index);
+      if (opt < 0)
 	break;
-      case 'r':   /* Specify the number of repetitions */
-	if (!optarg) {
-	  fprintf(stderr, "Must select number of repetitions\n");
-          PrintUsage(argv[0]);
+
+      switch (opt)
+	{
+	case 'h':		/* Print usage and exit */
+	  PrintUsage (argv[0]);	/* This function will exit */
+	  break;
+	case 'd':		/* set the debug level */
+	  if (!optarg)
+	    {
+	      fprintf (stderr, "Must select debug level\n");
+	      PrintUsage (argv[0]);
+	    }
+	  rc = (int) strtol (optarg, NULL, 10);
+	  if (errno || (rc < 0))
+	    {
+	      fprintf (stderr, "Invalid debug level: %s\n", optarg);
+	      PrintUsage (argv[0]);
+	    }
+	  debug_level = rc;
+	  break;
+	case 's':		/* set the PRNG seed */
+	  if (!optarg)
+	    {
+	      fprintf (stderr,
+		       "Must select a pseudo-ransom number seed with -s\n");
+	      PrintUsage (argv[0]);
+	    }
+	  rcl = strtol (optarg, NULL, 10);
+	  if (errno)
+	    {
+	      fprintf (stderr, "Invalid pseudo-ransom number seed: %s\n",
+		       optarg);
+	      PrintUsage (argv[0]);
+	    }
+	  gParam.prngSeed = rcl;
+	  break;
+	case 'r':		/* Specify the number of repetitions */
+	  if (!optarg)
+	    {
+	      fprintf (stderr, "Must select number of repetitions\n");
+	      PrintUsage (argv[0]);
+	    }
+	  gParam.reps = strtoull (optarg, NULL, 10);
+	  if (errno || (gParam.reps < 0))
+	    {
+	      fprintf (stderr, "Invalid number of repetitions: %s\n", optarg);
+	      PrintUsage (argv[0]);
+	    }
+	  break;
+	case 'c':		/* Specify the configuration file */
+	  rc = SetConfigFile (optarg);
+	  if (rc < 0)
+	    {
+	      fprintf (stderr, "Could not set config filename as '%s'\n",
+		       optarg);
+	      PrintUsage (argv[0]);
+	    }
+	  break;
+	case 'p':		/* PriorOutput file, PsiTauArray */
+	  rc = SetPriorOutFile (optarg);
+	  if (rc < 0)
+	    {
+	      fprintf (stderr, "Could not use prior out filename as '%s'\n",
+		       optarg);
+	      PrintUsage (argv[0]);
+	    }
+	  break;
+	default:
+	  PrintUsage (argv[0]);	/* This function will exit */
+	  break;
 	}
-        gParam.reps = strtoull(optarg, NULL, 10);
-        if(errno || (gParam.reps < 0)) {
-          fprintf(stderr, "Invalid number of repetitions: %s\n", optarg);
-          PrintUsage(argv[0]);
-        }
-        break;
-      case 'c':   /* Specify the configuration file */
-	rc = SetConfigFile(optarg);
-        if(rc < 0) {
-          fprintf(stderr, "Could not set config filename as '%s'\n", optarg);
-          PrintUsage(argv[0]);
-        }
-        break;
-      case 'p':  /* PriorOutput file, PsiTauArray */
-	rc=SetPriorOutFile(optarg);
-	if(rc<0) {
-          fprintf(stderr, "Could not use prior out filename as '%s'\n", optarg);
-          PrintUsage(argv[0]);
-	}
-	break;
-    default:
-        PrintUsage(argv[0]); /* This function will exit */
-        break;
     }
-  }
 }
 
 /* 
  * read a line from stdin, the string will be assigned to line[]
  * Return the length of the string
  */
-int GetLine(char *line, int max) {
-  if (fgets(line,max, stdin) == NULL)
+int
+GetLine (char *line, int max)
+{
+  if (fgets (line, max, stdin) == NULL)
     return 0;
   else
-    return strlen(line);
+    return strlen (line);
 }
 
 /* 
@@ -350,43 +377,59 @@ int GetLine(char *line, int max) {
  * function set gParam to the default values.  The default constants
  * are in msPriors.h
  */
-static void SetDefaultParams(runParameters * paramPtr) {
-  if (! paramPtr->upperTheta) {
-    paramPtr->upperTheta = DEFAULT_UPPER_THETA;
-  }
-  if (! paramPtr->lowerTheta) {
-    paramPtr->lowerTheta = DEFAULT_LOWER_THETA;
-  }
-  if (! paramPtr->upperTau) {
-    paramPtr->upperTau = DEFAULT_UPPER_TAU;
-  }
-  if(! paramPtr->numTauClasses) {
-    paramPtr->numTauClasses = 0;
-  }
-  if (! paramPtr->upperMig) {
-    paramPtr->upperMig = DEFAULT_UPPER_MIG;
-  }
-  if (! paramPtr->upperRec) {
-    paramPtr->upperRec = DEFAULT_UPPER_REC;
-  }
-  if (! paramPtr->upperAncPopSize) {
-    paramPtr->upperAncPopSize = DEFAULT_UPPER_ANC_POPSIZE;
-  }
-  if (! paramPtr->reps) {
-    paramPtr->reps = DEFAULT_REPS;
-  }
-  if (! paramPtr->configFile || ! paramPtr->configFile[0]) {
-    strncpy(paramPtr->configFile, DEFAULT_MUT_FILE, MAX_FILENAME_LEN);
-  }
-  if (! paramPtr->numLoci) {
-    paramPtr->numLoci = DEFAULT_NUM_LOCI;
-  }
-  if (! paramPtr->priorOutFile || ! paramPtr->priorOutFile[0]) {
-    strncpy(paramPtr->priorOutFile, DEFAULT_PRIOR_OUT_FILE, MAX_FILENAME_LEN);
-  }
-  if (! paramPtr->subParamConstrain || ! paramPtr->subParamConstrain[0]){
-    strncpy(paramPtr->subParamConstrain, DEFAULT_SUBPARAMCONSTRAIN, NUMBER_OF_CONPARAM);
-  }
+static void
+SetDefaultParams (runParameters * paramPtr)
+{
+  if (!paramPtr->upperTheta)
+    {
+      paramPtr->upperTheta = DEFAULT_UPPER_THETA;
+    }
+  if (!paramPtr->lowerTheta)
+    {
+      paramPtr->lowerTheta = DEFAULT_LOWER_THETA;
+    }
+  if (!paramPtr->upperTau)
+    {
+      paramPtr->upperTau = DEFAULT_UPPER_TAU;
+    }
+  if (!paramPtr->numTauClasses)
+    {
+      paramPtr->numTauClasses = 0;
+    }
+  if (!paramPtr->upperMig)
+    {
+      paramPtr->upperMig = DEFAULT_UPPER_MIG;
+    }
+  if (!paramPtr->upperRec)
+    {
+      paramPtr->upperRec = DEFAULT_UPPER_REC;
+    }
+  if (!paramPtr->upperAncPopSize)
+    {
+      paramPtr->upperAncPopSize = DEFAULT_UPPER_ANC_POPSIZE;
+    }
+  if (!paramPtr->reps)
+    {
+      paramPtr->reps = DEFAULT_REPS;
+    }
+  if (!paramPtr->configFile || !paramPtr->configFile[0])
+    {
+      strncpy (paramPtr->configFile, DEFAULT_MUT_FILE, MAX_FILENAME_LEN);
+    }
+  if (!paramPtr->numLoci)
+    {
+      paramPtr->numLoci = DEFAULT_NUM_LOCI;
+    }
+  if (!paramPtr->priorOutFile || !paramPtr->priorOutFile[0])
+    {
+      strncpy (paramPtr->priorOutFile, DEFAULT_PRIOR_OUT_FILE,
+	       MAX_FILENAME_LEN);
+    }
+  if (!paramPtr->subParamConstrain || !paramPtr->subParamConstrain[0])
+    {
+      strncpy (paramPtr->subParamConstrain, DEFAULT_SUBPARAMCONSTRAIN,
+	       NUMBER_OF_CONPARAM);
+    }
   return;
 }
 
@@ -398,161 +441,188 @@ static void SetDefaultParams(runParameters * paramPtr) {
  * are in msPriors.h
  */
 #define MAX_INPUT_LINE_LENGTH  1024
-static int InteractiveSetupParams (runParameters * paramPtr)
+static int
+InteractiveSetupParams (runParameters * paramPtr)
 {
   unsigned long long tempValULL;
   unsigned int tempValUI;
   double tempValDouble;
   char line[MAX_INPUT_LINE_LENGTH], fn[MAX_FILENAME_LEN];
-  int lineLen, badInput=1;
-  
-  if(!paramPtr)
+  int lineLen, badInput = 1;
+
+  if (!paramPtr)
     return -1;
 
-  fprintf(stderr,"\nPress [return] to accept the default value in [ ]\n\n");
+  fprintf (stderr, "\nPress [return] to accept the default value in [ ]\n\n");
 
-  SetDefaultParams(paramPtr);
+  SetDefaultParams (paramPtr);
 
   /* numLoci */
-  for(badInput=1; badInput; ) {
-    fprintf (stderr, 
-	     "Number of Loci "
-	     "[%u]: \n", paramPtr->numLoci);
-    lineLen = GetLine(line, MAX_INPUT_LINE_LENGTH);
-    if (lineLen == 1)
-      badInput = 0;  /* use default value */
-    else if ((lineLen > 1) && (sscanf(line, "%u", &tempValUI) == 1)) {
-      badInput = 0;
-      paramPtr->numLoci = tempValUI;
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr, "Number of Loci " "[%u]: \n", paramPtr->numLoci);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%u", &tempValUI) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->numLoci = tempValUI;
+	}
     }
-  }
 
   /* theta */
-  for(badInput=1; badInput; ) {
-    fprintf (stderr, 
-	     "Lower limit of uniform prior distribution for theta "
-	     "[%lf]: \n", paramPtr->lowerTheta);
-    lineLen = GetLine(line, MAX_INPUT_LINE_LENGTH);
-    if (lineLen == 1)
-      badInput = 0;  /* use default value */
-    else if ((lineLen > 1) && (sscanf(line, "%lf", &tempValDouble) == 1)) {
-      badInput = 0;
-      paramPtr->lowerTheta = tempValDouble;
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+	       "Lower limit of uniform prior distribution for theta "
+	       "[%lf]: \n", paramPtr->lowerTheta);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->lowerTheta = tempValDouble;
+	}
     }
-  }
-  for(badInput=1; badInput; ) {
-    fprintf (stderr, 
-	     "Upper limit of uniform prior distribution for theta "
-	     "[%lf]: \n", paramPtr->upperTheta);
-    lineLen = GetLine(line, MAX_INPUT_LINE_LENGTH);
-    if (lineLen == 1)
-      badInput = 0;  /* use default value */
-    else if ((lineLen > 1) && (sscanf(line, "%lf", &tempValDouble) == 1)) {
-      badInput = 0;
-      paramPtr->upperTheta = tempValDouble;
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+	       "Upper limit of uniform prior distribution for theta "
+	       "[%lf]: \n", paramPtr->upperTheta);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->upperTheta = tempValDouble;
+	}
     }
-  }
 
   /* tau */
-  for(badInput=1; badInput; ) {
-    fprintf (stderr, 
-	     "Upper limit of uniform prior distribution for tau, time of divergence (tau-max) "
-	     "[%lf]: \n", paramPtr->upperTau);
-    lineLen = GetLine(line, MAX_INPUT_LINE_LENGTH);
-    if (lineLen == 1)
-      badInput = 0;  /* use default value */
-    else if ((lineLen > 1) && (sscanf(line, "%lf", &tempValDouble) == 1)) {
-      badInput = 0;
-      paramPtr->upperTau = tempValDouble;
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+	       "Upper limit of uniform prior distribution for tau, time of divergence (tau-max) "
+	       "[%lf]: \n", paramPtr->upperTau);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->upperTau = tempValDouble;
+	}
     }
-  }
 
-  for(badInput=1; badInput; ) {
-    fprintf (stderr, 
-	     "Number of divergenece times across all Y of the taxon-pairs (Psi).  The hyper-parameter value should be between 1 and #taxon pairs (Y).  For example, 2 means that the model is constrained to have two divergence times (Psi=2), and each taxon pair formed at either of the two divergence times (each of which are drawn from  a uniform distribution).  Specify 0 (default) if you do not want to constrain Psi (number of divergence times), and want to draw it from the discrete uniform distribution of [1, #taxon pairs]. "
-	     " [%u]: \n", paramPtr->numTauClasses);
-    lineLen = GetLine(line, MAX_INPUT_LINE_LENGTH);
-    if (lineLen == 1)
-      badInput = 0;  /* use default value */
-    else if ((lineLen > 1) && (sscanf(line, "%u", &tempValUI) == 1)) {
-      badInput = 0;
-      paramPtr->numTauClasses = tempValUI;
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+	       "Number of divergenece times across all Y of the taxon-pairs (Psi).  The hyper-parameter value should be between 1 and #taxon pairs (Y).  For example, 2 means that the model is constrained to have two divergence times (Psi=2), and each taxon pair formed at either of the two divergence times (each of which are drawn from  a uniform distribution).  Specify 0 (default) if you do not want to constrain Psi (number of divergence times), and want to draw it from the discrete uniform distribution of [1, #taxon pairs]. "
+	       " [%u]: \n", paramPtr->numTauClasses);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%u", &tempValUI) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->numTauClasses = tempValUI;
+	}
     }
-  }
 
   /* mig */
-  for(badInput=1; badInput; ) {
-    fprintf (stderr,
-	     "Upper limit of uniform prior distribution for migration rate [%lf]: \n", 
-	     paramPtr->upperMig);
-    lineLen = GetLine(line, MAX_INPUT_LINE_LENGTH);
-    if (lineLen == 1)
-      badInput = 0;  /* use default value */
-    else if ((lineLen > 1) && (sscanf(line, "%lf", &tempValDouble) == 1)) {
-      badInput = 0;
-      paramPtr->upperMig = tempValDouble;
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+	       "Upper limit of uniform prior distribution for migration rate [%lf]: \n",
+	       paramPtr->upperMig);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->upperMig = tempValDouble;
+	}
     }
-  }
-  
+
   /* rec */
-  for(badInput=1; badInput; ) {
-    fprintf (stderr, "Upper limit of uniform prior distribution for recombination rate: "
-	     "[%lf]: \n",  paramPtr->upperRec);
-    
-    lineLen = GetLine(line, MAX_INPUT_LINE_LENGTH);
-    if (lineLen == 1)
-      badInput = 0;  /* use default value */
-    else if ((lineLen > 1) && (sscanf(line, "%lf", &tempValDouble) == 1)) {
-      badInput = 0;
-      paramPtr->upperRec = tempValDouble;
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+	       "Upper limit of uniform prior distribution for recombination rate: "
+	       "[%lf]: \n", paramPtr->upperRec);
+
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->upperRec = tempValDouble;
+	}
     }
-  }
 
   /* ancPop */
-  for(badInput=1; badInput; ) {
-    fprintf (stderr, "Coefficient for the upper limit of uniform prior distribution for ancestral theta "
-	     ": [%lf]\n",  paramPtr->upperAncPopSize);
-    fprintf (stderr, "  The upper limit for ancestral theta is determined by "
-	     "this coefficient\n  multiplied by the upper limit for (current) theta (%lf) : \n",
-	     paramPtr->upperTheta);
-    lineLen = GetLine(line, MAX_INPUT_LINE_LENGTH);
-    if (lineLen == 1)
-      badInput = 0;  /* use default value */
-    else if ((lineLen > 1) && (sscanf(line, "%lf", &tempValDouble) == 1)) {
-      badInput = 0;
-      paramPtr->upperAncPopSize = tempValDouble;
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+	       "Coefficient for the upper limit of uniform prior distribution for ancestral theta "
+	       ": [%lf]\n", paramPtr->upperAncPopSize);
+      fprintf (stderr,
+	       "  The upper limit for ancestral theta is determined by "
+	       "this coefficient\n  multiplied by the upper limit for (current) theta (%lf) : \n",
+	       paramPtr->upperTheta);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->upperAncPopSize = tempValDouble;
+	}
     }
-  }
 
   /* rep */
-  for(badInput=1; badInput; ) {
-    fprintf(stderr, "Number of draws from the Hyperprior (#simulations) [%llu]: \n", paramPtr->reps);
-    lineLen = GetLine(line, MAX_INPUT_LINE_LENGTH);
-    if (lineLen == 1)
-      badInput = 0;  /* use default value */
-    else if ((lineLen > 1) && (sscanf(line, "%llu", &tempValULL) == 1)) {
-      badInput = 0;
-      paramPtr->reps = tempValULL;
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+	       "Number of draws from the Hyperprior (#simulations) [%llu]: \n",
+	       paramPtr->reps);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%llu", &tempValULL) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->reps = tempValULL;
+	}
     }
-  }
-  
+
   /* mutation file */
-  for(badInput=1; badInput; ) {
-    fprintf(stderr, "Filename of master infile (sample sizes, #bp and mutation parameters) [%s]: \n",
-	    paramPtr->configFile);
-    lineLen = GetLine(line, MAX_INPUT_LINE_LENGTH);
-    if (lineLen == 1)
-      badInput = 0;  /* use default value */
-    else if ((lineLen > 1) && (sscanf(line, "%s", fn) == 1)) {
-      if (SetConfigFile(fn) < 0) {
-	fprintf(stderr, "Bad filename\n");
-	strncpy(paramPtr->configFile, DEFAULT_MUT_FILE, MAX_FILENAME_LEN);
-	continue;
-      }
-      badInput=0;
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+	       "Filename of master infile (sample sizes, #bp and mutation parameters) [%s]: \n",
+	       paramPtr->configFile);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%s", fn) == 1))
+	{
+	  if (SetConfigFile (fn) < 0)
+	    {
+	      fprintf (stderr, "Bad filename\n");
+	      strncpy (paramPtr->configFile, DEFAULT_MUT_FILE,
+		       MAX_FILENAME_LEN);
+	      continue;
+	    }
+	  badInput = 0;
+	}
     }
-  }
-  
+
   return (0);
 }
 
@@ -560,42 +630,47 @@ static int InteractiveSetupParams (runParameters * paramPtr)
  * Take the file pointer to the config file, and set up the
  * parameter (usually gParam).
  */
-static void SetupParams (FILE *fp, runParameters * paramPtr)
+static void
+SetupParams (FILE * fp, runParameters * paramPtr)
 {
   int retVal;
-  
+
   unsigned long r;
-  
-  r = paramPtr->reps;  /* save this in case this is set by command line */
 
-  SetDefaultParams(paramPtr);
-  
-  retVal = init_globals(fp ,
-	     "lowerTheta upperTheta upperTau numTauClasses upperMig upperRec upperAncPopSize reps numLoci constrain subParamConstrain",
-	     "dddudddVuus",
-	     &paramPtr->lowerTheta, &paramPtr->upperTheta,
-	     &paramPtr->upperTau, &paramPtr->numTauClasses, 
-	     &paramPtr->upperMig, &paramPtr->upperRec,
-			&paramPtr->upperAncPopSize, &paramPtr->reps,
-             &paramPtr->numLoci, &paramPtr->constrain, &paramPtr->subParamConstrain);
+  r = paramPtr->reps;		/* save this in case this is set by command line */
 
- 
+  SetDefaultParams (paramPtr);
 
-  
-  
-  if (retVal !=0) {
-    if (debug_level) {
-      PrintParam();
+  retVal = init_globals (fp,
+			 "lowerTheta upperTheta upperTau numTauClasses upperMig upperRec upperAncPopSize reps numLoci constrain subParamConstrain",
+			 "dddudddVuus",
+			 &paramPtr->lowerTheta, &paramPtr->upperTheta,
+			 &paramPtr->upperTau, &paramPtr->numTauClasses,
+			 &paramPtr->upperMig, &paramPtr->upperRec,
+			 &paramPtr->upperAncPopSize, &paramPtr->reps,
+			 &paramPtr->numLoci, &paramPtr->constrain,
+			 &paramPtr->subParamConstrain);
+
+
+
+
+
+  if (retVal != 0)
+    {
+      if (debug_level)
+	{
+	  PrintParam ();
+	}
+      fprintf (stderr, "Error reading in the parameter config file\n");
+      exit (EXIT_FAILURE);
     }
-    fprintf(stderr, "Error reading in the parameter config file\n");
-    exit(EXIT_FAILURE);
-  }
 
   paramPtr->reps = 0;
 
-  if (r > 0) { /* over-ride with the command line option */
-    paramPtr->reps = r;
-  }
+  if (r > 0)
+    {				/* over-ride with the command line option */
+      paramPtr->reps = r;
+    }
 
   return;
 }
@@ -609,145 +684,163 @@ static void SetupParams (FILE *fp, runParameters * paramPtr)
  * with these values.
  */
 
-static int InitMutPara(FILE *fp, mutParameterArray *mpaPtr)
+static int
+InitMutPara (FILE * fp, mutParameterArray * mpaPtr)
 {
-    char ln[LNSZ];
-    char *p;
-	int tmpCol, numColumns = 0;
-	int index, rc;
-	mutParameter *mpp;
+  char ln[LNSZ];
+  char *p;
+  int tmpCol, numColumns = 0;
+  int index, rc;
+  mutParameter *mpp;
 
-   
-    while ( fgets(ln, LNSZ, fp) ) {  /* read init file */
-      RmLeadingSpaces(ln);
 
-        if ( ln[0] == 0 || ln[0] == '#')        /* skip if blank line and */
-	  continue;                             /* comments starting with # */
+  while (fgets (ln, LNSZ, fp))
+    {				/* read init file */
+      RmLeadingSpaces (ln);
 
-        p = strchr(ln, '=');                    /* find equal sign */
-        if ( p == NULL )                        /* beginning of mut data */
-	  break;
+      if (ln[0] == 0 || ln[0] == '#')	/* skip if blank line and */
+	continue;		/* comments starting with # */
+
+      p = strchr (ln, '=');	/* find equal sign */
+      if (p == NULL)		/* beginning of mut data */
+	break;
     }
 
-    /* process the mutation data table */
-    index = 0;    
-    do {
+  /* process the mutation data table */
+  index = 0;
+  do
+    {
       /* clean up spaces */
-      RmLeadingSpaces(ln);
-      if ( ln[0] == 0 || ln[0] == '#')        /* skip if blank line and */
-	continue;                             /* comments starting with # */
-      RmTrailingSpaces(ln);
+      RmLeadingSpaces (ln);
+      if (ln[0] == 0 || ln[0] == '#')	/* skip if blank line and */
+	continue;		/* comments starting with # */
+      RmTrailingSpaces (ln);
 
-      tmpCol = RmExtraWhiteSpaces(ln) + 1;
+      tmpCol = RmExtraWhiteSpaces (ln) + 1;
 
 
       /* make sure the number of columns are correct */
 #ifdef W_GAMMA
-      if (tmpCol < 9 || tmpCol > 10) { /* should be 10 or 11 columns */
+      if (tmpCol < 9 || tmpCol > 10)
+	{			/* should be 10 or 11 columns */
 #else
-      if (tmpCol < 8 || tmpCol > 9) { /* should be 9 or 10 columns */
+      if (tmpCol < 8 || tmpCol > 9)
+	{			/* should be 9 or 10 columns */
 #endif
-	fprintf(stderr, 
-		"WARN: row with incorrect number of columns encountered "
-		"in sample size & mutation model table.  Ignoring the row.\n");
-	continue;
-      }
-      if (! numColumns)
+	  fprintf (stderr,
+		   "WARN: row with incorrect number of columns encountered "
+		   "in sample size & mutation model table.  Ignoring the row.\n");
+	  continue;
+	}
+      if (!numColumns)
 	numColumns = tmpCol;
-      else if (numColumns != tmpCol) { 	/* config file screwed */
-	fprintf(stderr, "The number of columns for mutation data should be" 
-		"%d, but following line has %d columns\n%s", 
-		numColumns, tmpCol,ln);
-	exit (-1);
-      }
+      else if (numColumns != tmpCol)
+	{			/* config file screwed */
+	  fprintf (stderr, "The number of columns for mutation data should be"
+		   "%d, but following line has %d columns\n%s",
+		   numColumns, tmpCol, ln);
+	  exit (-1);
+	}
 
-      /* check if mem allocated*/
-      rc = CheckMutParaArray(mpaPtr, index);
-      if (rc < 0) 
-	  {
-		  fprintf(stderr, "Error found in CheckMutParaArray\n");
-	  } /* error */
-      
+      /* check if mem allocated */
+      rc = CheckMutParaArray (mpaPtr, index);
+      if (rc < 0)
+	{
+	  fprintf (stderr, "Error found in CheckMutParaArray\n");
+	}			/* error */
+
       mpp = &(mpaPtr->data[index]);
-      
-      rc = ReadMutLine(mpp, ln, numColumns);
 
-      if (rc < 0) {
-	fprintf(stderr, "WARN: The following is weird, ignoring\n%s\n", ln);
-      } else {
-	index ++;
-      }
+      rc = ReadMutLine (mpp, ln, numColumns);
 
-    } while ( fgets(ln, LNSZ, fp) && (strstr(ln, ".fasta") != NULL) );
+      if (rc < 0)
+	{
+	  fprintf (stderr, "WARN: The following is weird, ignoring\n%s\n",
+		   ln);
+	}
+      else
+	{
+	  index++;
+	}
 
-    gParam.numTaxaPair = mpaPtr->numElements;
+    }
+  while (fgets (ln, LNSZ, fp) && (strstr (ln, ".fasta") != NULL));
 
-    return (0);
+  gParam.numTaxaPair = mpaPtr->numElements;
+
+  return (0);
 }
 
- 
 
-static int InitConPara(FILE *fp, constrainedParameterArray *cpaPtr)
+
+static int
+InitConPara (FILE * fp, constrainedParameterArray * cpaPtr)
 {
-  char ln[LNSZ]; // char array with length = 256(LNSZ)
+  char ln[LNSZ];		// char array with length = 256(LNSZ)
 
   int index, rc;
   int tmpCol, numColumns = 0;
   constrainedParameter *cpp;
 
 
-  while(fgets(ln, LNSZ, fp))
+  while (fgets (ln, LNSZ, fp))
     {
-      RmLeadingSpaces(ln);
+      RmLeadingSpaces (ln);
 
-      if(ln[0]== 0 || ln[0] == '#')
-        continue;
+      if (ln[0] == 0 || ln[0] == '#')
+	continue;
 
-      if((strchr(ln,'=')== NULL) && (strstr(ln, ".fasta") == NULL))
+      if ((strchr (ln, '=') == NULL) && (strstr (ln, ".fasta") == NULL))
 	break;
 
-     }
+    }
 
-    index = 0;
-  do{
-    
-     RmLeadingSpaces(ln);
+  index = 0;
+  do
+    {
 
-     // is this check neccesary??
-     if(ln[0] == 0 || ln[0] == '#')
-       continue;
+      RmLeadingSpaces (ln);
 
-     RmTrailingSpaces(ln);
+      // is this check neccesary??
+      if (ln[0] == 0 || ln[0] == '#')
+	continue;
 
-     tmpCol = RmExtraWhiteSpaces(ln) + 1;
+      RmTrailingSpaces (ln);
 
-     // printout tmpCol to see the value
-    
-     if(! numColumns)
-       numColumns = tmpCol;
-     else if (numColumns != tmpCol)
-       { fprintf(stderr, "The number of columns for mutation data should be %d, but following line has %d columns\n%s", numColumns, tmpCol, ln);
-       exit(-1);
-       }
+      tmpCol = RmExtraWhiteSpaces (ln) + 1;
 
-     // check might not be used
-     rc = CheckConParaArray(cpaPtr, index);
-	 if(rc < 0)
-	 {
-        fprintf(stderr, "Hmm, error found in CheckConParaArray\n");
-	 }
+      // printout tmpCol to see the value
 
-     cpp = &cpaPtr->conData[index];
+      if (!numColumns)
+	numColumns = tmpCol;
+      else if (numColumns != tmpCol)
+	{
+	  fprintf (stderr,
+		   "The number of columns for mutation data should be %d, but following line has %d columns\n%s",
+		   numColumns, tmpCol, ln);
+	  exit (-1);
+	}
 
-     rc = ReadConLine(cpp, ln, numColumns);
-     if(rc < 0)
-       {
-         fprintf(stderr, "Hey, error in reading constrain parameters\n%s\n", ln);          
-       } 
-     else 
-       index ++;
+      // check might not be used
+      rc = CheckConParaArray (cpaPtr, index);
+      if (rc < 0)
+	{
+	  fprintf (stderr, "Hmm, error found in CheckConParaArray\n");
+	}
 
-  }while(fgets(ln, LNSZ, fp));
+      cpp = &cpaPtr->conData[index];
+
+      rc = ReadConLine (cpp, ln, numColumns);
+      if (rc < 0)
+	{
+	  fprintf (stderr, "Hey, error in reading constrain parameters\n%s\n",
+		   ln);
+	}
+      else
+	index++;
+
+    }
+  while (fgets (ln, LNSZ, fp));
 
   return 0;
 }
@@ -763,87 +856,103 @@ static int InitConPara(FILE *fp, constrainedParameterArray *cpaPtr)
  *  0 for success
  *  1 for error
  */
-static int CheckMutParaArray(mutParameterArray *mpaPtr, int index) 
+static int
+CheckMutParaArray (mutParameterArray * mpaPtr, int index)
 {
   const int growBy = 10;
 
-  if (index < 0) {
-    fprintf(stderr,
-	    "In CheckMutParaArray(), 2nd arg should be non-negative.\n");
-    return -1;
-  }
-
-  if (! mpaPtr) {
-    fprintf(stderr, "In CheckMutParaArray(), NULL pointer is given\n");
-    return -1;
-  }
-
-  if (index + 1 <= mpaPtr->numElements) {
-    return 0;  /* the element is allocated, in use */
-  } else if (index + 1 <= mpaPtr->numAllocated) {
-    mpaPtr-> numElements = index + 1;
-    return 0;
-  } else {  /* all alocated ones are used up, so grow the memory */
-    size_t newNumEle = (1+ (index + 1) / growBy) * growBy;
-    mutParameter *rc;
-    rc = (mutParameter *) realloc(mpaPtr->data,sizeof(mutParameter)*newNumEle);
-    if (! rc) {
-      fprintf(stderr, "Not enough memory in CheckMutParaArray()\n");
-      exit (EXIT_FAILURE);
-    }
-    
-    mpaPtr->data = rc;
-    mpaPtr->numAllocated = newNumEle;
-    mpaPtr->numElements = index + 1;
-
-    return 0;
-  }
-  return -1;   /* It should never come here */
-}
-
-
-static int CheckConParaArray(constrainedParameterArray *cpaPtr, int index)
-{
-  int growBy = 10;
-  
-
-  if(index < 0)
+  if (index < 0)
     {
-      fprintf(stderr, "In CheckConArray(), 2nd arg should be non-negative. \n");
+      fprintf (stderr,
+	       "In CheckMutParaArray(), 2nd arg should be non-negative.\n");
       return -1;
     }
 
-  if(!cpaPtr)
+  if (!mpaPtr)
     {
-      fprintf(stderr, "In CheckConArray(), NULL pointer is givin\n");
+      fprintf (stderr, "In CheckMutParaArray(), NULL pointer is given\n");
+      return -1;
     }
 
-  if(index + 1 <= cpaPtr->conNumElements)
-  {
-	  return 0;
-  }
-  else if (index + 1 <= cpaPtr->conNumAllocated)
-  {
-	  cpaPtr->conNumElements = index + 1;
-	  return 0;
-  }
+  if (index + 1 <= mpaPtr->numElements)
+    {
+      return 0;			/* the element is allocated, in use */
+    }
+  else if (index + 1 <= mpaPtr->numAllocated)
+    {
+      mpaPtr->numElements = index + 1;
+      return 0;
+    }
   else
-  {
-	  size_t newNumEle = (1+(index + 1)/growBy) * growBy;
-	  constrainedParameter *cc;
+    {				/* all alocated ones are used up, so grow the memory */
+      size_t newNumEle = (1 + (index + 1) / growBy) * growBy;
+      mutParameter *rc;
+      rc =
+	(mutParameter *) realloc (mpaPtr->data,
+				  sizeof (mutParameter) * newNumEle);
+      if (!rc)
+	{
+	  fprintf (stderr, "Not enough memory in CheckMutParaArray()\n");
+	  exit (EXIT_FAILURE);
+	}
 
-	  cc = (constrainedParameter *)realloc(cpaPtr->conData, sizeof(constrainedParameter)*newNumEle);
-	  if(!cc)
-	  {
-		  fprintf(stderr, "Not enough memory in CheckConParaArray()\n");
-	  }
+      mpaPtr->data = rc;
+      mpaPtr->numAllocated = newNumEle;
+      mpaPtr->numElements = index + 1;
 
-	  cpaPtr->conData = cc;
-	  cpaPtr->conNumAllocated = newNumEle;
-	  cpaPtr->conNumElements = index + 1;
+      return 0;
+    }
+  return -1;			/* It should never come here */
+}
 
-	  return 0;
-  }
+
+static int
+CheckConParaArray (constrainedParameterArray * cpaPtr, int index)
+{
+  int growBy = 10;
+
+
+  if (index < 0)
+    {
+      fprintf (stderr,
+	       "In CheckConArray(), 2nd arg should be non-negative. \n");
+      return -1;
+    }
+
+  if (!cpaPtr)
+    {
+      fprintf (stderr, "In CheckConArray(), NULL pointer is givin\n");
+    }
+
+  if (index + 1 <= cpaPtr->conNumElements)
+    {
+      return 0;
+    }
+  else if (index + 1 <= cpaPtr->conNumAllocated)
+    {
+      cpaPtr->conNumElements = index + 1;
+      return 0;
+    }
+  else
+    {
+      size_t newNumEle = (1 + (index + 1) / growBy) * growBy;
+      constrainedParameter *cc;
+
+      cc =
+	(constrainedParameter *) realloc (cpaPtr->conData,
+					  sizeof (constrainedParameter) *
+					  newNumEle);
+      if (!cc)
+	{
+	  fprintf (stderr, "Not enough memory in CheckConParaArray()\n");
+	}
+
+      cpaPtr->conData = cc;
+      cpaPtr->conNumAllocated = newNumEle;
+      cpaPtr->conNumElements = index + 1;
+
+      return 0;
+    }
   return -1;
 }
 
@@ -853,141 +962,165 @@ static int CheckConParaArray(constrainedParameterArray *cpaPtr, int index)
  * Take a line which specify the mutation model and sample sizes of a
  * pair of taxon, and assign the values to mpp.
  */
-static int ReadMutLine(mutParameter *mpp, char *line, int ncol)
+static int
+ReadMutLine (mutParameter * mpp, char *line, int ncol)
 {
   /* probably we should check integer, double is correct in the file */
   int rc;
   char dummyTaxonPairName[1024];
 
-  
+
 #ifdef W_GAMMA
- 
-   if (ncol == 10) {
-    rc = sscanf(line, "%u %u %u %lf %lf %u %lf %lf %lf %s",
-	   &mpp->numPerTaxa, &mpp->sample[0], &mpp->sample[1],
-	   &mpp->tstv[0], &mpp->gamma, &mpp->seqLen,
-	   &mpp->freqA, &mpp->freqC, &mpp->freqG, dummyTaxonPairName);
 
-    if (mpp->numPerTaxa != mpp->sample[0] + mpp->sample[1]) {
-      fprintf(stderr, 
-	      "Error: In the following line, 2nd and 3rd column doesn't add\n"
-	      "up to the 1st column\n%s\n", line);
-      exit (EXIT_FAILURE);
+  if (ncol == 10)
+    {
+      rc = sscanf (line, "%u %u %u %lf %lf %u %lf %lf %lf %s",
+		   &mpp->numPerTaxa, &mpp->sample[0], &mpp->sample[1],
+		   &mpp->tstv[0], &mpp->gamma, &mpp->seqLen,
+		   &mpp->freqA, &mpp->freqC, &mpp->freqG, dummyTaxonPairName);
+
+      if (mpp->numPerTaxa != mpp->sample[0] + mpp->sample[1])
+	{
+	  fprintf (stderr,
+		   "Error: In the following line, 2nd and 3rd column doesn't add\n"
+		   "up to the 1st column\n%s\n", line);
+	  exit (EXIT_FAILURE);
+	}
     }
-  } else if (ncol == 9) {
-    rc = sscanf(line, "%u %u %lf %lf %u %lf %lf %lf %s",
-	   &mpp->sample[0], &mpp->sample[1],
-	   &mpp->tstv[0], &mpp->gamma, &mpp->seqLen,
-	   &mpp->freqA, &mpp->freqC, &mpp->freqG, dummyTaxonPairName);
-    mpp->numPerTaxa = mpp->sample[0] + mpp->sample[1];
-  } else {
-    return (-1);
-  } 
-#else  /* basically sscanf and ncol == are different */
-
-  if (ncol == 9) {
-    rc = sscanf(line, "%u %u %u %lf %u %lf %lf %lf %s",
-	   &mpp->numPerTaxa, &mpp->sample[0], &mpp->sample[1],
-	   &mpp->tstv[0], &mpp->seqLen,
-	   &mpp->freqA, &mpp->freqC, &mpp->freqG, dummyTaxonPairName);
-    mpp->gamma = 999;
-
-    if (mpp->numPerTaxa != mpp->sample[0] + mpp->sample[1]) {
- 
-      fprintf(stderr, 
-	      "Error: In the following line, 2nd and 3rd column doesn't add\n"
-	      "up to the 1st column\n%s\n", line);
-      exit (EXIT_FAILURE); 
-	  
-	  
+  else if (ncol == 9)
+    {
+      rc = sscanf (line, "%u %u %lf %lf %u %lf %lf %lf %s",
+		   &mpp->sample[0], &mpp->sample[1],
+		   &mpp->tstv[0], &mpp->gamma, &mpp->seqLen,
+		   &mpp->freqA, &mpp->freqC, &mpp->freqG, dummyTaxonPairName);
+      mpp->numPerTaxa = mpp->sample[0] + mpp->sample[1];
     }
-  } else if (ncol == 8) {
-    rc = sscanf(line, "%u %u %lf %u %lf %lf %lf %s",
-	   &mpp->sample[0], &mpp->sample[1],
-	   &mpp->tstv[0], &mpp->seqLen,
-	   &mpp->freqA, &mpp->freqC, &mpp->freqG, dummyTaxonPairName);
-    mpp->gamma = 999;
-    mpp->numPerTaxa = mpp->sample[0] + mpp->sample[1];
-  } else {
-    return (-1);
-  }
-  
-  
+  else
+    {
+      return (-1);
+    }
+#else /* basically sscanf and ncol == are different */
+
+  if (ncol == 9)
+    {
+      rc = sscanf (line, "%u %u %u %lf %u %lf %lf %lf %s",
+		   &mpp->numPerTaxa, &mpp->sample[0], &mpp->sample[1],
+		   &mpp->tstv[0], &mpp->seqLen,
+		   &mpp->freqA, &mpp->freqC, &mpp->freqG, dummyTaxonPairName);
+      mpp->gamma = 999;
+
+      if (mpp->numPerTaxa != mpp->sample[0] + mpp->sample[1])
+	{
+
+	  fprintf (stderr,
+		   "Error: In the following line, 2nd and 3rd column doesn't add\n"
+		   "up to the 1st column\n%s\n", line);
+	  exit (EXIT_FAILURE);
+
+
+	}
+    }
+  else if (ncol == 8)
+    {
+      rc = sscanf (line, "%u %u %lf %u %lf %lf %lf %s",
+		   &mpp->sample[0], &mpp->sample[1],
+		   &mpp->tstv[0], &mpp->seqLen,
+		   &mpp->freqA, &mpp->freqC, &mpp->freqG, dummyTaxonPairName);
+      mpp->gamma = 999;
+      mpp->numPerTaxa = mpp->sample[0] + mpp->sample[1];
+    }
+  else
+    {
+      return (-1);
+    }
+
+
 #endif
-  
+
   mpp->freqT = 1 - mpp->freqA - mpp->freqC - mpp->freqG;
 
-  
+
   return (rc);
 }
 
 
-static int ReadConLine(constrainedParameter *cpp, char *line, int ncol)
+static int
+ReadConLine (constrainedParameter * cpp, char *line, int ncol)
 {
 
-  int cc; 
- 
+  int cc;
 
-  if(ncol == 9) // so far there are nine values
+
+  if (ncol == 9)		// so far there are nine values
     {
-      cc = sscanf(line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", 
-                  &cpp->conTau, &cpp->conBottPop1, &cpp->conBottPop2,
-                  &cpp->conBottleTime, &cpp->conMig, &cpp->conTheta,
-                  &cpp->conN1, &cpp->conNanc, &cpp->conRec);
+      cc = sscanf (line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
+		   &cpp->conTau, &cpp->conBottPop1, &cpp->conBottPop2,
+		   &cpp->conBottleTime, &cpp->conMig, &cpp->conTheta,
+		   &cpp->conN1, &cpp->conNanc, &cpp->conRec);
     }
-  
-   return (cc);
+
+  return (cc);
 }
 
 
 /*
  * print out the value of parameters, useful for debugging
  */
-void PrintParam (void) {
+void
+PrintParam (void)
+{
   int i;
 
-  fprintf(stderr,"## gParam ##\n");
-  fprintf(stderr,"lowerTheta =\t%lf\n", gParam.lowerTheta);
-  fprintf(stderr,"upperTheta =\t%lf\n", gParam.upperTheta);
-  fprintf(stderr,"upperTau =\t%lf\n", gParam.upperTau);
-  fprintf(stderr,"numTauClasses =\t%u\n", gParam.numTauClasses);
-  fprintf(stderr,"upperMig =\t%lf\n", gParam.upperMig);
-  fprintf(stderr,"upperRec =\t%lf\n",  gParam.upperRec);
-  fprintf(stderr,"upperAncPopSize =\t%lf\n", gParam.upperAncPopSize);
-  fprintf(stderr,"reps =\t%llu\n", gParam.reps);
-  fprintf(stderr,"numTaxaPair =\t%u\n", gParam.numTaxaPair);
-  fprintf(stderr,"numLoci =\t%u\n", gParam.numLoci);
-  fprintf(stderr,"prngSeed =\t%ld\n", gParam.prngSeed);
-  fprintf(stderr,"configFile =\t%s\n", gParam.configFile);
+  fprintf (stderr, "## gParam ##\n");
+  fprintf (stderr, "lowerTheta =\t%lf\n", gParam.lowerTheta);
+  fprintf (stderr, "upperTheta =\t%lf\n", gParam.upperTheta);
+  fprintf (stderr, "upperTau =\t%lf\n", gParam.upperTau);
+  fprintf (stderr, "numTauClasses =\t%u\n", gParam.numTauClasses);
+  fprintf (stderr, "upperMig =\t%lf\n", gParam.upperMig);
+  fprintf (stderr, "upperRec =\t%lf\n", gParam.upperRec);
+  fprintf (stderr, "upperAncPopSize =\t%lf\n", gParam.upperAncPopSize);
+  fprintf (stderr, "reps =\t%llu\n", gParam.reps);
+  fprintf (stderr, "numTaxaPair =\t%u\n", gParam.numTaxaPair);
+  fprintf (stderr, "numLoci =\t%u\n", gParam.numLoci);
+  fprintf (stderr, "prngSeed =\t%ld\n", gParam.prngSeed);
+  fprintf (stderr, "configFile =\t%s\n", gParam.configFile);
 
-  fprintf(stderr,"## gMutParam ##\n");
-  for (i = 0; i < gMutParam.numElements; i ++) {
-    fprintf(stderr,"### taxon pair %d ###\n", i+1);
-    fprintf(stderr,"numPerTaxa =\t%u\n", gMutParam.data[i].numPerTaxa);
-    fprintf(stderr,"sample =\t%u %u\n",
-	    gMutParam.data[i].sample[0], gMutParam.data[i].sample[1]);
-    fprintf(stderr,"tstv =\t%lf  %lf\n",
-	    gMutParam.data[i].tstv[0], gMutParam.data[i].tstv[1]);
-    fprintf(stderr,"gamma =\t%lf\n", gMutParam.data[i].gamma);
-    fprintf(stderr,"seqLen =\t%u\n", gMutParam.data[i].seqLen);
-    fprintf(stderr,"freq:A, C, G, T = %f, %f %f %f\n", 
-	    gMutParam.data[i].freqA, gMutParam.data[i].freqC, 
-	    gMutParam.data[i].freqG, gMutParam.data[i].freqT);
-  }
+  fprintf (stderr, "## gMutParam ##\n");
+  for (i = 0; i < gMutParam.numElements; i++)
+    {
+      fprintf (stderr, "### taxon pair %d ###\n", i + 1);
+      fprintf (stderr, "numPerTaxa =\t%u\n", gMutParam.data[i].numPerTaxa);
+      fprintf (stderr, "sample =\t%u %u\n",
+	       gMutParam.data[i].sample[0], gMutParam.data[i].sample[1]);
+      fprintf (stderr, "tstv =\t%lf  %lf\n",
+	       gMutParam.data[i].tstv[0], gMutParam.data[i].tstv[1]);
+      fprintf (stderr, "gamma =\t%lf\n", gMutParam.data[i].gamma);
+      fprintf (stderr, "seqLen =\t%u\n", gMutParam.data[i].seqLen);
+      fprintf (stderr, "freq:A, C, G, T = %f, %f %f %f\n",
+	       gMutParam.data[i].freqA, gMutParam.data[i].freqC,
+	       gMutParam.data[i].freqG, gMutParam.data[i].freqT);
+    }
 
-  fprintf(stderr, "## gConParam, for contraint only ##\n");
-  for(i = 0; i < gConParam.conNumElements; i++)
-  {
-	  fprintf(stderr, "### taxon pair %d ###\n", i+1);
-	  fprintf(stderr, "tau = \t%lf\n", gConParam.conData[i].conTau);
-	  fprintf(stderr, "bottle neck populations = \t%lf %lf\n", gConParam.conData[i].conBottPop1, gConParam.conData[i].conBottPop2);
-	  fprintf(stderr, "bottle neck time = \t%lf\n", gConParam.conData[i].conBottleTime);
-	  fprintf(stderr, "migration rate= \t%lf\n", gConParam.conData[i].conMig);
-	  fprintf(stderr, "theta = \t%lf\n", gConParam.conData[i].conTheta);
-	  fprintf(stderr, "current population sizes = \t%lf\n", gConParam.conData[i].conN1);
-	  fprintf(stderr, "ancestral population size = \t%lf\n", gConParam.conData[i].conNanc);
-	  fprintf(stderr, "recombination rate = \t%lf\n", gConParam.conData[i].conRec);
-  }
+  fprintf (stderr, "## gConParam, for contraint only ##\n");
+  for (i = 0; i < gConParam.conNumElements; i++)
+    {
+      fprintf (stderr, "### taxon pair %d ###\n", i + 1);
+      fprintf (stderr, "tau = \t%lf\n", gConParam.conData[i].conTau);
+      fprintf (stderr, "bottle neck populations = \t%lf %lf\n",
+	       gConParam.conData[i].conBottPop1,
+	       gConParam.conData[i].conBottPop2);
+      fprintf (stderr, "bottle neck time = \t%lf\n",
+	       gConParam.conData[i].conBottleTime);
+      fprintf (stderr, "migration rate= \t%lf\n",
+	       gConParam.conData[i].conMig);
+      fprintf (stderr, "theta = \t%lf\n", gConParam.conData[i].conTheta);
+      fprintf (stderr, "current population sizes = \t%lf\n",
+	       gConParam.conData[i].conN1);
+      fprintf (stderr, "ancestral population size = \t%lf\n",
+	       gConParam.conData[i].conNanc);
+      fprintf (stderr, "recombination rate = \t%lf\n",
+	       gConParam.conData[i].conRec);
+    }
 }
 
 #ifdef TEST_SETUP
@@ -995,9 +1128,11 @@ void PrintParam (void) {
 runParameters gParam;
 mutParameterArray gMutParam;
 
-int main(int argc, char *argv[]) {
-  LoadConfiguration(argc, argv);
-  PrintParam();
+int
+main (int argc, char *argv[])
+{
+  LoadConfiguration (argc, argv);
+  PrintParam ();
 
 }
 

@@ -5,7 +5,7 @@
 #define DEFAULT_LOWER_THETA 0.5
 #define DEFAULT_UPPER_THETA 40.5
 #define DEFAULT_UPPER_TAU  10.0
-#define DEFAULT_UPPER_MIG  0.0 /* when set 0, it is a constant */
+#define DEFAULT_UPPER_MIG  0.0	/* when set 0, it is a constant */
 #define DEFAULT_UPPER_REC  0.0
 #define DEFAULT_UPPER_ANC_POPSIZE 0.5
 #define DEFAULT_NUM_LOCI 1;
@@ -17,13 +17,14 @@
 #define MAX_FILENAME_LEN 255
 #define NUMBER_OF_CONPARAM 9
 
-typedef struct {
-  double upperTheta;/* upper limit of prior dist'n for theta */
-  double lowerTheta;/* lower limit of prior dist'n for theta */
-  double upperTau;  /* upper limit of prior dist'n for time of separation */
-  double upperMig;  /* upper limit of prior dist'n for migration rate */
-  double upperRec;  /* upper limit of prior dist'n for recombination rate */
-  double upperAncPopSize; /* upper limit of prior dist'n for ancestral pop size */
+typedef struct
+{
+  double upperTheta;		/* upper limit of prior dist'n for theta */
+  double lowerTheta;		/* lower limit of prior dist'n for theta */
+  double upperTau;		/* upper limit of prior dist'n for time of separation */
+  double upperMig;		/* upper limit of prior dist'n for migration rate */
+  double upperRec;		/* upper limit of prior dist'n for recombination rate */
+  double upperAncPopSize;	/* upper limit of prior dist'n for ancestral pop size */
   unsigned long long reps;
   unsigned int numTaxaPair;
   unsigned int numTauClasses;
@@ -38,7 +39,8 @@ typedef struct {
 
 extern runParameters gParam;
 
-typedef struct {
+typedef struct
+{
   unsigned int numPerTaxa;
   unsigned int sample[2];
   double tstv[2];
@@ -50,7 +52,8 @@ typedef struct {
   double freqT;
 } mutParameter;
 
-typedef struct{
+typedef struct
+{
   mutParameter *data;
   int numElements;
   int numAllocated;
@@ -58,19 +61,21 @@ typedef struct{
 
 extern mutParameterArray gMutParam;
 
-typedef struct{
+typedef struct
+{
   double conTau;
   double conBottPop1;
   double conBottPop2;
   double conBottleTime;
-  double conMig; // migration rate
-  double conTheta; 
-  double conN1; //current population size1
-  double conNanc; // ancestral pupulation size
-  double conRec; // recombination rate
+  double conMig;		// migration rate
+  double conTheta;
+  double conN1;			//current population size1
+  double conNanc;		// ancestral pupulation size
+  double conRec;		// recombination rate
 } constrainedParameter;
 
-typedef struct{
+typedef struct
+{
   constrainedParameter *conData;
   int conNumElements;
   int conNumAllocated;

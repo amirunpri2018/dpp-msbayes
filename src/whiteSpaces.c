@@ -4,8 +4,8 @@
  * License: Public Domain
  */
 /* collection of functions which remove white spaces */
-#include <ctype.h> /* for isspace() */
-#include <string.h> /* for strlen() */
+#include <ctype.h>		/* for isspace() */
+#include <string.h>		/* for strlen() */
 
 /* Macro to move string from s to d */
 #define strMove(d,s) memmove(d,s,strlen(s)+1)
@@ -13,8 +13,9 @@
 /*
  * Convert multiple white space characters to a single space.
  * Returns the number of spaces in the new converted string.
- */ 
-int RmExtraWhiteSpaces(char *str)
+ */
+int
+RmExtraWhiteSpaces (char *str)
 {
   char *ibuf, *obuf;
   int i, cnt;
@@ -24,20 +25,20 @@ int RmExtraWhiteSpaces(char *str)
     {
       ibuf = obuf = str;
       i = cnt = 0;
-      
-      while(*ibuf)
+
+      while (*ibuf)
 	{
-	  if(isspace(*ibuf) && cnt)
+	  if (isspace (*ibuf) && cnt)
 	    ibuf++;
 	  else
 	    {
-	      if (!isspace(*ibuf))
+	      if (!isspace (*ibuf))
 		cnt = 0;
 	      else
 		{
 		  *ibuf = ' ';
 		  cnt = 1;
-		  wsCnt ++;
+		  wsCnt++;
 		}
 	      obuf[i++] = *ibuf++;
 	    }
@@ -51,16 +52,17 @@ int RmExtraWhiteSpaces(char *str)
 /* 
  *  Remove leading white spaces from a string 
  */
-char *RmLeadingSpaces(char *str)
+char *
+RmLeadingSpaces (char *str)
 {
   char *obuf;
-  
+
   if (str)
     {
-      for (obuf = str; *obuf && isspace(*obuf); ++obuf)
+      for (obuf = str; *obuf && isspace (*obuf); ++obuf)
 	;
       if (str != obuf)
-	strMove(str, obuf);
+	strMove (str, obuf);
     }
   return str;
 }
@@ -68,13 +70,14 @@ char *RmLeadingSpaces(char *str)
 /* 
  *  Remove trailing white spaces from a string 
  */
-char *RmTrailingSpaces(char *str)
+char *
+RmTrailingSpaces (char *str)
 {
   if (str)
     {
       int i;
-      
-      for (i = strlen(str) - 1; i >= 0 && isspace(str[i]); --i)
+
+      for (i = strlen (str) - 1; i >= 0 && isspace (str[i]); --i)
 	;
       str[++i] = '\0';
     }

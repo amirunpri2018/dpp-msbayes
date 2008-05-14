@@ -1,5 +1,3 @@
-#8_24_07 still have to add the plots for new hyper parameter posteriors
-
 #library and R code  and package stuff
 source("make_pd2005.r")
 source("loc2plot.r")
@@ -16,7 +14,7 @@ library(locfit)  # this need to be installed from CRAN
 # There is a setion "Add-on packages" describing how to install packages.
 
 
-#### UPDATE HERE, this is not true any more
+#### UPDATE HERE, the following info is obsolete
 #### Note that the following two vector variables are used in getData()
 #    If the outputs of sumstatsvector (including ordering) is changed,
 #    you can modify these two vectors accordingly, and everything should work.
@@ -259,10 +257,7 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
     par(mfcol=old.mfcol)
   }
   
-  # pdf("CrustCOITheta60Na30ssPibPi_jointdots7_18.pdf")
-  #plot(result11$x,result22$x,xlim=c(0,0.7),ylim=c(0,2.0),lty=2,lwd=0.5)
   plot((result[["PRI.omega"]])$x,(result[["PRI.E.t"]])$x,lty=2,lwd=0.5)
-  # CHECK THIS
 
   rc <- try(plotKernDensity(result[["PRI.omega"]],result[["PRI.E.t"]],
                             xlab="Omega", ylab="E(t)", title="Omega and E(t)"))

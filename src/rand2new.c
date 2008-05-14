@@ -26,25 +26,30 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <gsl/gsl_rng.h>/* for base rand num gen's */
+#include <gsl/gsl_rng.h>	/* for base rand num gen's */
 
-const gsl_rng *gBaseRand;/* global rand number generator */
+const gsl_rng *gBaseRand;	/* global rand number generator */
 
-double ran1 () {
-  return (gsl_rng_uniform(gBaseRand));
+double
+ran1 ()
+{
+  return (gsl_rng_uniform (gBaseRand));
 }
 
 
-int seedit (unsigned long seed)
+int
+seedit (unsigned long seed)
 {
-  gBaseRand = gsl_rng_alloc (gsl_rng_mt19937);/* set the base PRNG to
-						 Mersenne Twister */
-  gsl_rng_set (gBaseRand, seed); /* seed the PRNG */
+  gBaseRand = gsl_rng_alloc (gsl_rng_mt19937);	/* set the base PRNG to
+						   Mersenne Twister */
+  gsl_rng_set (gBaseRand, seed);	/* seed the PRNG */
   return 0;
 }
 
-int cleanPRNG(void) {
-  gsl_rng_free((gsl_rng *) gBaseRand);
+int
+cleanPRNG (void)
+{
+  gsl_rng_free ((gsl_rng *) gBaseRand);
   return 0;
 }
 
