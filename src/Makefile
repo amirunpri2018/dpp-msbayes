@@ -3,7 +3,7 @@
 #### We want to specify suffix rules for .c and .o
 .SUFFIXES: .c .o
 
-VERSION = 20061106
+VERSION = 20080515
 
 ####  Installation related
 PREFIX = $(HOME)
@@ -124,7 +124,7 @@ cleanObj:
 	rm -f *.o core
 
 distribution: clean
-	cd ../../; ln -s trunk msbayes-$(VERSION) && tar czvf msbayes-$(VERSION).tgz --exclude msbayes-$(VERSION)/old --exclude *~  msbayes-$(VERSION) && rm msbayes-$(VERSION)
+	cd ../../; ln -s trunk msbayes-$(VERSION) && tar czvf msbayes-$(VERSION).tgz --exclude *~  --exclude .svn --dereference msbayes-$(VERSION) && rm msbayes-$(VERSION)
 
 #### Generate dependencies (from GNU info on make)
 

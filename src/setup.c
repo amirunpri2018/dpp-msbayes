@@ -170,8 +170,8 @@ LoadConfiguration (int argc, char *argv[])
 
       if (rc != 0)
 	{
-	  (stderr, "Unable to read in constrain paramters from %s\n",
-	   gParam.configFile);
+	  fprintf(stderr, "Unable to read in constrain paramters from %s\n",
+		  gParam.configFile);
 	}
     }
 }

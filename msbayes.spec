@@ -1,5 +1,5 @@
 %define name msbayes
-%define version 20061106
+%define version 20080515
 %define release 1
 
 %define prefix   /usr/local
@@ -12,8 +12,8 @@ Release: %{release}
 Group: Applications/Scientific
 License: GPL
 Packager: Naoki Takebayashi <ffnt@uaf.edu>
-URL: http://www.faculty.uaf.edu/ffnt/software/index.html
-Source0: http://www.faculty.uaf.edu/ffnt/software/%{name}-%{version}.tgz
+URL: http://msbayes.sourceforge.net/
+Source0: http://msbayes.sourceforge.net/msbayes/%{name}-%{version}.tgz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 Requires: R
 BuildRequires: gsl-devel
@@ -79,6 +79,9 @@ rm -r %{builddir}
 %{prefix}/lib/msbayes
 
 %changelog
+* Thu May 15 2008 Naoki Takebayashi <ffnt@uaf.edu> [20080515-1]
+- version update
+
 * Mon Nov  6 2006 Naoki Takebayashi <ffnt@uaf.edu> [20061106-1]
 - version update
 
