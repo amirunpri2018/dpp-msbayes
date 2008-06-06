@@ -25,9 +25,11 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <time.h>
 #include <unistd.h>
+/* for strcasestr */
+#define _GNU_SOURCE
+#include <string.h>
 
 #include "setup.h"
 #include "msprior.h"
@@ -665,7 +667,7 @@ SetupParams (FILE * fp, runParameters * paramPtr)
       exit (EXIT_FAILURE);
     }
 
-  paramPtr->reps = 0;
+  /* paramPtr->reps = 0;  Wen put this, but this will screw up*/
 
   if (r > 0)
     {				/* over-ride with the command line option */
@@ -677,6 +679,10 @@ SetupParams (FILE * fp, runParameters * paramPtr)
 
 /*
  * Read in the config file.
+ * A non-comment line containing "BEGIN SMAPLE_TBL" (case insensitive) indicates
+ * the beginning of the table, and "END SAMPLE_TBL" indicates the end.
+ *
+ * Old method (kept for backward compat., works if constraints are not used):
  * It ignores empty lines, comments line (start with #), and a line 
  * with '=' sign.
  * The first line which doesn't contain '=' is considered to be the 1st
@@ -692,20 +698,24 @@ InitMutPara (FILE * fp, mutParameterArray * mpaPtr)
   int tmpCol, numColumns = 0;
   int index, rc;
   mutParameter *mpp;
-
-
+  
   while (fgets (ln, LNSZ, fp))
     {				/* read init file */
       RmLeadingSpaces (ln);
-
+      RmExtraWhiteSpaces(ln);
+      
       if (ln[0] == 0 || ln[0] == '#')	/* skip if blank line and */
 	continue;		/* comments starting with # */
-
+      
+      if (strcasestr(ln, "BEGIN SAMPLE_TBL")) /* found the sample table*/
+	break;
+      
+      /* keeping this for backward compatibility */
       p = strchr (ln, '=');	/* find equal sign */
       if (p == NULL)		/* beginning of mut data */
 	break;
     }
-
+  
   /* process the mutation data table */
   index = 0;
   do
@@ -717,7 +727,6 @@ InitMutPara (FILE * fp, mutParameterArray * mpaPtr)
       RmTrailingSpaces (ln);
 
       tmpCol = RmExtraWhiteSpaces (ln) + 1;
-
 
       /* make sure the number of columns are correct */
 #ifdef W_GAMMA
@@ -739,7 +748,7 @@ InitMutPara (FILE * fp, mutParameterArray * mpaPtr)
 	  fprintf (stderr, "The number of columns for mutation data should be"
 		   "%d, but following line has %d columns\n%s",
 		   numColumns, tmpCol, ln);
-	  exit (-1);
+	  exit (EXIT_FAILURE);
 	}
 
       /* check if mem allocated */
@@ -748,27 +757,31 @@ InitMutPara (FILE * fp, mutParameterArray * mpaPtr)
 	{
 	  fprintf (stderr, "Error found in CheckMutParaArray\n");
 	}			/* error */
-
+      
       mpp = &(mpaPtr->data[index]);
-
+      
       rc = ReadMutLine (mpp, ln, numColumns);
-
+      
       if (rc < 0)
 	{
-	  fprintf (stderr, "WARN: The following is weird, ignoring\n%s\n",
-		   ln);
+	  fprintf (stderr, "WARN: The following is weird, ignoring\n%s\n",ln);
 	}
       else
 	{
 	  index++;
 	}
-
+      
     }
-  while (fgets (ln, LNSZ, fp) && (strstr (ln, ".fasta") != NULL));
+  while (fgets (ln, LNSZ, fp) && (! strcasestr(ln, "END SAMPLE_TBL")));
 
   gParam.numTaxaPair = mpaPtr->numElements;
 
-  return (0);
+  if (gParam.numTaxaPair < 1) {
+    /* didn't find any sample size, mut para entries*/
+    return -1;
+  }
+
+  return 0;
 }
 
 
@@ -778,35 +791,39 @@ InitConPara (FILE * fp, constrainedParameterArray * cpaPtr)
 {
   char ln[LNSZ];		// char array with length = 256(LNSZ)
 
-  int index, rc;
+  int index, rc, foundConstraints=0;
   int tmpCol, numColumns = 0;
   constrainedParameter *cpp;
 
 
   while (fgets (ln, LNSZ, fp))
     {
-      RmLeadingSpaces (ln);
-
-      if (ln[0] == 0 || ln[0] == '#')
-	continue;
-
-      if ((strchr (ln, '=') == NULL) && (strstr (ln, ".fasta") == NULL))
-	break;
-
+       RmLeadingSpaces (ln);
+       RmExtraWhiteSpaces(ln);
+       
+       if (ln[0] == 0 || ln[0] == '#')	/* skip if blank line and */
+	 continue;		/* comments starting with # */
+       
+       /* found the beginning of constrain table*/
+       if (strcasestr(ln, "BEGIN CONSTRAIN"))  {
+	 foundConstraints = 1;
+	 break;
+       }
     }
+
+  if (! foundConstraints) { /* no constraints */
+    return -1;
+  }
 
   index = 0;
   do
     {
-
       RmLeadingSpaces (ln);
-
-      // is this check neccesary??
-      if (ln[0] == 0 || ln[0] == '#')
-	continue;
-
       RmTrailingSpaces (ln);
 
+      if (ln[0] == 0 || ln[0] == '#')
+	continue;
+      
       tmpCol = RmExtraWhiteSpaces (ln) + 1;
 
       // printout tmpCol to see the value
@@ -818,7 +835,7 @@ InitConPara (FILE * fp, constrainedParameterArray * cpaPtr)
 	  fprintf (stderr,
 		   "The number of columns for mutation data should be %d, but following line has %d columns\n%s",
 		   numColumns, tmpCol, ln);
-	  exit (-1);
+	  exit (EXIT_FAILURE);
 	}
 
       // check might not be used
@@ -840,7 +857,7 @@ InitConPara (FILE * fp, constrainedParameterArray * cpaPtr)
 	index++;
 
     }
-  while (fgets (ln, LNSZ, fp));
+  while (fgets (ln, LNSZ, fp) && (! strcasestr(ln, "END CONSTRAIN")) );
 
   return 0;
 }

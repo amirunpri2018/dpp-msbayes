@@ -166,12 +166,13 @@ NOT work).
 The example of master infile (included in the source distribution:
 document/SampleSize_MuModel_Vector) contains the following 6 rows of 6
 population-pairs (need to give information about each population pair
-in a single line).  For each population pair, one population is
-sampled from geographic region 1 and the other population is sampled
-from geographic region 2. You should be able to have any number of
-population-pairs. The population-pairs can be samples from pairs of
-species, but pooling samples across pairs of multiple species is not
-advised.
+in a single line).  The table starts after a line "BEGIN SAMPLE_TBL"
+and ends with a line "END SAMPLE_TBL".  For each population pair, one
+population is sampled from geographic region 1 and the other
+population is sampled from geographic region 2. You should be able to
+have any number of population-pairs. The population-pairs can be
+samples from pairs of species, but pooling samples across pairs of
+multiple species is not advised.
 
 TAB DELIMITED AND UNIX LINE BREAKS AND NO SPACES AT END OF ANY LINE.
 
@@ -197,13 +198,14 @@ only 8 columns, the program assumes that the first column is omitted.
 
 Example (documents/SampleSize_MuModel_Vector):
 
+BEGIN SAMPLE_TBL
 15	10	5	11.60	614	0.323	0.268	0.212	lamarckii.fasta
 16	10	6	13.03	614	0.266	0.215	0.265	erosa.fasta
 22	6	16	27.08	614	0.300	0.241	0.218	clandestina.fasta
 16	5	11	11.11	614	0.261	0.239	0.213	kieneri.fasta
 32	11	21	11.79	614	0.277	0.261	0.217	punctata.fasta
 17	7	10	57.03	614	0.266	0.264	0.245	stolida.fasta
-
+END SAMPLE_TBL
 
 These data were kindly provided by Chris Meyer and are mtDNA sequences
 collected from 6 population pairs of cowrie mollusks that span the
@@ -678,9 +680,11 @@ that you want to constrain to particular assigned values. Each
 taxon-pair can have its own sub-parameter value. You include these
 assigned values in a table of nine columns BELOW the section for the
 table of samples sizes and mutational models (see Master infile
-section of Step 1). Leave a "0" for each sub-parameter you do not want
-to constrain (and instead have it randomly drawn from its
-sub-prior). An example table of values is included in batch.masterIn.
+section of Step 1).  The table should be delimited by lines of "BEGIN
+CONSTRAIN" and "END CONSTRAIN".  Leave a "0" for each sub-parameter
+you do not want to constrain (and instead have it randomly drawn from
+its sub-prior). An example table of values is included in
+batch.masterIn.
 
 The nine sub-parameters corresponding to these nine columns in the
 third table of batch.masterIn:
@@ -722,18 +726,22 @@ numLoci = 1
 reps = 500000
 constrain = 0
 subParamConstrain = 000000000
+BEGIN SAMPLE_TBL
 15      10      5       11.60   614     0.323   0.268   0.212   lamarckii.fasta
 16      10      6       13.03   614     0.266   0.215   0.265   erosa.fasta
 22      6       16      27.08   614     0.300   0.241   0.218   clandestina.fasta
 16      5       11      11.11   614     0.261   0.239   0.213   kieneri.fasta
 32      11      21      11.79   614     0.277   0.261   0.217   punctata.fasta
 17      7       10      57.03   614     0.266   0.264   0.245   stolida.fasta
+END SAMPLE_TBL
+BEGIN CONSTRAIN
 0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
 0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
 0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
 0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
 0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
 0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+END CONSTRAIN
 
 If you want to constrain some of the sub-parameters, then the
 batch.masterIn could be this (to include constrain = 1 and
@@ -750,18 +758,22 @@ numLoci = 1
 reps = 500000
 constrain = 1
 subParamConstrain = 100001000
+BEGIN SAMPLE_TBL
 15      10      5       11.60   614     0.323   0.268   0.212   lamarckii.fasta
 16      10      6       13.03   614     0.266   0.215   0.265   erosa.fasta
 22      6       16      27.08   614     0.300   0.241   0.218   clandestina.fasta
 16      5       11      11.11   614     0.261   0.239   0.213   kieneri.fasta
 32      11      21      11.79   614     0.277   0.261   0.217   punctata.fasta
 17      7       10      57.03   614     0.266   0.264   0.245   stolida.fasta
+END SAMPLE_TBL
+BEGIN CONSTRAIN
 1.0     0.0     0.0     0.0     0.0     10.1    0.0     0.0     0.0
 1.0     0.0     0.0     0.0     0.0     20.1    0.0     0.0     0.0
 1.0     0.0     0.0     0.0     0.0     30.1    0.0     0.0     0.0
 1.0     0.0     0.0     0.0     0.0     40.1    0.0     0.0     0.0
 1.1     0.0     0.0     0.0     0.0     5.1     0.0     0.0     0.0
 1.2     0.0     0.0     0.0     0.0     25.1    0.0     0.0     0.0
+END CONSTRAIN
 
 In this case, msBayes will constrain 2 of the 9 sub-parameters (tau
 and theta) for all 6 taxon pairs

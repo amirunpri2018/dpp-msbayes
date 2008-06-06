@@ -286,6 +286,12 @@ sub ReadInMaster {
 	    }
 	    $warnFlag = 0;
 	}
+
+	if ($paraConfSect && /BEGIN\s+SAMPLE_TBL/i) {
+	    $paraConfSect = 0;
+	    next;
+	}
+
 	# There could be parameter config lines for msprior in the
 	# beginning of this file, which should be ignored.  These are
 	# in the format of "parameterName = value", so they are
@@ -299,6 +305,10 @@ sub ReadInMaster {
 	}
 	
 	# when reached here, we are getting into sample sizes/mutational para
+	if (/END\s+SAMPLE_TBL/i) {
+	    last;
+        }
+
 	my @master = split /\t/; 
 	chomp ($master[$#master]); # remove newline in the taxon name cell
 	# check all rows have good column numbers

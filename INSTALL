@@ -184,7 +184,8 @@ $ echo 'export PATH=$PATH:/usr/local/bin' >> ~/.bash_profile
 
 ## 5 ## INSTALLATION OF R AND R ADD-ON PACKAGES
 - 5.1. Make sure R <http://www.r-project.org/> is installed.
-
+       With Fedora (and possibly other RPM based distribution), you 
+       need R-devel package installed.
 - 5.2. Additionally, the following R packages should be
        installed for plotting the posterior samples using acceptRej.pl:
 
