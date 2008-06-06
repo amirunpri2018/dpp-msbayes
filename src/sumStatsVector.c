@@ -150,7 +150,7 @@ main (int argc, char *argv[])
     {
       mutscanline = strstr (line, "-t");
       if (mutscanline != NULL)
-	sscanf (mutscanline, " %s", dum);
+	sscanf (mutscanline, "-t %s", dum);
       else
 	{
 	  fprintf (stderr, "\nmutscanline problem -s or -t not found \n");
