@@ -707,9 +707,10 @@ InitMutPara (FILE * fp, mutParameterArray * mpaPtr)
       if (ln[0] == 0 || ln[0] == '#')	/* skip if blank line and */
 	continue;		/* comments starting with # */
       
-      if (strcasestr(ln, "BEGIN SAMPLE_TBL")) /* found the sample table*/
+      if (strcasestr(ln, "BEGIN SAMPLE_TBL")) {/* found the sample table*/
+	fgets(ln, LNSZ, fp);
 	break;
-      
+      }
       /* keeping this for backward compatibility */
       p = strchr (ln, '=');	/* find equal sign */
       if (p == NULL)		/* beginning of mut data */

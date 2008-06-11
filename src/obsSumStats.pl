@@ -287,21 +287,22 @@ sub ReadInMaster {
 	    $warnFlag = 0;
 	}
 
-	if ($paraConfSect && /BEGIN\s+SAMPLE_TBL/i) {
-	    $paraConfSect = 0;
-	    next;
-	}
-
 	# There could be parameter config lines for msprior in the
 	# beginning of this file, which should be ignored.  These are
 	# in the format of "parameterName = value", so they are
 	# indicated by existence of '=' character. The first line
 	# which doesn't contain '=' is considered to be the 1st line
 	# with mutation parameter data.
-	if ($paraConfSect && /=/) {
-	    next;
-	} else { # end of msprior para conf section, so lower the flag
-	    $paraConfSect = 0;
+	if ($paraConfSect) {
+	    if (/BEGIN\s+SAMPLE_TBL/i) {
+		$paraConfSect = 0;
+		next;
+	    } elsif (/=/) {
+		next;
+	    } else { # this is for old format without the constraints
+		$paraConfSect = 0;
+		# continue with analysis
+	    }
 	}
 	
 	# when reached here, we are getting into sample sizes/mutational para

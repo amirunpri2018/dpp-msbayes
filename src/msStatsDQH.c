@@ -941,9 +941,14 @@ shannonIndex (char **list, int *config, double **shannonIndexArray)
   int i, sizeOfSp1, sizeOfSp2, sizeAll, unit=1;
   double sHa1 = 0, sHa2 = 0, sHu = 0, sHua = 0, temp;
   hashtab_iter_t iHash;
-  hashtab_t *subPop1 = ht_init (sizeOfSp1, NULL);
-  hashtab_t *subPop2 = ht_init (sizeOfSp2, NULL);
-  hashtab_t *pool = ht_init (sizeOfSp1 + sizeOfSp2, NULL);
+  hashtab_t *subPop1, *subPop2, *pool;
+
+  sizeOfSp1 = config[0];
+  sizeOfSp2 = config[1];
+
+  subPop1 = ht_init (sizeOfSp1, NULL);
+  subPop2 = ht_init (sizeOfSp2, NULL);
+  pool = ht_init (sizeOfSp1 + sizeOfSp2, NULL);
 
   if (subPop1 == NULL || subPop2 == NULL || pool == NULL) {
     fprintf(stderr, "ERROR: no memory in shannonIndex\n");
@@ -962,7 +967,7 @@ shannonIndex (char **list, int *config, double **shannonIndexArray)
       if ( thisCnt == NULL) { /* new key */
 	ht_insert (subPop1, list[i], charCount (list[i]), &unit, sizeof (int));
 	ht_insert(pool,list[i], charCount (list[i]), &unit, sizeof (int));
-      } else {/* this key have seen befre */
+      } else {/* this key have seen before */
 	(*thisCnt)++;
 	(*((int *) ht_search (pool, list[i], charCount (list[i])))) ++;
       }
@@ -1026,7 +1031,6 @@ shannonIndex (char **list, int *config, double **shannonIndexArray)
   ht_destroy (pool);
   ht_destroy (subPop1);
   ht_destroy (subPop2);
-
 }
 
 /* 
