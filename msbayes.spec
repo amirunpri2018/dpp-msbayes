@@ -1,5 +1,7 @@
+%define debug_package  %{nil}
+
 %define name msbayes
-%define version 20080515
+%define version 20080613
 %define release 1
 
 %define prefix   /usr/local
@@ -16,7 +18,7 @@ URL: http://msbayes.sourceforge.net/
 Source0: http://msbayes.sourceforge.net/msbayes/%{name}-%{version}.tgz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 Requires: R
-BuildRequires: gsl-devel
+BuildRequires: gsl-devel gsl-static
 
 %description
 
@@ -79,6 +81,9 @@ rm -r %{builddir}
 %{prefix}/lib/msbayes
 
 %changelog
+* Fri Jun 13 2008 Naoki Takebayashi <ffnt@uaf.edu> [20080613-1]
+- version update
+
 * Thu May 15 2008 Naoki Takebayashi <ffnt@uaf.edu> [20080515-1]
 - version update
 

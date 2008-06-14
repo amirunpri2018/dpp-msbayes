@@ -3,7 +3,7 @@
 #### We want to specify suffix rules for .c and .o
 .SUFFIXES: .c .o
 
-VERSION = 20080515
+VERSION = 20080613
 
 ####  Installation related
 PREFIX = $(HOME)
