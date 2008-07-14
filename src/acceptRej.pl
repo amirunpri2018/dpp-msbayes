@@ -292,6 +292,12 @@ if (! defined($opt_a)) {  # use the external acceptRejection C program
     
     ## create the prior columns only file, and a file without header
     open SIMDAT, "<$simDat" || die "Can't open $simDat\n";
+    ## finding the length of SIMDAT, and setting up thinning of prior
+    ## for Bayes Factor.  Sampling approximately 100k prior to make its distn
+    my $numSimCount = `grep -v PRI.Psi $simDat | wc -l`;
+    die "ERROR: grep -v PRI.Psi $simDat | wc -l failed: $?" if $?;
+    chomp $numSimCount;
+    my $priorSampleIntvl = ($numSimCount>100000) ? int($numSimCount/100000) : 1;
     my $savedHeader = "";
     while (<SIMDAT>) {
 	if ($. != 1) {  # creating a file without the header for rejection
@@ -313,11 +319,14 @@ if (! defined($opt_a)) {  # use the external acceptRejection C program
 	    $savedHeader= $_;  # used to check multiple headers when
 	                       # multipe simulations are concatenated
 	}
-	# if we want to shrink the prior for R, we can do it here.
-	chomp;
-	my @line = split /\t/;
-	my @priors = splice @line, 0, $numPriorCols;
-	print $tmpPriorfh join("\t", @priors), "\n";
+	
+	# shrink the prior for R
+	if (($. -  1) % $priorSampleIntvl == 0) {
+	    chomp;
+	    my @line = split /\t/;
+	    my @priors = splice @line, 0, $numPriorCols;
+	    print $tmpPriorfh join("\t", @priors), "\n";
+	}
     }
     close SIMDAT;
     $tmpSimDat2fh->close();
