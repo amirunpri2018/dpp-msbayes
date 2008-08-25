@@ -805,9 +805,10 @@ InitConPara (FILE * fp, constrainedParameterArray * cpaPtr)
        if (ln[0] == 0 || ln[0] == '#')	/* skip if blank line and */
 	 continue;		/* comments starting with # */
        
-       /* found the beginning of constrain table*/
+       /* found the beginning of constrain table */
        if (strcasestr(ln, "BEGIN CONSTRAIN"))  {
 	 foundConstraints = 1;
+	 fgets (ln, LNSZ, fp);
 	 break;
        }
     }
