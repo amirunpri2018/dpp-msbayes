@@ -42,6 +42,8 @@
 #include <getopt.h>		/* for getopt_long() */
 #include <ctype.h>		/* for isspace() */
 #include "msprior.h"		/* MAX_FILENAME_LEN */
+#include "whiteSpaces.h"
+#include "stringUtils.h"        /* cmatrix */
 
 #define MAX_LNSZ 1000
 
@@ -64,16 +66,13 @@ double thetaW (int, int), mu, N;
 void PrintSumStatNames (void);
 
 /* function prototypes for the functions in this file */
-static char **cmatrix (int nsam, int len);
 static int biggerlist (int nsam, unsigned nmax, char **list);
-static void freeCMatrix (int nsam, char **list);
+
 static int FindNumPopsAndSubpopSampleSizes (const char line[],
 					    int **subPopSampleSize);
 static void ReadInPositionOfSegSites (const char *line,
 				      tPositionOfSegSites * positionArray,
 				      int numSegSites);
-char *FindFirstSpace (char *str);
-char *RmLeadingSpaces (char *str);
 
 static void ParseCommandLine (int argc, char *argv[]);
 static int SetScratchFile (char *fName);
@@ -403,27 +402,6 @@ ReadInPositionOfSegSites (const char *line,
 }
 
 /*****************  Character matrix functions **********************/
-/* allocates space for gametes (character strings) */
-static char **
-cmatrix (int nsam, int len)
-{
-  int i;
-  char **m;
-  if (!(m = (char **) malloc ((unsigned) (nsam * sizeof (char *)))))
-    {
-      perror ("alloc error in cmatrix");
-      return NULL;
-    }
-  for (i = 0; i < nsam; i++)
-    {
-      if (!(m[i] = (char *) malloc ((unsigned) (len * sizeof (char)))))
-	{
-	  perror ("alloc error in cmatric. 2");
-	  return NULL;
-	}
-    }
-  return (m);
-}
 
 /* 
  * Arguments:
@@ -454,60 +432,8 @@ biggerlist (int nsam, unsigned nmax, char **list)
   return 0;
 }
 
-static void
-freeCMatrix (int nsam, char **list)
-{
-  int i;
-
-  for (i = 0; i < nsam; i++)
-    free (list[i]);
-
-  free (list);
-  return;
-}
-
-/* Find the first space character and return the pointer to it 
- * Returns NULL if no space is found
- */
-char *
-FindFirstSpace (char *str)
-{
-  char *cPtr;
-  if (str)
-    {
-      for (cPtr = str; *cPtr && !(isspace (*cPtr)); cPtr++)
-	{
-	  ;
-	}
-      if (cPtr != str + strlen (str))
-	{
-	  return cPtr;
-	}
-    }
-
-  return NULL;
-}
-
 /* Macro to move string from s to d */
 #define strMove(d,s) memmove(d,s,strlen(s)+1)
-
-/*
- *  Remove leading white spaces from a string
- */
-char *
-RmLeadingSpaces (char *str)
-{
-  char *obuf;
-
-  if (str)
-    {
-      for (obuf = str; *obuf && isspace (*obuf); ++obuf)
-	;
-      if (str != obuf)
-	strMove (str, obuf);
-    }
-  return str;
-}
 
 /*
  * Print out the usage, and exit

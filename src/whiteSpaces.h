@@ -16,4 +16,10 @@ char *RmLeadingSpaces (char *str);
  */
 char *RmTrailingSpaces (char *str);
 
+/* 
+ * Find the first space character and return the pointer to it 
+ * Returns NULL if no space is found
+ */
+char *FindFirstSpace (char *str);
+
 #endif /* WHITE_SPACEH_H */

@@ -35,6 +35,8 @@
 #include "msprior.h"
 #include "whiteSpaces.h"
 #include "initvars.h"
+#include "hashtab/hashtab.h"
+#include "stringUtils.h"	/* for cmatrix, uniqueStrings */
 
 #define LNSZ 256		/* max length of a line */
 
@@ -52,6 +54,7 @@ static int SetConfigFile (char *fName);
 static int SetPriorOutFile (char *fName);
 void PrintParam (void);
 static int InitMutPara (FILE * fp, mutParameterArray * mutParaArray);
+static int ProcessTaxonLociInMutParaArray (mutParameterArray * mpaPtr);
 static int CheckMutParaArray (mutParameterArray * mpaPtr, int index);
 static int ReadMutLine (mutParameter * mpp, char *line, int ncol);
 static int InitConPara (FILE * fp, constrainedParameterArray * conParaArray);
@@ -109,8 +112,6 @@ LoadConfiguration (int argc, char *argv[])
 
   /* Process the options */
   ParseCommandLine (argc, argv);
-
-  //bunny = fopen("bunny", "w");
 
   /*
    * Load the parameteters for this simulation.  
@@ -172,8 +173,8 @@ LoadConfiguration (int argc, char *argv[])
 
       if (rc != 0)
 	{
-	  fprintf(stderr, "Unable to read in constrain paramters from %s\n",
-		  gParam.configFile);
+	  fprintf (stderr, "Unable to read in constrain paramters from %s\n",
+		   gParam.configFile);
 	}
     }
 }
@@ -438,7 +439,7 @@ SetDefaultParams (runParameters * paramPtr)
 
 /* 
  * If the config file is not specified with the command line option
- * (-c), this function set gParam interactively after setting themt o
+ * (-c), this function set gParam interactively after setting them to
  * default values (with SetDefaultParams()).  The default constants
  * are in msPriors.h
  */
@@ -667,7 +668,7 @@ SetupParams (FILE * fp, runParameters * paramPtr)
       exit (EXIT_FAILURE);
     }
 
-  /* paramPtr->reps = 0;  Wen put this, but this will screw up*/
+  /* paramPtr->reps = 0;  Wen put this, but this will screw up */
 
   if (r > 0)
     {				/* over-ride with the command line option */
@@ -698,25 +699,26 @@ InitMutPara (FILE * fp, mutParameterArray * mpaPtr)
   int tmpCol, numColumns = 0;
   int index, rc;
   mutParameter *mpp;
-  
+
   while (fgets (ln, LNSZ, fp))
     {				/* read init file */
       RmLeadingSpaces (ln);
-      RmExtraWhiteSpaces(ln);
-      
+      RmExtraWhiteSpaces (ln);
+
       if (ln[0] == 0 || ln[0] == '#')	/* skip if blank line and */
 	continue;		/* comments starting with # */
-      
-      if (strcasestr(ln, "BEGIN SAMPLE_TBL")) {/* found the sample table*/
-	fgets(ln, LNSZ, fp);
-	break;
-      }
+
+      if (strcasestr (ln, "BEGIN SAMPLE_TBL"))
+	{			/* found the sample table */
+	  fgets (ln, LNSZ, fp);
+	  break;
+	}
       /* keeping this for backward compatibility */
       p = strchr (ln, '=');	/* find equal sign */
       if (p == NULL)		/* beginning of mut data */
 	break;
     }
-  
+
   /* process the mutation data table */
   index = 0;
   do
@@ -731,12 +733,11 @@ InitMutPara (FILE * fp, mutParameterArray * mpaPtr)
 
       /* make sure the number of columns are correct */
 #ifdef W_GAMMA
-      if (tmpCol < 9 || tmpCol > 10)
-	{			/* should be 10 or 11 columns */
+      if (tmpCol != 12)		/* should be 12 columns */
 #else
-      if (tmpCol < 8 || tmpCol > 9)
-	{			/* should be 9 or 10 columns */
+      if (tmpCol != 11)		/* should be 11 columns */
 #endif
+	{
 	  fprintf (stderr,
 		   "WARN: row with incorrect number of columns encountered "
 		   "in sample size & mutation model table.  Ignoring the row.\n");
@@ -758,64 +759,233 @@ InitMutPara (FILE * fp, mutParameterArray * mpaPtr)
 	{
 	  fprintf (stderr, "Error found in CheckMutParaArray\n");
 	}			/* error */
-      
+
       mpp = &(mpaPtr->data[index]);
-      
+
       rc = ReadMutLine (mpp, ln, numColumns);
-      
+
       if (rc < 0)
 	{
-	  fprintf (stderr, "WARN: The following is weird, ignoring\n%s\n",ln);
+	  fprintf (stderr, "WARN: The following is weird, ignoring\n%s\n",
+		   ln);
 	}
       else
 	{
 	  index++;
 	}
-      
+
     }
-  while (fgets (ln, LNSZ, fp) && (! strcasestr(ln, "END SAMPLE_TBL")));
+  while (fgets (ln, LNSZ, fp) && (!strcasestr (ln, "END SAMPLE_TBL")));
 
-  gParam.numTaxaPair = mpaPtr->numElements;
+  rc = ProcessTaxonLociInMutParaArray (mpaPtr);
+  if (rc < 0)			/* error */
+    {
+      fprintf (stderr,
+	       "In InitMutPara of msprior, Trying to Process the SAMPLE_TBL, and error encountered: Err code = %d\n",
+	       rc);
+      return -1;
+    }
 
-  if (gParam.numTaxaPair < 1) {
-    /* didn't find any sample size, mut para entries*/
-    return -1;
-  }
+  gParam.numLociTaxaPair = mpaPtr->numElements;
+
+  if (gParam.numLociTaxaPair < 1)
+    {
+      /* didn't find any sample size, mut para entries */
+      return -1;
+    }
 
   return 0;
 }
 
+/* primary goal is to create locus table */
+static int
+ProcessTaxonLociInMutParaArray (mutParameterArray * mpaPtr)
+{
+  int row, col, index, numUniqLoc, numUniqTaxon;
+  mutParameter *mpp;
 
+  char **locusNames, **taxonNames, **uniqLocNames, **uniqTaxonNames;
+
+  /* cmatrix in sumStatsVector.c */
+  locusNames = cmatrix (mpaPtr->numElements, MAX_NAME_CHAR_LEN);
+  uniqLocNames = cmatrix (mpaPtr->numElements, MAX_NAME_CHAR_LEN);
+  taxonNames = cmatrix (mpaPtr->numElements, MAX_NAME_CHAR_LEN);
+  uniqTaxonNames = cmatrix (mpaPtr->numElements, MAX_NAME_CHAR_LEN);
+
+  for (index = 0; index < mpaPtr->numElements; index++)
+    {
+      mpp = &mpaPtr->data[index];
+      /* copy all locusNames to an array */
+      strcpy (locusNames[index], mpp->locusName);
+      /* copy all species Names to an array */
+      strcpy (taxonNames[index], mpp->taxonName);
+    }
+
+  /* Extract Unique locus, spNames */
+  numUniqTaxon =
+    UniqueStrings (taxonNames, uniqTaxonNames, mpaPtr->numElements);
+  numUniqLoc = UniqueStrings (locusNames, uniqLocNames, mpaPtr->numElements);
+
+  /* fill out the hashTbl in mpPtr */
+  mpaPtr->taxonIDTbl = ht_init (numUniqTaxon, NULL);
+  mpaPtr->locusIDTbl = ht_init (numUniqLoc, NULL);
+  if (mpaPtr->taxonIDTbl == NULL || mpaPtr->locusIDTbl == NULL)
+    {
+      fprintf (stderr,
+	       "In ProcessTaxonLociInMutParaArray, no mem for HashTbls\n");
+      exit (EXIT_FAILURE);
+    }
+
+  /* fill up a hash table, key is taxon name, value is index */
+  for (index = 0; index < numUniqTaxon; index++)
+    {
+      int *val;
+      val = (int *) malloc (sizeof (int));
+      if (val == NULL)
+	{
+	  fprintf (stderr,
+		   "ERROR: Not enough memory in ProcessTRaxonLociInMutParaArray\n");
+	  exit (EXIT_FAILURE);
+	}
+
+      *val = index;
+      if (ht_insert (mpaPtr->taxonIDTbl, uniqTaxonNames[index],
+		     strlen (uniqTaxonNames[index]),
+		     val, sizeof (int)) == NULL)
+	{
+	  fprintf (stderr,
+		   "ERROR: Not enough memory in ProcessTRaxonLociInMutParaArray, inserting to hash table\n");
+	  exit (EXIT_FAILURE);
+	}
+    }
+
+  /* fill up a hash table, key is locus name, value is index */
+  for (index = 0; index < numUniqLoc; index++)
+    {
+      int *val;
+      val = (int *) malloc (sizeof (int));
+      if (val == NULL)
+	{
+	  fprintf (stderr,
+		   "ERROR: Not enough memory in ProcessTaxonLociInMutParaArray\n");
+	  exit (EXIT_FAILURE);
+	}
+
+      *val = index;
+      if (ht_insert (mpaPtr->locusIDTbl, uniqLocNames[index],
+		     strlen (uniqLocNames[index]), val, sizeof (int)) == NULL)
+	{
+	  fprintf (stderr,
+		   "ERROR: Not enough memory in ProcessTaxonLociInMutParaArray, inserting to hash table\n");
+	  exit (EXIT_FAILURE);
+	}
+    }
+
+  /* go through each line and assign the locus/taxonID, value is index */
+  /* initialize locTbl, fill with -1 */
+  mpaPtr->locTbl = malloc (sizeof (lociTbl));
+  if (mpaPtr->locTbl == NULL)
+    {
+      fprintf (stderr,
+	       "ERROR: not enough memory for lociTbl in ProcessTaxonLociInMutParaArray\n");
+      exit (EXIT_FAILURE);
+    }
+  mpaPtr->locTbl->numTaxon = numUniqTaxon;
+  mpaPtr->locTbl->numLoci = numUniqLoc;
+  /* These two values need to be copied to numTaxaPair, numTaxaPair of gParam */
+  /* remove earlier configuration of numLoci */
+  gParam.numTaxaPair = numUniqTaxon;
+  gParam.numLoci = numUniqLoc;
+
+  mpaPtr->locTbl->tbl = (int **) calloc (numUniqTaxon, sizeof (int *));
+  if (mpaPtr->locTbl->tbl == NULL)
+    {
+      fprintf (stderr,
+	       "ERROR: not enough memory (2) for lociTbl in ProcessTaxonLociInMutParaArray\n");
+      exit (EXIT_FAILURE);
+    }
+  for (row = 0; row < numUniqTaxon; row++)
+    {
+      mpaPtr->locTbl->tbl[row] = (int *) calloc (numUniqLoc, sizeof (int));
+      if (mpaPtr->locTbl->tbl[row] == NULL)
+	{
+	  fprintf (stderr,
+		   "ERROR: not enough memory (3) for lociTbl in ProcessTaxonLociInMutParaArray\n");
+	  exit (EXIT_FAILURE);
+	}
+      for (col = 0; col < numUniqLoc; col++)
+	{
+	  mpaPtr->locTbl->tbl[row][col] = -1;
+	}
+    }
+
+  /* fill up the locTbl, with the correct 0-offset index */
+  for (index = 0; index < mpaPtr->numElements; index++)
+    {
+      int *locIndex, *taxonIndex;
+      mpp = &mpaPtr->data[index];
+
+      taxonIndex = (int *) ht_search (mpaPtr->taxonIDTbl, mpp->taxonName,
+				      strlen (mpp->taxonName));
+      locIndex = (int *) ht_search (mpaPtr->locusIDTbl, mpp->locusName,
+				    strlen (mpp->locusName));
+      /* update the numerical IDs in the mutParameter */
+      mpp->taxonID = (unsigned int) (*taxonIndex);
+      mpp->locusID = (unsigned int) (*locIndex);
+
+      if (mpaPtr->locTbl->tbl[*taxonIndex][*locIndex] >= 0)
+	{
+	  fprintf (stderr,
+		   "WARN: In the configuration file, there is multiple lines for the following taxon:locus = %s : %s.  The first info is used.\n",
+		   mpp->taxonName, mpp->locusName);
+	  mpp->taxonID = mpp->locusID = -1;	/* note it is unsigned int */
+	}
+      else
+	{
+	  mpaPtr->locTbl->tbl[*taxonIndex][*locIndex] = index;
+	}
+    }
+
+  /* clean the momory of charMats */
+  freeCMatrix (mpaPtr->numElements, locusNames);
+  freeCMatrix (mpaPtr->numElements, uniqLocNames);
+  freeCMatrix (mpaPtr->numElements, taxonNames);
+  freeCMatrix (mpaPtr->numElements, uniqTaxonNames);
+
+  return 0;
+}
 
 static int
 InitConPara (FILE * fp, constrainedParameterArray * cpaPtr)
 {
   char ln[LNSZ];		// char array with length = 256(LNSZ)
 
-  int index, rc, foundConstraints=0;
+  int index, rc, foundConstraints = 0;
   int tmpCol, numColumns = 0;
   constrainedParameter *cpp;
 
 
   while (fgets (ln, LNSZ, fp))
     {
-       RmLeadingSpaces (ln);
-       RmExtraWhiteSpaces(ln);
-       
-       if (ln[0] == 0 || ln[0] == '#')	/* skip if blank line and */
-	 continue;		/* comments starting with # */
-       
-       /* found the beginning of constrain table */
-       if (strcasestr(ln, "BEGIN CONSTRAIN"))  {
-	 foundConstraints = 1;
-	 fgets (ln, LNSZ, fp);
-	 break;
-       }
+      RmLeadingSpaces (ln);
+      RmExtraWhiteSpaces (ln);
+
+      if (ln[0] == 0 || ln[0] == '#')	/* skip if blank line and */
+	continue;		/* comments starting with # */
+
+      /* found the beginning of constrain table */
+      if (strcasestr (ln, "BEGIN CONSTRAIN"))
+	{
+	  foundConstraints = 1;
+	  fgets (ln, LNSZ, fp);
+	  break;
+	}
     }
 
-  if (! foundConstraints) { /* no constraints */
-    return -1;
-  }
+  if (!foundConstraints)
+    {				/* no constraints */
+      return -1;
+    }
 
   index = 0;
   do
@@ -825,7 +995,7 @@ InitConPara (FILE * fp, constrainedParameterArray * cpaPtr)
 
       if (ln[0] == 0 || ln[0] == '#')
 	continue;
-      
+
       tmpCol = RmExtraWhiteSpaces (ln) + 1;
 
       // printout tmpCol to see the value
@@ -859,7 +1029,7 @@ InitConPara (FILE * fp, constrainedParameterArray * cpaPtr)
 	index++;
 
     }
-  while (fgets (ln, LNSZ, fp) && (! strcasestr(ln, "END CONSTRAIN")) );
+  while (fgets (ln, LNSZ, fp) && (!strcasestr (ln, "END CONSTRAIN")));
 
   return 0;
 }
@@ -986,65 +1156,34 @@ ReadMutLine (mutParameter * mpp, char *line, int ncol)
 {
   /* probably we should check integer, double is correct in the file */
   int rc;
-  char dummyTaxonPairName[1024];
+  /* char dummyTaxonPairName[1024]; */
 
 
 #ifdef W_GAMMA
 
-  if (ncol == 10)
-    {
-      rc = sscanf (line, "%u %u %u %lf %lf %u %lf %lf %lf %s",
-		   &mpp->numPerTaxa, &mpp->sample[0], &mpp->sample[1],
-		   &mpp->tstv[0], &mpp->gamma, &mpp->seqLen,
-		   &mpp->freqA, &mpp->freqC, &mpp->freqG, dummyTaxonPairName);
-
-      if (mpp->numPerTaxa != mpp->sample[0] + mpp->sample[1])
-	{
-	  fprintf (stderr,
-		   "Error: In the following line, 2nd and 3rd column doesn't add\n"
-		   "up to the 1st column\n%s\n", line);
-	  exit (EXIT_FAILURE);
-	}
-    }
-  else if (ncol == 9)
-    {
-      rc = sscanf (line, "%u %u %lf %lf %u %lf %lf %lf %s",
+  if (ncol == 12)
+    {				/* 12 column */
+      rc = sscanf (line, "%s %s %d %u %u %lf %lf %u %lf %lf %lf %s",
+		   mpp->taxonName, mpp->locusName, &mpp->ploidy,
 		   &mpp->sample[0], &mpp->sample[1],
 		   &mpp->tstv[0], &mpp->gamma, &mpp->seqLen,
-		   &mpp->freqA, &mpp->freqC, &mpp->freqG, dummyTaxonPairName);
+		   &mpp->freqA, &mpp->freqC, &mpp->freqG, mpp->filename);
       mpp->numPerTaxa = mpp->sample[0] + mpp->sample[1];
     }
   else
     {
       return (-1);
     }
+
 #else /* basically sscanf and ncol == are different */
 
-  if (ncol == 9)
+  if (ncol == 11)
     {
-      rc = sscanf (line, "%u %u %u %lf %u %lf %lf %lf %s",
-		   &mpp->numPerTaxa, &mpp->sample[0], &mpp->sample[1],
-		   &mpp->tstv[0], &mpp->seqLen,
-		   &mpp->freqA, &mpp->freqC, &mpp->freqG, dummyTaxonPairName);
-      mpp->gamma = 999;
-
-      if (mpp->numPerTaxa != mpp->sample[0] + mpp->sample[1])
-	{
-
-	  fprintf (stderr,
-		   "Error: In the following line, 2nd and 3rd column doesn't add\n"
-		   "up to the 1st column\n%s\n", line);
-	  exit (EXIT_FAILURE);
-
-
-	}
-    }
-  else if (ncol == 8)
-    {
-      rc = sscanf (line, "%u %u %lf %u %lf %lf %lf %s",
+      rc = sscanf (line, "%s %s %d %u %u %lf %u %lf %lf %lf %s",
+		   mpp->taxonName, mpp->locusName, &mpp->ploidy,
 		   &mpp->sample[0], &mpp->sample[1],
 		   &mpp->tstv[0], &mpp->seqLen,
-		   &mpp->freqA, &mpp->freqC, &mpp->freqG, dummyTaxonPairName);
+		   &mpp->freqA, &mpp->freqC, &mpp->freqG, mpp->filename);
       mpp->gamma = 999;
       mpp->numPerTaxa = mpp->sample[0] + mpp->sample[1];
     }
@@ -1052,7 +1191,6 @@ ReadMutLine (mutParameter * mpp, char *line, int ncol)
     {
       return (-1);
     }
-
 
 #endif
 
@@ -1072,7 +1210,7 @@ ReadConLine (constrainedParameter * cpp, char *line, int ncol)
 
   if (ncol == 9)		// so far there are nine values
     {
-      cc = sscanf (line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
+      cc = sscanf (line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf",
 		   &cpp->conTau, &cpp->conBottPop1, &cpp->conBottPop2,
 		   &cpp->conBottleTime, &cpp->conMig, &cpp->conTheta,
 		   &cpp->conN1, &cpp->conNanc, &cpp->conRec);
@@ -1099,6 +1237,7 @@ PrintParam (void)
   fprintf (stderr, "upperRec =\t%lf\n", gParam.upperRec);
   fprintf (stderr, "upperAncPopSize =\t%lf\n", gParam.upperAncPopSize);
   fprintf (stderr, "reps =\t%llu\n", gParam.reps);
+  fprintf (stderr, "numLociTaxaPair =\t%u\n", gParam.numLociTaxaPair);
   fprintf (stderr, "numTaxaPair =\t%u\n", gParam.numTaxaPair);
   fprintf (stderr, "numLoci =\t%u\n", gParam.numLoci);
   fprintf (stderr, "prngSeed =\t%ld\n", gParam.prngSeed);

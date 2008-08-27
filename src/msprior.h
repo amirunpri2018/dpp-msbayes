@@ -14,8 +14,11 @@
 #define DEFAULT_PRIOR_OUT_FILE "msBayesPriorOut.csv"
 #define DEFAULT_SUBPARAMCONSTRAIN "000000000"
 
-#define MAX_FILENAME_LEN 255
+#define MAX_FILENAME_LEN 1024
+#define MAX_NAME_CHAR_LEN 1024
 #define NUMBER_OF_CONPARAM 9
+
+#include "hashtab.h"
 
 typedef struct
 {
@@ -26,9 +29,10 @@ typedef struct
   double upperRec;		/* upper limit of prior dist'n for recombination rate */
   double upperAncPopSize;	/* upper limit of prior dist'n for ancestral pop size */
   unsigned long long reps;
-  unsigned int numTaxaPair;
+  unsigned int numLociTaxaPair; /* total number of taxa:loci */
+  unsigned int numTaxaPair;     /* number of unique taxon pairs */ 
   unsigned int numTauClasses;
-  unsigned int numLoci;
+  unsigned int numLoci;         /* number of unique loci */
   long prngSeed;
   char configFile[MAX_FILENAME_LEN];
   char priorOutFile[MAX_FILENAME_LEN];
@@ -41,6 +45,11 @@ extern runParameters gParam;
 
 typedef struct
 {
+  char taxonName[MAX_NAME_CHAR_LEN];
+  char locusName[MAX_NAME_CHAR_LEN];
+  unsigned int taxonID;  /* integer (0-) representation of taxon pair name */
+  unsigned int locusID;  /* integer (0-) representation of locus name */
+  int ploidy;
   unsigned int numPerTaxa;
   unsigned int sample[2];
   double tstv[2];
@@ -50,13 +59,26 @@ typedef struct
   double freqC;
   double freqG;
   double freqT;
+  char filename[MAX_FILENAME_LEN];
 } mutParameter;
 
+typedef struct {
+  int **tbl;
+  unsigned int numTaxon;  /* number of rows (not 0-offset index) */
+  unsigned int numLoci;   /* number of columns */
+} lociTbl;
+
+/* keeps track of sample size mutation model settings */
 typedef struct
 {
   mutParameter *data;
   int numElements;
   int numAllocated;
+  int numSpecies;
+  int numLoci;
+  hashtab_t *taxonIDTbl;  /* taxon name string to -> unique ID hash table */
+  hashtab_t *locusIDTbl;  /* locus name string to -> unique ID hash table */
+  lociTbl *locTbl;
 } mutParameterArray;
 
 extern mutParameterArray gMutParam;

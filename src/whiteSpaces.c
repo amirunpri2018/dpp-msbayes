@@ -83,3 +83,25 @@ RmTrailingSpaces (char *str)
     }
   return str;
 }
+
+/* Find the first space character and return the pointer to it 
+ * Returns NULL if no space is found
+ */
+char *
+FindFirstSpace (char *str)
+{
+  char *cPtr;
+  if (str)
+    {
+      for (cPtr = str; *cPtr && !(isspace (*cPtr)); cPtr++)
+	{
+	  ;
+	}
+      if (cPtr != str + strlen (str))
+	{
+	  return cPtr;
+	}
+    }
+
+  return NULL;
+}

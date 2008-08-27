@@ -45,6 +45,9 @@
 
 /*
  Change Log
+ * Fri July 26 2006 Mike Hickerson
+ - Implement fixed number of tau classes.
+
  * Fri May 12 2006 Naoki Takebayashi <ffnt@uaf.edu>
  - upper and lower bounds of prior distribution for theta is configurable
    uses gParam.upperTheta and gParam.lowerTheta
@@ -107,14 +110,15 @@ comp_nums (const void *doubleNum1, const void *doubleNum2)
 int
 main (int argc, char *argv[])
 {
-  double N1, N2, Nanc, *tauArray = NULL, theta, tauequalizer, gaussTime,
+  double N1, N2, Nanc, *tauArray = NULL, spTheta, tauequalizer, gaussTime = 0.0,
     mig, rec, BottStr1, BottStr2, BottleTime;
+  double *recTbl;
   int tauClass, *PSIarray = NULL;
+  int taxonID;
   unsigned int numTauClasses = -1, u, locus, zzz, c;
   unsigned long randSeed;
   unsigned long long rep;
   extern const gsl_rng *gBaseRand;
-  void display_nums (int *, int);
   int comp_nums (const void *, const void *);
   FILE *fpTauPsiArray;
 
@@ -139,7 +143,6 @@ main (int argc, char *argv[])
 		   "ERROR: Not enough memory for subParamConstrainConfig\n");
 	  exit (EXIT_FAILURE);
 	}
-
 
       int i = 0;
 
@@ -189,19 +192,15 @@ main (int argc, char *argv[])
 
   /* Sizes are set to the number of taxon pairs (Max number of tau) */
   tauArray = calloc (gParam.numTaxaPair, sizeof (double));
-  if (tauArray == NULL)
-    {
-      fprintf (stderr, "ERROR: Not enough memory for tauArray\n");
-      exit (EXIT_FAILURE);
-    }
-
   PSIarray = calloc (gParam.numTaxaPair, sizeof (int));
-  if (PSIarray == NULL)
+
+  recTbl = calloc (gParam.numLoci, sizeof (double));
+  if (tauArray == NULL || PSIarray == NULL || recTbl == NULL)
     {
-      fprintf (stderr, "ERROR: Not enough memory for PSIarray\n");
+      fprintf (stderr, "ERROR: Not enough memory for tauArray, PSIarray, or recTbl\n");
       exit (EXIT_FAILURE);
     }
-
+  
   /* open the stream to output tauArray and PSIarray */
   if ((fpTauPsiArray = fopen (gParam.priorOutFile, "w")) == NULL)
     {
@@ -225,8 +224,6 @@ main (int argc, char *argv[])
   /* Beginning of the main loop */
   for (rep = 0; rep < gParam.reps; rep++)
     {
-
-
       /*
        * Each taxon pair was separated at a time tau in the past.  Of
        * all pairs, some of them may have been separated at the same
@@ -259,6 +256,17 @@ main (int argc, char *argv[])
 		  fprintf (stderr, "DEBUG:%u of %u categories:\t%lf\n",
 			   u, numTauClasses, tauArray[u]);
 		}
+	    }
+
+	  /* create the recombination rate table for each gene */
+	  rec = gsl_ran_flat (gBaseRand, 0.0, gParam.upperRec);
+	  for (u=0; u <gParam.numLoci; u++)
+	    {
+	      /* all loci shares same recombination rate */
+	      recTbl[u] = rec;
+	      /* each locus has different recomb. rate 
+	      recTbl[u] = gsl_ran_flat (gBaseRand, 0.0, gParam.upperRec);
+	      */
 	    }
 	}
       else if ((b_constrain == 1) && (subParamConstrainConfig[0] == 1))
@@ -307,13 +315,10 @@ main (int argc, char *argv[])
       //if(psiIndex != (numTauClasses-1) )
       // fprintf(stderr,"numberPsiArray:%d and numTauClasses:%d have problems\n", psiIndex, numTauClasses );
 
-
       int tauPsiIndex = 0;
       int tauCounter = 1;
-      for (u = 0; u < gParam.numTaxaPair; u++)
+      for (taxonID = 0; taxonID < gParam.numTaxaPair; taxonID++)
 	{
-
-
 	  //Check upperAncPopSize before doing anything
 	  /* ancestral population size prior */
 	  if (gParam.upperAncPopSize < 0.01)
@@ -325,13 +330,8 @@ main (int argc, char *argv[])
 	      exit (EXIT_FAILURE);
 	    }
 
-	  mutParameter taxonPairDat;
-
-	  /* sample sizes, mutational model for u-th taxon-pair */
-	  taxonPairDat = gMutParam.data[u];
 
 	  constrainedParameter conTaxonPairDat;
-
 
 	  BottStr1 = gsl_ran_flat (gBaseRand, 0.01, 1.0);
 	  BottStr2 = gsl_ran_flat (gBaseRand, 0.01, 1.0);
@@ -340,27 +340,17 @@ main (int argc, char *argv[])
 
 	  /* migration rate prior */
 	  mig = gsl_ran_flat (gBaseRand, 0.0, gParam.upperMig);
-	  /* theta prior */
-	  theta = gsl_ran_flat (gBaseRand, gParam.lowerTheta,
+	  /* spTheta prior */
+	  spTheta = gsl_ran_flat (gBaseRand, gParam.lowerTheta,
 				gParam.upperTheta);
 
 	  /* population sizes immediately after the separation, and 
 	     what it grows to after the bottleneck (today) */
 	  N1 = gsl_ran_flat (gBaseRand, 0.01, 1.99);
-
-	  /* Wen commented out the following in version 41, is it ok? */
-	  /* ancestral population size prior */
-	  //if(gParam.upperAncPopSize < 0.01) {
-	  // fprintf(stderr, "The upper bound (%lf) of ancestral pop. size is "
-	  //        "smaller than the lower bound (0.01)\n",
-	  //        gParam.upperAncPopSize);
-	  //exit(EXIT_FAILURE);
-	  //}
-
-
+	  /* WORK: Mike is the upper limit of 1.99 ok, even for nuclear gene? NT Aug 26, 2008*/
 	  /*
 	     Nmax=((gParam.upperAncPopSize*gParam.upperTheta)*gParam.upperTheta)
-	     /theta; 
+	     /spTheta; 
 	     Nanc = gsl_ran_flat (gBaseRand, 0.01, Nmax);
 	   */
 
@@ -368,18 +358,14 @@ main (int argc, char *argv[])
 	     of upper Theta (e.g. 40) and upper AncPopSize (e.g. 0.5) */
 	  Nanc = gsl_ran_flat (gBaseRand, 0.01,
 			       gParam.upperAncPopSize * gParam.upperTheta);
-
-	  /* recombination rate */
-	  rec = gsl_ran_flat (gBaseRand, 0.0, gParam.upperRec);
-
-	  /* sample sizes, constrain model for u-th taxon-pair */
-	  //conTaxonPairDat = gConParam.conData[u];
+	  
+	  /* sample sizes, constrain model for taxonID-th taxon-pair */
+	  //conTaxonPairDat = gConParam.conData[taxonID];
 
 	  if (b_constrain == 1)
 	    {
-
-	      conTaxonPairDat = gConParam.conData[u];
-
+	      int gInd;
+	      conTaxonPairDat = gConParam.conData[taxonID];
 
 	      /** bottleneck priors **/
 	      /* severity of bottle neck (how small the population become) */
@@ -397,7 +383,7 @@ main (int argc, char *argv[])
 
 	      /* theta prior */
 	      if (subParamConstrainConfig[5] == 1)
-		theta = conTaxonPairDat.conTheta;
+		spTheta = conTaxonPairDat.conTheta;
 
 	      /* population sizes immediately after the separation, and 
 	         what it grows to after the bottleneck (today) */
@@ -410,15 +396,24 @@ main (int argc, char *argv[])
 		Nanc = conTaxonPairDat.conNanc;
 
 	      /* recombination rate */
-	      if (subParamConstrainConfig[8] == 1)
+	      if (subParamConstrainConfig[8] == 1) {
 		rec = conTaxonPairDat.conRec;
+		/* all loci have the same recombination rate */
+		/* check this with Wen and Mike */
+		for (gInd = 0; gInd < gParam.numLoci; gInd++) {
+		  recTbl[gInd] = rec;
+		}
+	      }
 	    }
 
 	  N2 = 2.0 - N1;
-	  Nanc = Nanc / theta;	/* get the ratio of theta_anc / theta_cur 
-				   This ratio is required for msDQH */
+	  /* WORK: Mike, is 2.0 ok, even for nuclear gene? NT Aug 26, 2008*/
 
-	  tauequalizer = gParam.upperTheta / 2 / theta;
+	  Nanc = Nanc / spTheta; /* get the ratio of theta_anc / spTheta_cur 
+				    This ratio is required for msDQH */
+
+	  tauequalizer = gParam.upperTheta / 2 / spTheta;
+	  /* WORK: Mike, is "2" ok for nuclear gene? NT Aug 26, 2008 */
 
 	  /* pick a tau for every taxon-pair with replacement from the
 	     array of X taxon-pairs, where X is a uniform discrete RV
@@ -427,8 +422,9 @@ main (int argc, char *argv[])
 	  if ((b_constrain == 0) || (subParamConstrainConfig[0] != 1))
 	    {
 	      // 1-31-2007 it will use new way of picking tau
-	      if (u < numTauClasses)
-		tauClass = u;
+	      /* WORK: this method has a bias in multi locus case NT*/
+	      if (taxonID < numTauClasses)
+		tauClass = taxonID;
 	      else
 		tauClass = gsl_rng_uniform_int (gBaseRand, numTauClasses);
 
@@ -439,9 +435,9 @@ main (int argc, char *argv[])
 	    }
 	  else if ((b_constrain == 1) && (subParamConstrainConfig[0] == 1))
 	    {
-	      if (u < numTauClasses)
+	      if (taxonID < numTauClasses)
 		{
-		  tauClass = u;
+		  tauClass = taxonID;
 		}
 	      else
 		{
@@ -449,19 +445,17 @@ main (int argc, char *argv[])
 		    {
 		      tauClass = tauPsiIndex;
 		      tauCounter++;
-
 		    }
 		  else
 		    {
 		      tauCounter = 1;
 		      int x = 1;
 		      for (x = 1; x < numTauClasses; x++)
-			if (gConParam.conData[u].conTau == tauArray[x])
+			if (gConParam.conData[taxonID].conTau == tauArray[x])
 			  tauPsiIndex = x;
 		      //tauPsiIndex ++;
 		      tauClass = tauPsiIndex;
 		      tauCounter++;
-
 		    }
 		}
 
@@ -470,11 +464,11 @@ main (int argc, char *argv[])
 	      else
 		fprintf (stderr, "what happened to tauClass?\n");
 	    }
-	  //gaussTime = tauArray[u];
+	  //gaussTime = tauArray[taxonID];
 	  //fprintf(stderr, "gaussTime")
 
 	  /* use the following if simulating a particular fixed history */
-	  /* gaussTime = tauArray[u]; */
+	  /* gaussTime = tauArray[taxonID]; */
 
 	  gaussTime = gaussTime * tauequalizer;
 
@@ -494,9 +488,30 @@ main (int argc, char *argv[])
 	  /* print out the results */
 	  for (locus = 0; locus < gParam.numLoci; locus++)
 	    {
+	      double locTheta;
+	      /* check if this locus exist for this taxon pair */
+	      /* this table contains 0-offset index for corresponding 
+		 taxon:locus mutPara */
+	      int mpIndex = gMutParam.locTbl->tbl[taxonID][locus];
+	      
+	      if(mpIndex<0) { /* this taxon:locus is not in the data */
+		continue;
+	      }
 
+	      /* access sample sizes, mutational model for this taxon:locus */
+	      mutParameter taxonPairDat;
+	      taxonPairDat = gMutParam.data[mpIndex];
+	      
+	      /* scale the theta for each locus */
+	      /* Note that species wide theta (represents pop size) is 
+	         4 Ne mu with mu per site, not per gene.
+		 Assumes mu is constant.  This may be a problem with
+	         mitochondoria */
+	      locTheta = spTheta * taxonPairDat.seqLen * taxonPairDat.ploidy/2;
+	      
+	      /* We can send some extra info to msbayes.pl here */
 	      printf ("%lf %lf %lf %lf %lf %u ",
-		      gParam.upperTheta, theta, gaussTime, mig, rec, u + 1);
+		      gParam.upperTheta, locTheta, gaussTime, mig, recTbl[locus], taxonID + 1);
 	      printf ("%lf %lf %lf ", BottleTime, BottStr1, BottStr2);
 	      printf ("%u %u %u %lf %lf %lf ",
 		      taxonPairDat.numPerTaxa,
@@ -509,13 +524,13 @@ main (int argc, char *argv[])
 		      taxonPairDat.freqA, taxonPairDat.freqC,
 		      taxonPairDat.freqG, taxonPairDat.freqT);
 
-	      printf ("%u\n", gParam.numTaxaPair);
-
+	      printf ("%u\n", gParam.numLociTaxaPair);
+	      /* The last element numTaxaPair??? CHECK THIS */
 	      /* These feed into the system command line (msDQH) within
 	         the perl shell msbayes.  Some of these are used directly
 	         by msDQH, but some are also passed on to the sumstats
-	         programs via the msDQH commabnd line, .... like bp[u],
-	         theta, gaussTime, NumPerTax[u], yy, */
+	         programs via the msDQH commabnd line, .... like bp[taxonID],
+	         theta, gaussTime, NumPerTax[taxonID], yy, */
 	    }
 	}
 
@@ -533,6 +548,7 @@ main (int argc, char *argv[])
   fclose (fpTauPsiArray);
   free (tauArray);
   free (PSIarray);
+  free (recTbl);
   free (subParamConstrainConfig);
   exit (0);
 }

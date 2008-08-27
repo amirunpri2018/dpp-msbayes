@@ -14,12 +14,12 @@ MAKE = make
 CC = gcc
 
 # for debugging
-#CCOPT = -O0 -g  -Wunused
+CCOPT = -O0 -g  -Wunused
 #-Wall -Werror
-#LDFLAGS =  -g         # for debugging but not profiling
+LDFLAGS =  -g         # for debugging but not profiling
 # for performance
-CCOPT = -O3 -Wall -fomit-frame-pointer -funroll-loops
-LDFLAGS =
+#CCOPT = -O3 -Wall -fomit-frame-pointer -funroll-loops
+#LDFLAGS =
 INCLS = -I.
 DEFS =
 
@@ -57,10 +57,10 @@ LIB_EXEC_FILES = acceptRej.r make_pd2005.r loc2plot.r
 # LIBEXEC files are used by acceptRej.r, these has to be installed
 # inside of ../lib/msbayes/ relative to binaries
 
-MSPRIOR_O = msprior.o setup.o initvars.o whiteSpaces.o
+MSPRIOR_O = msprior.o setup.o initvars.o whiteSpaces.o hashtab.o stringUtils.o
 MSDQH_O = msQHarbpop.o QHarbpop-streec.o QHsubs.o QHarbpop-getpars.o rand2new.o
 MSREJECT_O = rejectinC.o
-SUMSTATSVECTOR = msStatsDQH.o  sumStatsVector.o hashtab.o
+SUMSTATSVECTOR = msStatsDQH.o sumStatsVector.o hashtab.o whiteSpaces.o stringUtils.o
 
 all: $(TARGET)
 
