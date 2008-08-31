@@ -103,39 +103,6 @@ END {                   # delete the temp file when done
 $tmpPriorOutfh->close();
 $options = $options . " --priorOut $tmpPriorOut ";
 
-# The main results (after sumstatsvector) get stored in this file
-# Then this and $tmpPriorOut files get column concatenated produce the final
-# output.  As long as the /tmp is local file, this enable running the
-# program in NFS mounted /home
-my ($tmpMainOut, $tmpMainOutfh);
-do {$tmpMainOut = tmpnam()} until $tmpMainOutfh = 
-    IO::File->new($tmpMainOut, O_RDWR|O_CREAT|O_EXCL);
-END {                   # delete the temp file when done
-    if (defined($tmpMainOut) && -e $tmpMainOut) {
-	if (defined($rmTempFiles)) {
-	    unlink($tmpMainOut) || die "Couldn't unlink $tmpMainOut : $!";
-	}  else {
-	    print STDERR "FILE: \$tmpMainOut = $tmpMainOut\n";
-	}
-    }
-};
-$tmpMainOutfh->close();
-
-# This is used by sumstats to store temporary output.  It used to be
-# "PARarray-E", but now we are using temp file.  Better for NFS /home
-my ($tmpSumStatVectScratch, $tmpSumStatVectScratchFh);
-do {$tmpSumStatVectScratch = tmpnam()} until $tmpSumStatVectScratchFh = 
-    IO::File->new($tmpSumStatVectScratch, O_RDWR|O_CREAT|O_EXCL);
-END {                   # delete the temp file when done
-    if (defined($tmpSumStatVectScratch) && -e $tmpSumStatVectScratch) {
-	if (defined($rmTempFiles)) {
-	    unlink($tmpSumStatVectScratch) || die "Couldn't unlink $tmpSumStatVectScratch : $!";
-	} else {
-	    print STDERR "FILE: \$tmpSumStatVectScratch = $tmpSumStatVectScratch\n";
-	}
-    }
-};
-$tmpSumStatVectScratchFh->close();
 
 #### setting up output filename
 my $outFile;
@@ -201,10 +168,7 @@ while (<RAND>) {
 	$rec = 0;
 	
 	$SEED = int(rand(2**32));  # msDQH expect unsigned long, the max val (2**32-1) is chosen here
-	
-	# Printing the header at the right time
-	# my $headerOpt = ($counter == $mspriorConf{'numTaxonLocusPairs'}) ? "-H":"";
-	
+		
 	my $ms1run = `$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 6 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $durationOfBottleneck 1 Nc $Nanc $numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonLocusPairID 1 Nc $Nanc $mspriorConf{numTaxonLocusPairs}`;
 
 	$ms1run = "# taxonID $taxonID locusID $locusID\n" . $ms1run;
@@ -243,6 +207,7 @@ while (<RAND>) {
 	    $prepPriorHeader = 0;  # print this only 1 time
 	}
 
+	##### PREPARING PRIOR COLUMNS #####
 	# prepare the prior columns
 	# PRI.numTauClass
 	my @tmpPrior = ($mspriorConf{numTauClasses});
@@ -254,7 +219,6 @@ while (<RAND>) {
 	    @tmpPrior = push @tmpPrior, @tauTbl, @psiTbl;
 	}
 	
-
 	# PRI.Psi PRI.var.t PRI.E.t PRI.omega (= #tauClasses, Var, Mean, weirdCV of tau)
 	push @tmpPrior, SummarizeTau(\@tauTbl, \@psiTbl);
 
@@ -266,7 +230,7 @@ while (<RAND>) {
     # Check if it is time to run sumstats
     if (@msOutCache % $msCacheSize == 0 || $counter == $totalNumSims) {
 	# getting read write access to sumstatsvector
-	open2(\*READ_SS, \*WRITE_SS, "$sumstatsvector -T $mspriorConf{upperTheta} --tempFile $tmpSumStatVectScratch $headerOpt"); 
+	open2(\*READ_SS, \*WRITE_SS, "$sumstatsvector $headerOpt"); 
 	
 	$headerOpt = "";  # remove -H, so header is printed only once
 
@@ -289,7 +253,6 @@ while (<RAND>) {
 	}
 	
 	# print out prior etc.
-	#out filename = $tmpMainOut;
 	for my $index (0..$#priorCache) {
 	    # print FINAL_OUT "$priorCache[$index]\t$ssOut[$index]";
 	    print "$priorCache[$index]\t$ssOut[$index]";
@@ -411,7 +374,7 @@ while (<RAND>) {
 
 close RAND;
 
-if (0) {
+if (0) {  # NOT NEEDED ANYMORE
 # combine the two outputfile to create the final output file
 my $rc = ColCatFiles($tmpPriorOut, $tmpMainOut, $outFile);
 if ($rc != 1) {
@@ -426,9 +389,6 @@ if ($rc != 1) {
 }
 }
 
-if (-e "PARarray-E") {
-    unlink("PARarray-E") || die "Couldn't unlink PARarray-E : $!";
-}
 exit(0);
 
 # interactively setting up.

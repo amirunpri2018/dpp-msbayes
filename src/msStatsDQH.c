@@ -329,25 +329,6 @@ PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs)
       gPrintHeader = 0; /* lower the flag to print only once */
     }
 
-#if 0
-  if (gPrintHeader)
-    {
-      int numPriorColumns = 4;
-      char priorNameVect[][MAX_LEN_COLUMN_NAME] =
-	{ "PRI.Psi", "PRI.var.t", "PRI.E.t", "PRI.omega" };
-      PrintHeader (priorNameVect, numPriorColumns, ssNameVect,
-		   numSumStats, numTaxonLocusPairs);
-    }
-
-  /* THIS SHOULD BE DONE IN OTHER PLACE */
-  VarTAU = gsl_stats_variance (tau, 1, numTaxonLocusPairs);
-  MeanTAU = gsl_stats_mean (tau, 1, numTaxonLocusPairs);
-  CV = VarTAU / MeanTAU;
-  
-  /* printing pirors */
-  printf ("%d\t%lf\t%lf\t%lf\t", numTauClassesHyper, VarTAU, MeanTAU, CV);
-#endif
-  
   /* start to print sum stats */
   for (a = 0; a < numTaxonLocusPairs; a++)
     printf ("%lf\t", SumStat_list[a]->PI_b);
@@ -434,8 +415,6 @@ PrintHeader (char priorNames[][MAX_LEN_COLUMN_NAME], int numPriors,
   printf ("\n");
   return;
 }
-
-
 
 /*
  * Checks that sub population sample sizes n[] are reasonable.

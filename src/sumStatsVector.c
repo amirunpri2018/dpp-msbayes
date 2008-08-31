@@ -29,8 +29,6 @@
     now this program takes upper bound of theta as an option (-T).
     This value enables us to calculate the tauequalizer.
   - msbayes.pl gets this value correctly from msprior, and pass it with -T.
-  - If no -T is given, the default value of upperTheta which is hardcoded in
-    msprior.h is used.
   - nadv used to be a commandline argument.  But I moved it to be an option.
     To pass nadv, we use -a N option now.
   - It will print the usage message with -h option.
@@ -90,9 +88,11 @@ main (int argc, char *argv[])
   struct SumStat **sumStatArr;
 
   /* check the command line argument */
+#if 0
   /* if -T is given, the value from the option will override the default */
   gParam.upperTheta = DEFAULT_UPPER_THETA;
   strncpy (gParam.scratchFile, "PARarray-E", MAX_FILENAME_LEN);	/* set default scratch file */
+#endif /* not used any more */
   /* set gParam.upperTheta, gNadv (default 0) gParam.scratchFile */
   ParseCommandLine (argc, argv);
 
@@ -154,13 +154,14 @@ ReadInMSoutput (FILE * pfin){
     exit(EXIT_FAILURE);
   }
   
+  /* processing the header information */
   if (strcmp(line, "# BEGIN MSBAYES\n") == 0) { /* process info from msbayes.pl */
     fgets(line, MAX_LNSZ,pfin); /* get next line */
-    /* WORK HERE TO PROCESS HEADER */
     sscanf(line, "# numTaxonLocusPairs %d numTaxonPairs %d numLoci %d",
 	   &(msOutArr->numTaxonLocusPairs), &(msOutArr->numTaxonPairs), 
 	   &(msOutArr->numLoci));
-    /* taxon:locus table?  */
+    /* if taxon:locus matrix is required, we can process here  */
+
     fgets(line, MAX_LNSZ,pfin); /* get next line */
     msbayesFormat = 1;
     initialArrSize = 500;    
@@ -255,10 +256,12 @@ ReadInMSoutput (FILE * pfin){
 	if ((mutscanline = strstr (mutscanline, "-Q")) != NULL)
 	  Qbool = 1;
       }
-    
+
+#if 0    
     TAU = Tau1 + Tau2;		/* time of separation */
     TAU = TAU * (theta * 2 / gParam.upperTheta);
-    
+#endif    
+
     /* 
      * config become an array with npops elements, 
      * it contains subpop sample sizes
@@ -358,7 +361,6 @@ ReadInMSoutput (FILE * pfin){
 	outPtr->isNumSegSitesFixed = isNumSegSitesConst;
 	outPtr->Qbool = Qbool;
 	outPtr->Fst_bool = Fst_bool;
-	outPtr->tau = TAU;
 	outPtr->replicateID = count;
 	outPtr->numReplicates = howmany;
 	outPtr->taxonID = taxonID;
@@ -575,14 +577,11 @@ PrintUsage (char *progname)
     p = progname;
 
   fprintf (stderr,
-	   "\nUsage: %s [--help] [--header] [--name] [--upper_theta N] [--nadv N] [--tempFile fileName] [< output_line_of_msDQH]\n\n"
+	   "\nUsage: %s [--help] [--header] [--name] [--nadv N] [< output_line_of_msDQH]\n\n"
 	   "        help: Print this usage function (-h)\n"
 	   "      header: Print column header (-H)\n"
 	   "        name: Print names of available summary statistics (-n)\n"
-	   " upper_theta: Specify a upper limit of prior distribution for "
-	   "theta (-T)\n"
 	   "        nadv: Specify nadv (-a)\n"
-	   "     tmpFile: Specify a filename which can be used to store temporary data (-t)\n\n"
 	   "stdin is used to read in a single line of msDQH output "
 	   "(output_line_of_msDQH)" "\n\n", p);
   exit (EXIT_FAILURE);
@@ -592,10 +591,8 @@ PrintUsage (char *progname)
 static struct option sim_opts[] = {
   {"help", 0, NULL, 'h'},	/* list options */
   {"header", 0, NULL, 'H'},
-  {"upper_theta", 1, NULL, 'T'},
   {"name", 0, NULL, 'n'},
   {"nadv", 1, NULL, 'a'},
-  {"tempFile", 1, NULL, 't'},
   {NULL, 0, NULL, 0}
 };
 
@@ -607,7 +604,7 @@ ParseCommandLine (int argc, char *argv[])
       int opt, rc;
       int opt_index;
 
-      opt = getopt_long (argc, argv, "hHnT:a:t:", sim_opts, &opt_index);
+      opt = getopt_long (argc, argv, "hHna:", sim_opts, &opt_index);
       if (opt < 0)
 	break;
 
@@ -622,21 +619,6 @@ ParseCommandLine (int argc, char *argv[])
 	case 'H':		/* Print header */
 	  gPrintHeader = 1;
 	  break;
-	case 'T':		/* Specify the upperTheta */
-	  if (!optarg)
-	    {
-	      fprintf (stderr,
-		       "Must select upper bound of prior distribution "
-		       "of theta\n");
-	      PrintUsage (argv[0]);
-	    }
-	  gParam.upperTheta = strtod (optarg, NULL);
-	  if (errno || (gParam.upperTheta < 0))
-	    {
-	      fprintf (stderr, "Invalid upper theta: %s\n", optarg);
-	      PrintUsage (argv[0]);
-	    }
-	  break;
 	case 'a':		/* specify nadv */
 	  if (!optarg)
 	    {
@@ -650,43 +632,9 @@ ParseCommandLine (int argc, char *argv[])
 	      PrintUsage (argv[0]);
 	    }
 	  break;
-	case 't':
-	  if (!optarg)
-	    {
-	      fprintf (stderr,
-		       "Must specify filename used for temporary storage file\n");
-	      PrintUsage (argv[0]);
-	    }
-	  rc = SetScratchFile (optarg);
-	  if (rc < 0)
-	    {
-	      fprintf (stderr,
-		       "Can't set the temporary scratch file as '%s'\n",
-		       optarg);
-	      PrintUsage (argv[0]);
-	    }
-	  break;
 	default:
 	  PrintUsage (argv[0]);	/* This function will exit */
 	  break;
 	}
     }
-}
-
-
-static int
-SetScratchFile (char *fName)
-{
-  int len;
-
-  if (!fName || !fName[0])
-    return -1;
-
-  len = strlen (fName);
-  if ((len + 1) >= MAX_FILENAME_LEN)
-    return -1;
-
-  strncpy (gParam.scratchFile, fName, MAX_FILENAME_LEN);
-
-  return 0;
 }
