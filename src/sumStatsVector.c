@@ -44,6 +44,7 @@
 #include "msprior.h"		/* MAX_FILENAME_LEN */
 #include "whiteSpaces.h"
 #include "stringUtils.h"        /* cmatrix */
+#include "sumStatsVector.h"
 
 #define MAX_LNSZ 1000
 
@@ -57,10 +58,12 @@ int gNadv = 0;
 int gPrintHeader = 0;
 
 /* function prototypes of external functions */
+/*
 void printstats (int n, int S, char **, int subn, int npops, int *config,
 		 double THETA, int isNumSegSitesConst, int Qbool,
-		 int Fst_bool, double TAU, int count, int TAXAcount,
-		 int BasePairs, int TauHyp, int NumTaxa);
+		 int Fst_bool, double TAU, int count, int numTaxonLocusPairs,
+		 int BasePairs, int numTauClasses, int taxonLocusID);
+*/
 int multiplepopssampledfrom (int nsam, int npops, int *config);
 double thetaW (int, int), mu, N;
 void PrintSumStatNames (void);
@@ -76,25 +79,15 @@ static void ReadInPositionOfSegSites (const char *line,
 
 static void ParseCommandLine (int argc, char *argv[]);
 static int SetScratchFile (char *fName);
+static msOutputArray *ReadInMSoutput (FILE * pfin);
 
 int
 main (int argc, char *argv[])
 {
-  int maxsites = 1000;		/* max number of seg sites, used for size of data mat */
-  int nsam, i, howmany, npops, *config;
-  char **list, line[MAX_LNSZ], longline[32000], *mutscanline;
-  char dum[100];
-  FILE *pfin;
-  tPositionOfSegSites *posit;
-  double theta, THETA, TAU, Tau1, Tau2;
-  int segsites, count, TAXAcount, BasePairs, NumTaxa;
-  int TauHyp;
-  int Fst_bool = 0, Qbool = 0;
-  int isNumSegSitesConst = 0;	/* 1 with -s, the number of segregating sites 
-				 *    will be constant in each sample 
-				 * 0 with -t, varies between samples
-				 */
-  char dum1[100], dum2[100], dum3[100], dum4[100], dum5[100];
+  int i,j;
+  msOutputArray *msOutArr;
+  double *tauArr;
+  struct SumStat **sumStatArr;
 
   /* check the command line argument */
   /* if -T is given, the value from the option will override the default */
@@ -103,153 +96,282 @@ main (int argc, char *argv[])
   /* set gParam.upperTheta, gNadv (default 0) gParam.scratchFile */
   ParseCommandLine (argc, argv);
 
-  pfin = stdin;			/* read the data from STDIN */
+  /* read the data from STDIN */
+  msOutArr = ReadInMSoutput(stdin); 
+  
+  /* go through the array of each msDQH run and get sum stats  */
+  sumStatArr = calloc(msOutArr->numTaxonLocusPairs, 
+		      sizeof(struct SumStat *));
+  tauArr = calloc(msOutArr->numTaxonPairs, sizeof(double));
+  
+  if (sumStatArr == NULL || tauArr == NULL) {
+    perror("ERROR: No mem in main ");
+    exit(EXIT_FAILURE);
+  }
+  
+  /* need loop here*/
+  for (i = 0; i < msOutArr->numElements; i++) {
+    j = i % msOutArr->numTaxonLocusPairs;
+    sumStatArr[j] = CalcSumStats (& (msOutArr->dat[i]));
+    /* make tau */
+    
+    if (j == msOutArr->numTaxonLocusPairs - 1) {
+      /* we got sumStats for 1 set */
+      PrintSumStatsArray(sumStatArr, msOutArr->numTaxonLocusPairs);
+    }
+  }
+  return (0);
+}
+
+static msOutputArray *
+ReadInMSoutput (FILE * pfin){
+  msOutputArray *msOutArr;
+  msOutput *outPtr;
+  int initialArrSize;
+  int msbayesFormat, taxonID, locusID;
+  
+  int maxsites = 1000; /* max number of seg sites, used for size of data mat */
+  int nsam, i, howmany, npops, *config;
+  char **list, line[MAX_LNSZ], longline[32000], *mutscanline;
+  char dum[100];
+  tPositionOfSegSites *posit;
+  double theta, TAU, Tau1, Tau2;
+  int segsites, count, numTaxonLocusPairs, BasePairs, taxonLocusID;
+  int numTauClasses;
+  int Fst_bool = 0, Qbool = 0;
+  int isNumSegSitesConst = 0;	/* 1 with -s, the number of segregating sites 
+				 *    will be constant in each sample 
+				 * 0 with -t, varies between samples
+				 */
+  char dum1[100], dum2[100], dum3[100], dum4[100], dum5[100];
+
 
   /* read in first line of output (command line options of msDQH) */
   fgets (line, MAX_LNSZ, pfin);
 
-  /*
-   * Get the following variables from the command line options
-   *
-   * nsam:      number of total samples
-   * howmany:   how many simulations were run
-   * THETA:     4 Ne mu used for the simulation
-   * Tau1:      time of bottleneck event (going back in time)
-   * Tau2:      time intvl between the bottleneck and separation events
-   * TauHyp:    ???
-   * BasePairs: sequence length
-   * TAXAcount: sequential ID for each taxon pair (1 to # of taxon pairs)
-   */
-  sscanf (line,
-	  " %s %s %d %d %s %lf %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %lf %s %s %s %s %s %s %s %s %s %s %s %lf %s %s %s %u %s %s %s %u %s %s %s %d %s %s %s %u ",
-	  dum, dum, &nsam, &howmany, dum, &THETA, dum, dum, dum, dum, dum,
-	  dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum,
-	  dum, dum, dum, dum, dum, &Tau1, dum, dum, dum, dum, dum, dum, dum,
-	  dum, dum, dum, dum, &Tau2, dum, dum5, dum, &TauHyp, dum4, dum, dum1,
-	  &BasePairs, dum2, dum3, dum, &TAXAcount, dum, dum, dum, &NumTaxa);
+  if (! (msOutArr = malloc(sizeof(msOutputArray)))) {
+    perror ("ERROR: not enough memory in ReadInMSoutput\n");
+    exit(EXIT_FAILURE);
+  }
+  
+  if (strcmp(line, "# BEGIN MSBAYES\n") == 0) { /* process info from msbayes.pl */
+    fgets(line, MAX_LNSZ,pfin); /* get next line */
+    /* WORK HERE TO PROCESS HEADER */
+    sscanf(line, "# numTaxonLocusPairs %d numTaxonPairs %d numLoci %d",
+	   &(msOutArr->numTaxonLocusPairs), &(msOutArr->numTaxonPairs), 
+	   &(msOutArr->numLoci));
+    /* taxon:locus table?  */
+    fgets(line, MAX_LNSZ,pfin); /* get next line */
+    msbayesFormat = 1;
+    initialArrSize = 500;    
+  } else {
+    msOutArr->numTaxonPairs=msOutArr->numTaxonLocusPairs = 0;
+    msOutArr->numLoci = 1;
+    msbayesFormat = 0;
+    initialArrSize = 1;
+  }
+  
+  /* allocate memory to msOutArr */
+  if (! (msOutArr->dat = (msOutput *)calloc(initialArrSize, sizeof(msOutput)))) {
+    perror ("ERROR: not enough memory 2 in ReadInMSoutput\n");
+    exit(EXIT_FAILURE);
+  }
+  msOutArr->numElements = 0;
+  msOutArr->allocatedSize = initialArrSize;
 
-  /* 
-   * of course, I have to put a prior generator in the actual sample
-   * generator for theta and tau down below for each count 
-   */
-
-  TAU = Tau1 + Tau2;		/* time of separation */
-  TAU = TAU * (THETA * 2 / gParam.upperTheta);
-
-  /* Find the theta or number of segregating sites from -t or -s */
-  mutscanline = strstr (line, "-s");
-  if (mutscanline != NULL)
-    {
-      /* number of segregating sites is constant */
-      sscanf (mutscanline, " %d", &segsites);
-      isNumSegSitesConst = 1;
-      theta = thetaW (nsam, segsites);
-    }
-  else
-    {
-      mutscanline = strstr (line, "-t");
-      if (mutscanline != NULL)
-	sscanf (mutscanline, "-t %s", dum);
-      else
-	{
-	  fprintf (stderr, "\nmutscanline problem -s or -t not found \n");
-	  exit (1);
+  do {
+    int endOfFile = 0;
+    if (msbayesFormat) {
+      while (strncmp(line, "# taxonID ", 10) != 0) {
+	if (! fgets(line, MAX_LNSZ,pfin)) { /* basically skipping empty line */
+	  endOfFile = 1;
+	  break;
 	}
-      theta = atof (dum);
-
-      /* -Q will tell transition transversion rate ratio and base freqs */
-      if ((mutscanline = strstr (mutscanline, "-Q")) != NULL)
-	Qbool = 1;
+      }
+      if(endOfFile)
+	break;
+      /* Before msDQH output, numerial IDs for taxon and locus are inserted */
+      sscanf(line, "# taxonID %d locusID %d\n", &taxonID, &locusID);
+      fgets(line, MAX_LNSZ,pfin);
+    } else {
+      taxonID = locusID = 1;
     }
-
-  /* 
-   * config become an array with npops elements, 
-   * it contains subpop sample sizes
-   */
-  npops = FindNumPopsAndSubpopSampleSizes (line, &config);
-
-  /* Checking if 0 < config[i] < nsam for all i */
-  if ((npops > 1) && (multiplepopssampledfrom (nsam, npops, config)))
-    Fst_bool = 1;
-
-  /* prepare the storage for segregating sites data */
-  if (isNumSegSitesConst)
-    maxsites = segsites;
-
-  list = cmatrix (nsam, maxsites + 1);
-  posit =
-    (tPositionOfSegSites *) calloc (maxsites, sizeof (tPositionOfSegSites));
-
-  if (list == NULL || posit == NULL)
-    {
-      fprintf (stderr, "No mem for segregating sites data\n");
-      exit (EXIT_FAILURE);
+    
+    /*
+     * Get the following variables from the command line options
+     * NOTE: this line has to match with system() line of msbayes.pl
+     *
+     * nsam:      number of total samples
+     * howmany:   how many simulations were run
+     * THETA:     4 Ne mu used for the simulation
+     *            This is removed, and getting this in more prper way
+     * Tau1:      time of end of bottleneck event (going back in time)
+     * Tau2:      length of bottleneck: between the time when 2 pops 
+     *            diverge and the time population start to expand.
+     * numTauClasses: number of tau classes drawn from prior dist'n
+     * BasePairs: sequence length
+     * taxonLocusID: sequential ID for each taxon:locus pair 
+                     (1 to # of taxon:locus pairs)
+     * numTaxonLocusPairs: total number of taxon:locus pairs per 1 set of sims.
+     */
+    sscanf (line,
+	    " %s %s %d %d %s %lf %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %lf %s %s %s %s %s %s %s %s %s %s %s %lf %s %s %s %u %s %s %s %u %s %s %s %d %s %s %s %u ",
+	    dum, dum, &nsam, &howmany, dum, dum, dum, dum, dum, dum, dum,
+	    dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum,
+	    dum, dum, dum, dum, dum, &Tau1, dum, dum, dum, dum, dum, dum, dum,
+	    dum, dum, dum, dum, &Tau2, dum, dum5, dum, &numTauClasses, dum4, dum, dum1,
+	    &BasePairs, dum2, dum3, dum, &taxonLocusID, dum, dum, dum, &numTaxonLocusPairs);
+    
+    if(!msbayesFormat) {
+      msOutArr->numTaxonPairs=msOutArr->numTaxonLocusPairs = numTaxonLocusPairs;
     }
+    /* 
+     * of course, I have to put a prior generator in the actual sample
+     * generator for theta and tau down below for each count 
+     */
+    
+    /* Find the theta or number of segregating sites from -t or -s */
+    mutscanline = strstr (line, "-s");
+    if (mutscanline != NULL)
+      {
+	/* number of segregating sites is constant */
+	sscanf (mutscanline, " %d", &segsites);
+	isNumSegSitesConst = 1;
+	theta = thetaW (nsam, segsites);
+      }
+    else
+      {
+	mutscanline = strstr (line, "-t");
+	if (mutscanline != NULL)
+	  sscanf (mutscanline, "-t %s", dum);
+	else
+	  {
+	    fprintf (stderr, "\nmutscanline problem -s or -t not found \n");
+	    exit (1);
+	  }
+	theta = atof (dum);
+	
+	/* -Q will tell transition transversion rate ratio and base freqs */
+	if ((mutscanline = strstr (mutscanline, "-Q")) != NULL)
+	  Qbool = 1;
+      }
+    
+    TAU = Tau1 + Tau2;		/* time of separation */
+    TAU = TAU * (theta * 2 / gParam.upperTheta);
+    
+    /* 
+     * config become an array with npops elements, 
+     * it contains subpop sample sizes
+     */
+    npops = FindNumPopsAndSubpopSampleSizes (line, &config);
+    
+    /* Checking if 0 < config[i] < nsam for all i */
+    if ((npops > 1) && (multiplepopssampledfrom (nsam, npops, config)))
+      Fst_bool = 1;
+    
+    /* prepare the storage for segregating sites data */
+    if (isNumSegSitesConst)
+      maxsites = segsites;
+    
+    list = cmatrix (nsam, maxsites + 1);
+    posit =
+      (tPositionOfSegSites *) calloc (maxsites, sizeof (tPositionOfSegSites));
+    
+    if (list == NULL || posit == NULL)
+      {
+	fprintf (stderr, "No mem for segregating sites data\n");
+	exit (EXIT_FAILURE);
+      }
 
-  /* Start to process the data */
-  count = 0;
-  while (howmany - count++)
-    {
-      /* The line after "//" is the beginning of simulation data */
-      while (strcmp (line, "//\n") != 0)
-	fgets (line, MAX_LNSZ, pfin);
-
-      /* Number of segregating sites line */
-      fgets (line, MAX_LNSZ, pfin);
-      if (!isNumSegSitesConst)
-	{
-	  sscanf (line, "segsites: %d\n", &segsites);
-
-	  if (segsites >= maxsites)	/* readjust the size of data matrix */
-	    {
-	      maxsites = segsites + 10;	/* extra 10 elements */
-	      posit = (tPositionOfSegSites *)
-		realloc (posit, maxsites * sizeof (tPositionOfSegSites));
-	      /*printf("PRE %d %d %d\n", segsites, maxsites, nsam); */
-	      if (posit == NULL || biggerlist (nsam, maxsites, list) != 0)
-		{
-		  fprintf (stderr,
-			   "Not enough memory for reallocating char matrix\n");
-		  exit (EXIT_FAILURE);
-		}
-	    }
-	}
-
-      /* get rid of base frequency line */
-      if (Qbool)
-	{
+    /* Start to process the data */
+    count = 0;
+    while (howmany - count++)
+      {
+	/* The line after "//" is the beginning of simulation data */
+	while (strcmp (line, "//\n") != 0)
 	  fgets (line, MAX_LNSZ, pfin);
-	  sscanf (line, "freqACGT: %s %s %s %s", dum, dum, dum, dum);
+	
+	/* Number of segregating sites line */
+	fgets (line, MAX_LNSZ, pfin);
+	if (!isNumSegSitesConst)
+	  {
+	    sscanf (line, "segsites: %d\n", &segsites);
+	    
+	    if (segsites >= maxsites)	/* readjust the size of data matrix */
+	      {
+		maxsites = segsites + 10;	/* extra 10 elements */
+		posit = (tPositionOfSegSites *)
+		  realloc (posit, maxsites * sizeof (tPositionOfSegSites));
+		/*printf("PRE %d %d %d\n", segsites, maxsites, nsam); */
+		if (posit == NULL || biggerlist (nsam, maxsites, list) != 0)
+		  {
+		    fprintf (stderr,
+			     "Not enough memory for reallocating char matrix\n");
+		    exit (EXIT_FAILURE);
+		  }
+	      }
+	  }
+	
+	/* get rid of base frequency line */
+	if (Qbool)
+	  {
+	    fgets (line, MAX_LNSZ, pfin);
+	    sscanf (line, "freqACGT: %s %s %s %s", dum, dum, dum, dum);
+	  }
+	
+	if (segsites > 0)
+	  {
+	    /* read in position of segregating sites */
+	    fgets (longline, 32000, pfin);
+	    
+	    /* posit array initialized */
+	    ReadInPositionOfSegSites (longline, posit, segsites);
+	    
+	    /* list[][] get initialized with character states */
+	    for (i = 0; i < nsam; i++)
+	      fscanf (pfin, " %s", list[i]);
+	    
+	  }
+	/* what do we do if segsites = 0?, Naoki */
+	
+	/* insert the data into the array */
+	msOutArr->numElements ++;
+	if (msOutArr->numElements > msOutArr->allocatedSize) {
+	  /* reallocate the memory */
+	  msOutArr->allocatedSize += 1000;
+	  msOutArr->dat = realloc(msOutArr->dat,
+				  sizeof(msOutput) * (msOutArr->allocatedSize));
+	  if(msOutArr->dat ==NULL) {
+	    perror("Realloc of mem failed\n");
+	    exit(EXIT_FAILURE);
+	  }
 	}
+	outPtr = & msOutArr->dat[msOutArr->numElements-1];
+	
+	outPtr->nsam = nsam;
+	outPtr->segsites = segsites;
+	outPtr->seqDat = list;
+	outPtr->nsub = gNadv;
+	outPtr->npops = npops;
+	outPtr->n = config;
+	outPtr->theta = theta;
+	outPtr->isNumSegSitesFixed = isNumSegSitesConst;
+	outPtr->Qbool = Qbool;
+	outPtr->Fst_bool = Fst_bool;
+	outPtr->tau = TAU;
+	outPtr->replicateID = count;
+	outPtr->numReplicates = howmany;
+	outPtr->taxonID = taxonID;
+	outPtr->locusID = locusID;
+	outPtr->taxonLocusID = taxonLocusID;
+	outPtr->NumTaxonLocusPairs = numTaxonLocusPairs;
+	outPtr->BasePairs = BasePairs;
+	outPtr->numTauClasses = numTauClasses;
 
-      if (segsites > 0)
-	{
-	  /* read in position of segregating sites */
-	  fgets (longline, 32000, pfin);
+      }
+  } while (fgets(line, MAX_LNSZ,pfin));
 
-	  /* posit array initialized */
-	  ReadInPositionOfSegSites (longline, posit, segsites);
-
-	  /* list[][] get initialized with character states */
-	  for (i = 0; i < nsam; i++)
-	    fscanf (pfin, " %s", list[i]);
-
-	}
-      /* what do we do if segsites = 0?, Naoki */
-
-      /* analyse sample ( do stuff with segsites and list) */
-      printstats (nsam, segsites, list, gNadv, npops, config, THETA,
-		  isNumSegSitesConst, Qbool, Fst_bool, TAU, count, TAXAcount,
-		  BasePairs, TauHyp, NumTaxa);
-
-      /* perhaps put acceptance/rejection thing here */
-
-    }
-
-  free (config);
-  free (posit);
-  freeCMatrix (nsam, list);
-  return (0);
+  return msOutArr;
 }
 
 
@@ -304,7 +426,6 @@ FindNumPopsAndSubpopSampleSizes (const char line[], int **subPopSampleSize)
     }
   else if (Dscanline != NULL)
     {
-
       charPtr = Dscanline;
     }
 

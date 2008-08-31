@@ -6,7 +6,7 @@
 #include "msprior.h"
 
 extern void LoadConfiguration (int argc, char *argv[]);
-extern void PrintParam (void);
+extern void PrintParam (FILE *fp);
 
 extern int setup_done;
 extern int debug_level;

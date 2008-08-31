@@ -30,8 +30,8 @@
 
 #include "hashtab.h"
 #include "msprior.h"
+#include "sumStatsVector.h"
 #include <string.h>
-//#include <math.h>
 
 /* #include <float.h> */
 /* #if defined (__SVR4) && defined (__sun) */
@@ -40,7 +40,6 @@
 
 #define MAX_LEN_COLUMN_NAME 128	/* Used for header. This is the maximum char length
 				   of names for each column */
-
 
 double nucdiv (int, int, char **);
 double nucdiv_w (int, int, char **, int, int *, int);
@@ -81,28 +80,6 @@ char ssNameVect[][MAX_LEN_COLUMN_NAME] =
   "ShannonsIndex.Net", "ShannonsIndex.Pop1", "ShannonsIndex.Pop2"
 };
 
-struct SumStat
-{
-  double PI_b;
-  double PI_Net;
-  double TD;
-  double TD1;
-  double TD2;
-  double PI_w;
-  double PI_w1;
-  double PI_w2;
-  double PI;
-  double TW;
-  double TW1;
-  double TW2;
-  double TDD;
-  double TDD1;
-  double TDD2;
-  double si1;
-  double si2;
-  double si3;
-  double si4;
-};
 
 #if 0				/* commented out since it is not used */
 /*
@@ -149,58 +126,77 @@ PrintSumStatNames (void)
 }
 
 /*
+  Takes a pointer to structure which contains the results of SINGLE run of
+  msDQH and calculates the summary statistics.
+
+  Side effect: memory is allocated to store all SumStats,
+  Returns: a pointer to the SumStats which contains the results
+
   nsam: number of samples
   segsites: number of segregating sites
   list: character matrix (A,T,G,orC) containing nsam rows and segsites columns
   nsub: gNadv, default 0, but can be specified by --nadv option
   npops: number of sub-populations
   n: a vector of sub-population sizes, there are npops elements
-  THETA: 4 Ne mu used for the simulations, it comes from the command line option (-t)
-         to msDQH 
-  Sbool: boolean; T if NumSegSites is Const	 
+  theta: 4 Ne mu used for the simulations, it comes from the command line 
+         option (-t) to msDQH 
 */
-void
-printstats (int nsam, int segsites, char **list, int nsub, int npops, int *n,
-	    double THETA, int Sbool, int Qbool, int Fst_bool, double TAU,
-	    int count, int TAXAcount, int BasePairs, int TauHyp, int NumTaxa)
+struct SumStat *
+CalcSumStats (msOutput *msOut)
 {
-  int i, STATLOAD, SSLOAD;
-  double tW2, tW, tW1, pi, D, D1, D2, FuLiD, FuLiF, CV, TDen, TDen2, TDen1;
-  double pi_w2 = -1, pi_w1 = -1, pi_w = -1, pi_b = -1, Fst, Nm, Pi_Net = -1;	/*zz7z Hickerson 7/29/04 zzz */
-  int *freqdist, nsegsub = -1, CC, a;
-  double NSEGSUB[NumTaxa];
-  double TW[NumTaxa], TW1[NumTaxa], TW2[NumTaxa], PI[NumTaxa], PI_w[NumTaxa],
-    PI_w1[NumTaxa], PI_w2[NumTaxa], PI_b[NumTaxa], PI_Net[NumTaxa],
-    TD[NumTaxa], TD1[NumTaxa], TD2[NumTaxa], tau[NumTaxa], TDD[NumTaxa],
-    TDD1[NumTaxa], TDD2[NumTaxa], si1[NumTaxa], si2[NumTaxa], si3[NumTaxa],
-    si4[NumTaxa];
-  double tW_w;			/*zzz Hickerson 6/26/04 zzz *//*yyy tW_w  Eli 05/15/06 yyy */
-  int *segwithin, tW_w_npops;	/*yyy Eli 5/15/06 yyy */
-  double MeanTAU, VarTAU;
+  int i, nsam, npops, *n, BasePairs, segsites;
+  int *freqdist, *segwithin, tW_w_npops;
+  double  FuLiD, FuLiF, Fst, Nm, tW_w;
   /* double h, th, ObsvVARD, ObsvVARPi_Net, ObsvEPi_Net, ObsvCV_pi_net_tW; */
+  char **list;
 
-  FILE *fp;
+  /* struct SumStat SumStat_list[NumTaxa]; */
+  struct SumStat * resultSS;
 
-  struct SumStat SumStat_list[NumTaxa];
+  /* copying frequently used valuse for easy access */
+  nsam = msOut->nsam;
+  npops = msOut->npops;
+  n = msOut->n;
+  BasePairs = msOut->BasePairs;
+  segsites = msOut->segsites;
+  list = msOut->seqDat;
 
-  freqdist = (int *) malloc (nsam * sizeof (int));
-  if (Qbool)
+  /* SIDE EFFECT: allocating memory to return results */
+  if (!(resultSS = malloc (sizeof(struct SumStat)))) {
+    perror("ERROR: No Mem in CalcSumStats\n");
+    exit(EXIT_FAILURE);
+  }
+  
+  /* initalize with -1 */
+  resultSS->PI_b = resultSS->PI_Net = resultSS->PI_w2 = resultSS->PI_w1 =
+    resultSS->PI_w = -1;
+
+  if (! (freqdist = (int *) malloc (nsam * sizeof (int)))) {
+	perror("ERROR: No Mem 2 in CalcSumStats\n");
+	exit(EXIT_FAILURE);    
+  }
+  if (msOut->Qbool)
     FrequencyDistrQ (freqdist, nsam, segsites, list);
   else
     FrequencyDistrInfSites (freqdist, nsam, segsites, list);
 
-  if (Sbool)
-    tW = THETA;
+  /* this is actually already taken care of, so this is redundant */
+  if (msOut->isNumSegSitesFixed)
+    resultSS->TW = msOut->theta;
   else
-    tW = (double) thetaW (nsam, segsites);
+    resultSS->TW = thetaW (nsam, segsites);
 
-  pi = (double) nucdiv (nsam, segsites, list);
+  resultSS->PI = nucdiv (nsam, segsites, list);
 
-  if (Fst_bool)
+  if (msOut->Fst_bool)
     {
-      /*yyy BELOW  Eli 05/15/06 yyy */
-      segwithin = (int *) malloc (npops * sizeof (int));
+      if (!(segwithin = (int *) malloc (npops * sizeof (int)))) {
+	perror("ERROR: No Mem 3 in CalcSumStats\n");
+	exit(EXIT_FAILURE);
+      }
+      
       segsubs (segwithin, segsites, list, npops, n);
+
       tW_w = 0.;
       tW_w_npops = 0;
       for (i = 0; i < npops; i++)
@@ -210,18 +206,20 @@ printstats (int nsam, int segsites, char **list, int nsub, int npops, int *n,
 	    tW_w_npops++;
 	  }
       tW_w /= tW_w_npops;
-      /*yyy ABOVE  Eli 05/15/06 yyy */
-      tW2 = (double) thetaW (n[1], segwithin[1]);
-      tW1 = (double) thetaW (n[0], segwithin[0]);
-      /* -1 signals Average of pi's within subpop */
-      pi_w =
-	(double) nucdiv_w (nsam, segsites, list, npops, n, -1) / BasePairs;
-      pi_w2 = (double) nucdiv_w (nsam, segsites, list, npops, n, 1);
-      pi_w1 = (double) nucdiv_w (nsam, segsites, list, npops, n, 0);
 
-      pi_b = (double) nucdiv_bw (nsam, segsites, list, npops, n) / BasePairs;
-      Fst = 1. - pi_w / pi_b;
-      Pi_Net = (double) pi_b - pi_w;
+      /*yyy ABOVE  Eli 05/15/06 yyy */
+      resultSS->TW1 = thetaW (n[0], segwithin[0]);
+      resultSS->TW2 = thetaW (n[1], segwithin[1]);
+      /* -1 signals Average of pi's within subpop */
+
+      resultSS->PI_w =
+	nucdiv_w (nsam, segsites, list, npops, n, -1) / BasePairs;
+      resultSS->PI_w1 = nucdiv_w (nsam, segsites, list, npops, n, 0);
+      resultSS->PI_w2 = nucdiv_w (nsam, segsites, list, npops, n, 1);
+
+      resultSS->PI_b = nucdiv_bw (nsam, segsites, list, npops, n) / BasePairs;
+      Fst = 1. - resultSS->PI_w / resultSS->PI_b;
+      resultSS->PI_Net = resultSS->PI_b - resultSS->PI_w;
       if (Fst < 0)
 	{
 	  Fst = 0.;
@@ -231,218 +229,189 @@ printstats (int nsam, int segsites, char **list, int nsub, int npops, int *n,
 	{
 	  Nm = (1. / Fst - 1.) / 4.;
 	}
-    }				/*zzz Hickerson 7/29/04 zzz */
+    }
   /*   th = thetah(nsam, segsites, list) ; */
-  D = (pi - tW) / tajddenominator (nsam, segsites, pi);
-  D2 = (pi_w2 - tW2) / tajddenominator2 (n[1], segwithin[1], pi_w2);
-  D1 = (pi_w1 - tW1) / tajddenominator2 (n[0], segwithin[0], pi_w2);
-  TDen2 = tajddenominator2 (n[1], segwithin[1], pi_w2);
-  TDen1 = tajddenominator2 (n[0], segwithin[0], pi_w1);
-  TDen = tajddenominator (nsam, segsites, pi);
-/*  FuLi(&FuLiD,&FuLiF,nsam,segsites,list,pi);*/
-/*   h = pi-th ; */
-  if (nsub > 0)
-    nsegsub = segsub (nsub, segsites, list);
 
-  tW2 = tW2 / BasePairs;
-  tW1 = tW1 / BasePairs;
-  tW = tW / BasePairs;
-  pi = pi / BasePairs;
-  pi_w2 = pi_w2 / BasePairs;
-  pi_w1 = pi_w1 / BasePairs;
+  /* Tajima's D denominator */
+  resultSS->TDD = tajddenominator (nsam, segsites, resultSS->PI);
+  resultSS->TDD1 = tajddenominator2 (n[0], segwithin[0], resultSS->PI_w1);
+  resultSS->TDD2 = tajddenominator2 (n[1], segwithin[1], resultSS->PI_w2);
+
+  /* Tajima's D */
+  resultSS->TD = (resultSS->PI - resultSS->TW) / resultSS->TDD;
+  resultSS->TD1 = (resultSS->PI_w1 - resultSS->TW1) / resultSS->TDD1;
+  resultSS->TD2 = (resultSS->PI_w2 - resultSS->TW2) / resultSS->TDD2;
+  
+/*  FuLi(&FuLiD,&FuLiF,nsam,segsites,list,resultSS->PI);*/
+/*   h = resultSS->PI-th ; */
+#if 0
+  /* not used NT */
+  if (msOut->nsub > 0)
+    nsegsub = segsub (msOut->nsub, segsites, list);
+#endif
+  resultSS->TW = resultSS->TW / BasePairs;
+  resultSS->TW1 = resultSS->TW1 / BasePairs;
+  resultSS->TW2 = resultSS->TW2 / BasePairs;
+
+  resultSS->PI = resultSS->PI / BasePairs;
+  resultSS->PI_w1 = resultSS->PI_w1 / BasePairs;
+  resultSS->PI_w2 = resultSS->PI_w2 / BasePairs;
 
   if (segsites < 1)
-    D = 0, Fst = 0, Pi_Net = 0, FuLiD = 0, FuLiF = 0, tW = 0, tW1 = 0, tW2 =
-      0, pi = 0, pi_b = 0, pi_w = 0, pi_w1 = 0, pi_w2 = 0, TDen = 0, TDen1 =
-      0, TDen2 = 0;
+    resultSS->PI_b = resultSS->PI_Net = 
+      resultSS->TD = resultSS->TD1 = resultSS->TD2 = 
+      resultSS->PI_w = resultSS->PI_w1 = resultSS->PI_w2 = resultSS->PI = 
+      resultSS->TW = resultSS->TW1 = resultSS->TW2 =
+      resultSS->TDD = resultSS->TDD1 = resultSS->TDD2 = 
+      FuLiD = FuLiF = Fst = 0;
+  
   if (segwithin[1] < 1)
-    D2 = 0;
+    resultSS->TD2 = 0;
   if (segwithin[0] < 1)
-    D1 = 0;
-  if (Pi_Net < 0)
-    Pi_Net = 0;
-  if (pi_b < 0)
-    pi_b = 0;
+    resultSS->TD1 = 0;
+  if (resultSS->PI_Net < 0)
+    resultSS->PI_Net = 0;
+  if (resultSS->PI_b < 0)
+    resultSS->PI_b = 0;
 
-  CC = TAXAcount - 1;
 
   double *shannonIndexArray;
 
   shannonIndexArray = (double *) malloc (4 * sizeof (double));
   shannonIndex (list, n, &shannonIndexArray);
-
-  if ((fp = fopen (gParam.scratchFile, "a+")) == NULL)
-    {
-      fprintf (stderr, "Cannot open the file: %s\n", gParam.scratchFile);
-      exit (1);
-    }
-
-/*fprintf(fp, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n", pi_b, FuLiD, FuLiF, tW, pi, segsites, pi_w, Fst, Pi_Net, D, TAU, TDen);
-     fclose (fp); */
-
-  fprintf (fp,
-	   "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
-	   pi_w2, tW2, TDen2, pi_w1, tW1, TDen1, pi_w, pi, tW, TDen, D2, D1,
-	   D, pi_b, Pi_Net, TAU, shannonIndexArray[0], shannonIndexArray[1],
-	   shannonIndexArray[2], shannonIndexArray[3]);
+  resultSS->si1 = shannonIndexArray[0];
+  resultSS->si2 = shannonIndexArray[1];
+  resultSS->si3 = shannonIndexArray[2];
+  resultSS->si4 = shannonIndexArray[3];
 
   free (shannonIndexArray);
+  free(segwithin);
+  free(freqdist);
 
-  fclose (fp);
+  return resultSS;
+}
 
-  if (nsub > 0)
-    NSEGSUB[CC] = nsegsub;
+/*
+*/
+void
+PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs)
+{
+  int a;
+  /* double MeanTAU, VarTAU, CV; */
 
-  if (TAXAcount == NumTaxa)
+  /* struct SumStat SumStat_list[numTaxonLocusPairs]; */
+  /* WORK HERE, Mike I disabled sorting, this may need to be enabled later */
+  //qsort (SumStat_list, numTaxonLocusPairs, sizeof (SumStat_list[0]), SS_comp);
+  
+  /****** NOTE ******
+   *
+   * (A) If new summary stat is added or the print order is
+   *     changed, please modify the global: numStats and
+   *     ssNameVect (top of this file).  numSumStats should be
+   *     the number of summary statistics used for each taxon
+   *     pair.
+   *
+   * (B) If new prior is added or the print order is changed,
+   *     please modify numPriorColumns and priorNameVect.  For
+   *     prior names, start with "PRI."
+   *  
+   * ORDER of names is important!
+   */
+
+  if (gPrintHeader)
     {
-      if ((fp = fopen (gParam.scratchFile, "r")) == NULL)
-	{
-	  fprintf (stderr, "Cannot open the file: %s\n", gParam.scratchFile);
-	  exit (1);
-	}
-      STATLOAD = NumTaxa;
-      SSLOAD = 11;
-      for (a = 0; a < STATLOAD; a++)
-	fscanf (fp,
-		"%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
-		&PI_w2[a], &TW2[a], &TDD2[a], &PI_w1[a], &TW1[a], &TDD1[a],
-		&PI_w[a], &PI[a], &TW[a], &TDD[a], &TD2[a], &TD1[a], &TD[a],
-		&PI_b[a], &PI_Net[a], &tau[a], &si1[a], &si2[a], &si3[a],
-		&si4[a]);
-
-      fclose (fp);
-
-      for (a = 0; a < STATLOAD; a++)
-	{
-	  SumStat_list[a].PI_b = PI_b[a];
-	  SumStat_list[a].PI_Net = PI_Net[a];
-	  SumStat_list[a].TD2 = TD2[a];
-	  SumStat_list[a].TD1 = TD1[a];
-	  SumStat_list[a].TD = TD[a];
-	  SumStat_list[a].PI_w = PI_w[a];
-	  SumStat_list[a].PI_w2 = PI_w2[a];
-	  SumStat_list[a].PI_w1 = PI_w1[a];
-	  SumStat_list[a].PI = PI[a];
-	  SumStat_list[a].TW = TW[a];
-	  SumStat_list[a].TW2 = TW2[a];
-	  SumStat_list[a].TW1 = TW1[a];
-	  SumStat_list[a].TDD = TDD[a];
-	  SumStat_list[a].TDD2 = TDD2[a];
-	  SumStat_list[a].TDD1 = TDD1[a];
-	  SumStat_list[a].si1 = si1[a];
-	  SumStat_list[a].si2 = si2[a];
-	  SumStat_list[a].si3 = si3[a];
-	  SumStat_list[a].si4 = si4[a];
-	}
-
-      qsort (SumStat_list, NumTaxa, sizeof SumStat_list[0], SS_comp);
-
-      {
-	/****** NOTE ******
-	 *
-	 * (A) If new summary stat is added or the print order is
-	 *     changed, please modify the global: numStats and
-	 *     ssNameVect (top of this file).  numSumStats should be
-	 *     the number of summary statistics used for each taxon
-	 *     pair.
-	 *
-	 * (B) If new prior is added or the print order is changed,
-	 *     please modify numPriorColumns and priorNameVect.  For
-	 *     prior names, start with "PRI."
-	 *  
-	 * ORDER of names is important!
-	 */
-	if (gPrintHeader)
-	  {
-	    int numPriorColumns = 4;
-	    char priorNameVect[][MAX_LEN_COLUMN_NAME] =
-	      { "PRI.Psi", "PRI.var.t", "PRI.E.t", "PRI.omega" };
-	    PrintHeader (priorNameVect, numPriorColumns, ssNameVect,
-			 numSumStats, STATLOAD);
-	  }
-
-	VarTAU = gsl_stats_variance (tau, 1, NumTaxa);
-	MeanTAU = gsl_stats_mean (tau, 1, NumTaxa);
-	CV = VarTAU / MeanTAU;
-
-	/* printing pirors */
-	printf ("%d\t%lf\t%lf\t%lf\t", TauHyp, VarTAU, MeanTAU, CV);
-
-	//for (a=0;a<STATLOAD;a++)printf("%lf\t", SumStat_list[a].PI_Net);
-	// printf("\n"); 
-
-	/* start to print sum stats */
-	for (a = 0; a < STATLOAD; a++)
-	  printf ("%lf\t", SumStat_list[a].PI_b);
-
-	for (a = 0; a < STATLOAD; a++)
-	  printf ("%lf\t", SumStat_list[a].PI_w);
-
-	for (a = 0; a < STATLOAD; a++)
-	  printf ("%lf\t", SumStat_list[a].PI);
-
-	for (a = 0; a < STATLOAD; a++)
-	  printf ("%lf\t", SumStat_list[a].TW);
-
-	for (a = 0; a < STATLOAD; a++)
-	  printf ("%lf\t", SumStat_list[a].PI_Net);
-
-	for (a = 0; a < STATLOAD; a++)
-	  printf ("%lf\t", SumStat_list[a].TD);
-
-	for (a = 0; a < STATLOAD; a++)
-	  printf ("%lf\t", SumStat_list[a].TDD);
-
-	for (a = 0; a < STATLOAD; a++)
-	  printf ("%lf\t", SumStat_list[a].PI_w2);
-
-	for (a = 0; a < STATLOAD; a++)
-	  printf ("%lf\t", SumStat_list[a].PI_w1);
-
-	for (a = 0; a < STATLOAD; a++)
-	  printf ("%lf\t", SumStat_list[a].TW2);
-
-	for (a = 0; a < STATLOAD; a++)
-	  printf ("%lf\t", SumStat_list[a].TW1);
-
-	for (a = 0; a < STATLOAD; a++)
-	  printf ("%lf\t", SumStat_list[a].TDD2);
-
-	for (a = 0; a < STATLOAD; a++)
-	  printf ("%lf\t", SumStat_list[a].TDD1);
-
-	for (a = 0; a < STATLOAD; a++)
-	  printf ("%lf\t", SumStat_list[a].si1);
-
-	for (a = 0; a < STATLOAD; a++)
-	  printf ("%lf\t", SumStat_list[a].si2);
-
-	for (a = 0; a < STATLOAD; a++)
-	  printf ("%lf\t", SumStat_list[a].si3);
-
-	for (a = 0; a < STATLOAD; a++)
-	  printf ("%lf\t", SumStat_list[a].si4);
-
-	printf ("\n");
-
-
-	//for(a = 0; a < STATLOAD; a++)
-	//printf ("%lf\n", SumStat_list[a].si4);
-
-
-	/*    if ((fp=fopen("likeout1_21", "a+b")) ==NULL){
-	   fprintf(stderr,"Cannot open the file.\n");
-	   exit(1);
-	   }                                
-
-	   fprintf(fp, "%d\t%d\t%lf\t%lf\t%lf\t%lf\t%lf\n", TauHyp, VT, MeanTau, ObsvVARPi_Net, ObsvVARD, ObsvCV_pi_net_tW, ObsvEPi_Net );
-	   fclose (fp); */
-
-      }
-
-      remove (gParam.scratchFile);
-      /*remove arrays */
+      int numPriorColumns = 0; /* Prior is not printed anymore */
+      char priorNameVect[][MAX_LEN_COLUMN_NAME] =
+	{ "PRI.Psi", "PRI.var.t", "PRI.E.t", "PRI.omega" };
+      PrintHeader (priorNameVect, numPriorColumns, ssNameVect,
+		   numSumStats, numTaxonLocusPairs);
+      
+      gPrintHeader = 0; /* lower the flag to print only once */
     }
+
+#if 0
+  if (gPrintHeader)
+    {
+      int numPriorColumns = 4;
+      char priorNameVect[][MAX_LEN_COLUMN_NAME] =
+	{ "PRI.Psi", "PRI.var.t", "PRI.E.t", "PRI.omega" };
+      PrintHeader (priorNameVect, numPriorColumns, ssNameVect,
+		   numSumStats, numTaxonLocusPairs);
+    }
+
+  /* THIS SHOULD BE DONE IN OTHER PLACE */
+  VarTAU = gsl_stats_variance (tau, 1, numTaxonLocusPairs);
+  MeanTAU = gsl_stats_mean (tau, 1, numTaxonLocusPairs);
+  CV = VarTAU / MeanTAU;
+  
+  /* printing pirors */
+  printf ("%d\t%lf\t%lf\t%lf\t", numTauClassesHyper, VarTAU, MeanTAU, CV);
+#endif
+  
+  /* start to print sum stats */
+  for (a = 0; a < numTaxonLocusPairs; a++)
+    printf ("%lf\t", SumStat_list[a]->PI_b);
+  
+  for (a = 0; a < numTaxonLocusPairs; a++)
+    printf ("%lf\t", SumStat_list[a]->PI_w);
+  
+  for (a = 0; a < numTaxonLocusPairs; a++)
+    printf ("%lf\t", SumStat_list[a]->PI);
+  
+  for (a = 0; a < numTaxonLocusPairs; a++)
+    printf ("%lf\t", SumStat_list[a]->TW);
+  
+  for (a = 0; a < numTaxonLocusPairs; a++)
+    printf ("%lf\t", SumStat_list[a]->PI_Net);
+  
+  for (a = 0; a < numTaxonLocusPairs; a++)
+    printf ("%lf\t", SumStat_list[a]->TD);
+  
+  for (a = 0; a < numTaxonLocusPairs; a++)
+    printf ("%lf\t", SumStat_list[a]->TDD);
+  
+  for (a = 0; a < numTaxonLocusPairs; a++)
+    printf ("%lf\t", SumStat_list[a]->PI_w2);
+  
+  for (a = 0; a < numTaxonLocusPairs; a++)
+    printf ("%lf\t", SumStat_list[a]->PI_w1);
+  
+  for (a = 0; a < numTaxonLocusPairs; a++)
+    printf ("%lf\t", SumStat_list[a]->TW2);
+  
+  for (a = 0; a < numTaxonLocusPairs; a++)
+    printf ("%lf\t", SumStat_list[a]->TW1);
+  
+  for (a = 0; a < numTaxonLocusPairs; a++)
+    printf ("%lf\t", SumStat_list[a]->TDD2);
+  
+  for (a = 0; a < numTaxonLocusPairs; a++)
+    printf ("%lf\t", SumStat_list[a]->TDD1);
+  
+  for (a = 0; a < numTaxonLocusPairs; a++)
+    printf ("%lf\t", SumStat_list[a]->si1);
+  
+  for (a = 0; a < numTaxonLocusPairs; a++)
+    printf ("%lf\t", SumStat_list[a]->si2);
+  
+  for (a = 0; a < numTaxonLocusPairs; a++)
+    printf ("%lf\t", SumStat_list[a]->si3);
+  
+  for (a = 0; a < numTaxonLocusPairs; a++)
+    printf ("%lf\t", SumStat_list[a]->si4);
+  
+  printf ("\n");
+    
+  /*
+  if ((fp=fopen("likeout1_21", "a+b")) ==NULL){
+    fprintf(stderr,"Cannot open the file.\n");
+    exit(1);
+  }                                
+  
+  fprintf(fp, "%d\t%d\t%lf\t%lf\t%lf\t%lf\t%lf\n", numTauClassesHyper, VT, MeanTau, ObsvVARPi_Net, ObsvVARD, ObsvCV_pi_net_tW, ObsvEPi_Net );
+  fclose (fp); 
+  */
+  
 }
 
 static void
@@ -553,13 +522,27 @@ pairwisediffc_b (int ss, int nsam, char **list, int np, int *n, int pop1,
 }
 
 /*yyy BELOW  Eli 05/15/06 yyy*/
+/*
+ * Arguments:
+ *   segwReturnArr: results get returned here
+ *   segsites: number of segSite in the entire data = # columns in list matrix
+ *   list: sequence data array
+ *   numSubpops: number of sub populations
+ *   n: array with numSubpops elements.  i-th element is # seqs in i-th subpops
+ *  
+ * Assumes that memory is allocated to segwReturnArr (numSubpops * sizeof(int)).
+ *
+ * Side effect: segReturnArr get filled up by # seg sites within each subpops.
+ */
 void
-segsubs (int *segw, int segsites, char **list, int np, int *n)
+segsubs (int *segwReturnArr, int segsites, char **list, int numSubpops, int *n)
 {
   int i, count, npi, n0 = 0, ni, npops_gt1 = 0;
 
+  /* initialize the result counter */
+  memset(segwReturnArr, 0, numSubpops *  sizeof(int));
 
-  for (npi = 0; npi < np; npi++)
+  for (npi = 0; npi < numSubpops; npi++)
     {
       if (n[npi] > 1)
 	{
@@ -571,7 +554,7 @@ segsubs (int *segw, int segsites, char **list, int np, int *n)
 		{
 		  if (list[ni][i] != list[n0][i])
 		    {
-		      segw[npi]++;
+		      segwReturnArr[npi]++;
 		      break;
 		    }
 		}
@@ -579,7 +562,7 @@ segsubs (int *segw, int segsites, char **list, int np, int *n)
 	}
       else
 	{
-	  segw[npi] = 0;
+	  segwReturnArr[npi] = 0;
 	}
       n0 += n[npi];
     }

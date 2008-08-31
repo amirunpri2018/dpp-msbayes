@@ -36,6 +36,7 @@ my $defaultOutFile = "Prior_SumStat_Outfile";
 use File::Copy;
 use IO::File;
 use POSIX qw(tmpnam);
+use IPC::Open2;
 
 use Getopt::Std;
 
@@ -145,6 +146,12 @@ if(defined($opt_o)) {
     $outFile = InteractiveSetup();
 }
 
+my $mspriorConfOut = `$msprior $options --info`;  # getting the config information
+
+my %mspriorConf = ExtractMspriorConf($mspriorConfOut);
+# my $numTaxonLocusPairs = $mspriorConf{'numTaxonLocusPairs'};
+# $numTaxonLocusPairs is the total number of taxa:locus pairs.
+
 my $new = 1;
 open (RAND, "$msprior $options |") || 
     die "Hey buddy, where the hell is \"msprior\"?\n";
@@ -153,34 +160,146 @@ open (RAND, "$msprior $options |") ||
 ## before computation if there is a leftover.
 CheckNBackupFile("PARarray-E");
 
-my $counter  = 1;
+my @msOutCache = ();
+my @priorCache = ();
+my $msCacheSize = $mspriorConf{'numTaxonLocusPairs'} * 2; # USE SOME BIGGER NUM HERE
+
+my $prepPriorHeader = 1;
+
+# used to print out the last simulations
+my $counter  = 0;
+my $totalNumSims = $mspriorConfOut{reps} * $mspriorConfOut{numTaxonLocusPairs};
+
+# WORK HERE, currently it output to screen, handle how to deal with output file
+# open FINAL_OUT ">$mspriorConfOut{}" || die "Can't open;
+
+my $headerOpt = " -H ";
 while (<RAND>) {
     s/^\s+//; s/\s+$//; 
+    
+    unless (/^# TAU_PSI_TBL/) {
+        # When reached here, it is regular parameter lines, so need to run msDQH
+	my ($taxonLocusPairID, $taxonID, $locusID, $theta, $gaussTime, $mig, $rec, 
+	    $BottleTime, $BottStr1, $BottStr2, 
+	    $totSampleNum, $sampleNum1, $sampleNum2, $tstv1, $tstv2, $gamma,
+	    $seqLen, $N1, $N2, $Nanc, 
+	    $freqA, $freqC, $freqG, $freqT, $numTauClasses) = split /\s+/;
+	
+	# $numTauClasses can be removed later
+	
+#  0 $taxonLocusPairID, $taxonID, $locusID, $theta, $gaussTime, 
+#  6 $mig, $rec, $BottleTime, $BottStr1, $BottStr2,
+# 11 $totSampleNum, $sampleNum1, $sampleNum2, $tstv1, $tstv2, 
+# 16 $gamma, $seqLen, $N1, $N2, $Nanc, 
+# 21 $freqA, $freqC, $freqG, $freqT
+	
+	# The duration of bottleneck after divergence before the population growth
+	my $durationOfBottleneck = $gaussTime - $BottleTime;
+	
+	# option for -r was fixed to 0, so changed to $rec, then forcing
+	# it to be 0 here
+	$rec = 0;
+	
+	$SEED = int(rand(2**32));  # msDQH expect unsigned long, the max val (2**32-1) is chosen here
+	
+	# Printing the header at the right time
+	# my $headerOpt = ($counter == $mspriorConf{'numTaxonLocusPairs'}) ? "-H":"";
+	
+	my $ms1run = `$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 6 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $durationOfBottleneck 1 Nc $Nanc $numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonLocusPairID 1 Nc $Nanc $mspriorConf{numTaxonLocusPairs}`;
 
-    my ($upperTheta, $theta, $gaussTime, $mig, $rec, $taxonPairID,
-	$BottleTime, $BottStr1, $BottStr2, 
-	$totSampleNum, $sampleNum1, $sampleNum2, $tstv1, $tstv2, $gamma,
-	$seqLen, $numTauClasses, $N1, $N2, $Nanc, 
-	$freqA, $freqC, $freqG, $freqT, $numTaxaPair) = split /\s+/;
+	$ms1run = "# taxonID $taxonID locusID $locusID\n" . $ms1run;
+	push @msOutCache, $ms1run;
+	
+	$counter++;
+	next;
+    }
+    
+    # When reached here, TAU_PSI_TBL line
+    # At the end of 1 repetition (a set of simulations for all taxon:locus),
+    # msprior print outs the following line:
+    # # TAU_PSI_TBL setting: 0 realizedNumTauClass: 3 tauTbl:,8.713673,4.981266,4.013629 psiTbl:,1,1,1
+    # Processing this line to prepare prior columns.
 
-# 0 $upperTheta, $theta, $gaussTime, $mig, $rec, $taxonPairID,
-# 6 $BottleTime, $BottStr1, $BottStr2, $totSampleNum, $sampleNum1,
-#11  $sampleNum2, $tstv1, $tstv2, $gamma, $seqLen,
-#16  $numTauClasses, $N1, $N2, $Nanc, $freqA,
-#21  $freqC, $freqG, $freqT
+    my ($tauClassSetting, $numTauCla);
+    if (/setting:\s+(\d+)\s+realizedNumTauClasses:\s+(\d+)\s+tauTbl:,([\d\.,]+)\s+psiTbl:,([\d\.,]+)/) {
+	$tauClassSetting = $1;
+	$numTauCla = $2;
+	my @tauTbl = split /\s*,\s*/, $3;
+	my @psiTbl = split /\s*,\s*/, $4;
+	
+	# prep header
+	if ($prepPriorHeader){ 
+	    my $headString = "PRI.numTauClass";
+	    if ($mspriorConf{numTauClasses} > 0) {
+		for my $suffix (1..$mspriorConf{numTauClasses}) {
+		    $headString .= "\tPRI.Tau.$suffix";
+		}
+		for my $suffix (1..$mspriorConf{numTauClasses}) {
+		    $headString .= "\tPRI.Psi.$suffix";
+		}
+	    }
+	    $headString .= "\tPRI.Psi\tPRI.var.t\tPRI.E.t\tPRI.omega";
+	    push @priorCache, $headString;
+	    $prepPriorHeader = 0;  # print this only 1 time
+	}
 
-    my $tmpVal = $gaussTime - $BottleTime;
+	# prepare the prior columns
+	# PRI.numTauClass
+	my @tmpPrior = ($mspriorConf{numTauClasses});
 
-    # option for -r was fixed to 0, so changed to $rec, then forcing
-    # it to be 0 here
-    $rec = 0;
+	# conversion of tau
+	if ($mspriorConf{numTauClasses} > 0) {
+	    #PRI.Tau.1 PRi.Tau.2 ... PRI.Tau.numTauClasses
+	    #PRI.Psi.1 PRi.Psi.2 ... PRI.Psi.numTauClasses
+	    @tmpPrior = push @tmpPrior, @tauTbl, @psiTbl;
+	}
+	
 
-    $SEED = int(rand(2**32));  # msDQH expect unsigned long, the max val (2**32-1) is chosen here
+	# PRI.Psi PRI.var.t PRI.E.t PRI.omega (= #tauClasses, Var, Mean, weirdCV of tau)
+	push @tmpPrior, SummarizeTau(\@tauTbl, \@psiTbl);
 
-    # Printing the header at the right time
-    my $headerOpt = ($counter == $numTaxaPair) ? "-H":"";
+	push @priorCache, join("\t", @tmpPrior);
+    } else {
+	die "ERROR: TAU_PSI_TBL line is weird.\n$_\n";
+    }
+    
+    # Check if it is time to run sumstats
+    if (@msOutCache % $msCacheSize == 0 || $counter == $totalNumSims) {
+	# getting read write access to sumstatsvector
+	open2(\*READ_SS, \*WRITE_SS, "$sumstatsvector -T $mspriorConf{upperTheta} --tempFile $tmpSumStatVectScratch $headerOpt"); 
+	
+	$headerOpt = "";  # remove -H, so header is printed only once
 
-    system("$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 6 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $tmpVal 1 Nc $Nanc $numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonPairID 1 Nc $Nanc $numTaxaPair | $sumstatsvector -T $upperTheta --tempFile $tmpSumStatVectScratch $headerOpt >> $tmpMainOut");
+	print WRITE_SS "# BEGIN MSBAYES\n".
+	    "# numTaxonLocusPairs $mspriorConf{numTaxonLocusPairs} ".
+	    "numTaxonPairs $mspriorConf{numTaxonPairs} ".
+	    "numLoci $mspriorConf{numLoci}\n";
+	
+	for my $index (0..$#msOutCache) {
+	    print WRITE_SS "$msOutCache[$index]";
+	}
+	close(WRITE_SS);  # need to close this to prevent dead-lock
+	
+	my @ssOut = <READ_SS>;
+	close(READ_SS);
+	
+	if (@priorCache != @ssOut) {
+	    die "ERROR: size of priorCache (". scalar(@priorCache).
+		") differ from sumStatsCache(" .scalar(@ssOut)."\n";
+	}
+	
+	# print out prior etc.
+	#out filename = $tmpMainOut;
+	for my $index (0..$#priorCache) {
+	    # print FINAL_OUT "$priorCache[$index]\t$ssOut[$index]";
+	    print "$priorCache[$index]\t$ssOut[$index]";
+	}
+	
+	@msOutCache = ();  # clear the cache
+	@priorCache = ();
+    }
+
+#    system("$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 6 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $durationOfBottleneck 1 Nc $Nanc $numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonLocusPairID 1 Nc $Nanc $mspriorConf{numTaxonLocusPairs} | $sumstatsvector -T $mspriorConf{upperTheta} --tempFile $tmpSumStatVectScratch $headerOpt >> $tmpMainOut");
 
 # minor change 9/8/06; $N1 $N1 $N2 $N2 to $N1 $BottStr1 $N2 $BottStr2
 
@@ -192,9 +311,9 @@ while (<RAND>) {
 # The rest -D is explained using the following template:
 #
 # -D 6 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $N1 $N2 $N2 $BottleTime \
-#  -2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $tmpVal 1 Nc $Nanc \
-#   -$numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonPairID 1 Nc
-#    -$Nanc $numTaxaPair
+#  -2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $durationOfBottleneck 1 Nc $Nanc \
+#   -$numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonLocusPairID 1 Nc
+#    -$Nanc $mspriorConf{numTaxonLocusPairs}
 #
 # $sampleNum1 $sampleNum2; the 2 sample sizes of the 2 populations
 
@@ -229,10 +348,10 @@ while (<RAND>) {
 # Nc; Nc specifies that all populations have constant size in this
 #   next time step
 
-# $BottStr1 $BottStr2; these are the two constant realtive sizes of
+# $BottStr1 $BottStr2; these are the two constant relative sizes of
 #   the two populations during this next time step.
 
-# $tmpVal; this is the length of this next time step (in this case it
+# $durationOfBottleneck; this is the length of this next time step (in this case it
 #   ends at the divergence time)
 
 # 1 Nc $Nanc $numTauClasses; specifies that the next time step has
@@ -288,11 +407,11 @@ while (<RAND>) {
 #    Dint4 npops 1
 #      (Nrec_Npast)[] 0.42 0.42 
 #       tpast 1013.03
-    $counter++;
 }
 
 close RAND;
 
+if (0) {
 # combine the two outputfile to create the final output file
 my $rc = ColCatFiles($tmpPriorOut, $tmpMainOut, $outFile);
 if ($rc != 1) {
@@ -304,6 +423,7 @@ if ($rc != 1) {
     if ($debug && $rc == -1) {    # debug, remove this later
 	warn "In Concatenating at the end, one file was empty.  This means that the simulation was the UNCONSTRAINED\n";
     }
+}
 }
 
 if (-e "PARarray-E") {
@@ -439,4 +559,68 @@ sub ColCatFiles {
     close FILE1;
     close FILE2;
     return $retval;
+}
+
+
+sub ExtractMspriorConf {
+    my $mspriorConfOut = shift;
+
+    my %result =();
+
+    my @generalKwdArr = qw(lowerTheta upperTheta upperTau upperMig upperRec upperAncPopSize reps numTaxonLocusPairs numTaxonPairs numLoci numTauClasses prngSeed constrain);
+    
+    for my $kkk (@generalKwdArr) {
+	if ($mspriorConfOut =~ /\s*$kkk\s*=\s*([^\s\n]+)\s*\n/) {
+	    $result{$kkk} = $1;
+	} else {
+	    die "In:\n $mspriorConfOut\nCan't find $kkk\n";
+	}
+    }
+
+    my $mutPara;
+    if ($mspriorConfOut =~ /## gMutParam ##\s*\n(.+)## gConParam/s) {
+	# note s in the regex will let . to match \n
+	$mutPara = $1;
+    } else {
+	warn "Couldn't find mutation parameter table";
+    }    
+    # I'm not using this, but following info can be extrcted
+# ### taxon:locus pair ID 1 taxonID 1 (lamarckii) locusID 1 (mt) ploidy 1 ###
+# numPerTaxa =    15
+# sample =        10 5
+# tstv =  11.600000  0.000000
+# gamma = 999.000000
+# seqLen =        614
+# freq:A, C, G, T = 0.323000, 0.268000 0.212000 0.197000
+# fileName =      lamarckii.fasta
+# ### taxon:locus pair ID 2 taxonID 2 (erosa) locusID 1 (mt) ploidy 1 ###
+# numPerTaxa =    16
+# sample =        10 6
+# tstv =  13.030000  0.000000
+# gamma = 999.000000
+# seqLen =        614
+# freq:A, C, G, T = 0.266000, 0.215000 0.265000 0.254000
+# fileName =      erosa.fasta
+# ### taxon:locus pair ID 3 taxonID 3 (clandestina) locusID 2 (adh) ploidy 2 ###
+
+    return %result;
+}
+
+sub SummarizeTau {
+    my ($tauArrRef, $cntArrRef)  = @_;
+    
+    my $numTauClasses = scalar(@$tauArrRef); # num elements = Psi
+    
+    my ($sum, $ss, $n) = (0,0,0);
+    foreach my $index (0..($numTauClasses-1)) {
+	$n += $$cntArrRef[$index];
+	$sum += $$tauArrRef[$index] * $$cntArrRef[$index];
+	$ss += ($$tauArrRef[$index] ** 2) * $$cntArrRef[$index];	
+    }
+    
+    my $mean = $sum / $n;
+    my $var = ($ss -  $n * ($mean ** 2)) / ($n-1); # estimated, or sample var
+    my $weirdCV = $var/$mean;
+    
+    return ($numTauClasses, $var, $mean, $weirdCV);
 }

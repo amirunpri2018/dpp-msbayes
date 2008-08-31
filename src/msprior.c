@@ -114,8 +114,7 @@ main (int argc, char *argv[])
     mig, rec, BottStr1, BottStr2, BottleTime;
   double *recTbl;
   int tauClass, *PSIarray = NULL;
-  int taxonID;
-  unsigned int numTauClasses = -1, u, locus, zzz, c;
+  unsigned int numTauClasses = -1, u, locus, taxonID, zzz, c;
   unsigned long randSeed;
   unsigned long long rep;
   extern const gsl_rng *gBaseRand;
@@ -174,13 +173,13 @@ main (int argc, char *argv[])
       /* fixed numTauClasses configuration */
       if (gParam.numTauClasses != 0)
 	{
-	  if (gParam.numTauClasses > gParam.numTaxaPair)
+	  if (gParam.numTauClasses > gParam.numTaxonPairs)
 	    {
 	      fprintf (stderr, "WARN: numTauClasses (%u) is larger than "
-		       "numTaxaPair (%u). Setting numTauClasses to %u",
-		       gParam.numTauClasses, gParam.numTaxaPair,
-		       gParam.numTaxaPair);
-	      gParam.numTauClasses = gParam.numTaxaPair;
+		       "numTaxonPairs (%u). Setting numTauClasses to %u",
+		       gParam.numTauClasses, gParam.numTaxonPairs,
+		       gParam.numTaxonPairs);
+	      gParam.numTauClasses = gParam.numTaxonPairs;
 	    }
 	  numTauClasses = gParam.numTauClasses;
 	}
@@ -190,9 +189,15 @@ main (int argc, char *argv[])
       numTauClasses = gParam.numTauClasses;
     }
 
+  /* print out all of the parameters */
+  if(gParam.printConf) {
+    PrintParam(stdout);
+    exit (0);
+  }
+
   /* Sizes are set to the number of taxon pairs (Max number of tau) */
-  tauArray = calloc (gParam.numTaxaPair, sizeof (double));
-  PSIarray = calloc (gParam.numTaxaPair, sizeof (int));
+  tauArray = calloc (gParam.numTaxonPairs, sizeof (double));
+  PSIarray = calloc (gParam.numTaxonPairs, sizeof (int));
 
   recTbl = calloc (gParam.numLoci, sizeof (double));
   if (tauArray == NULL || PSIarray == NULL || recTbl == NULL)
@@ -224,6 +229,7 @@ main (int argc, char *argv[])
   /* Beginning of the main loop */
   for (rep = 0; rep < gParam.reps; rep++)
     {
+      int lociTaxonPairIDcntr = 1;
       /*
        * Each taxon pair was separated at a time tau in the past.  Of
        * all pairs, some of them may have been separated at the same
@@ -236,9 +242,9 @@ main (int argc, char *argv[])
       if (gParam.numTauClasses == 0)
 	{			/* numTauClasses is NOT fixed */
 	  numTauClasses =
-	    1 + gsl_rng_uniform_int (gBaseRand, gParam.numTaxaPair);
+	    1 + gsl_rng_uniform_int (gBaseRand, gParam.numTaxonPairs);
 	}
-
+      
       for (c = 0; c < numTauClasses; c++)
 	PSIarray[c] = 0;	/* Reset the PSIarray counters */
 
@@ -277,19 +283,19 @@ main (int argc, char *argv[])
 
 	  double *conTauArray = NULL;
 
-	  conTauArray = calloc (gParam.numTaxaPair, sizeof (double));
+	  conTauArray = calloc (gParam.numTaxonPairs, sizeof (double));
 	  if (conTauArray == NULL)
 	    {
 	      fprintf (stderr, "ERROR: Not enough memory for conTauArray\n");
 	      exit (EXIT_FAILURE);
 	    }
 
-	  for (u = 0; u < gParam.numTaxaPair; u++)
+	  for (u = 0; u < gParam.numTaxonPairs; u++)
 	    {
 	      conTauArray[u] = gConParam.conData[u].conTau;
 	    }
 
-	  qsort (conTauArray, (gParam.numTaxaPair), sizeof (double),
+	  qsort (conTauArray, (gParam.numTaxonPairs), sizeof (double),
 		 comp_nums);
 
 
@@ -297,7 +303,7 @@ main (int argc, char *argv[])
 	  double tempTau = conTauArray[0];
 
 	  PSIarray[psiIndex] = 1;
-	  for (u = 1; u < gParam.numTaxaPair; u++)
+	  for (u = 1; u < gParam.numTaxonPairs; u++)
 	    {
 
 	      if (conTauArray[u] == tempTau)
@@ -317,7 +323,7 @@ main (int argc, char *argv[])
 
       int tauPsiIndex = 0;
       int tauCounter = 1;
-      for (taxonID = 0; taxonID < gParam.numTaxaPair; taxonID++)
+      for (taxonID = 0; taxonID < gParam.numTaxonPairs; taxonID++)
 	{
 	  //Check upperAncPopSize before doing anything
 	  /* ancestral population size prior */
@@ -333,9 +339,19 @@ main (int argc, char *argv[])
 
 	  constrainedParameter conTaxonPairDat;
 
+	  /* Population sizes during the bottleneck after the divergence of 2 pops.
+	     This is same as the population sizes, immediately after the 
+	     divergence/separation of the 2 pops. These are relative sizes. */
 	  BottStr1 = gsl_ran_flat (gBaseRand, 0.01, 1.0);
 	  BottStr2 = gsl_ran_flat (gBaseRand, 0.01, 1.0);
-	  /* timing of bottle neck */
+
+	  /* timing of bottle neck. This is the time when
+	     After the populations diverge, they experience pop. bottleneck.  Then
+	     the population size exponentially grow until current.
+	     BottleTime indicate the time when population start to grow.  
+	     BottleTime of 1 means, populations start to expand immediately after
+	     divergence. Closer to 0 means, populations hasn't started to expand
+	     until very recently.  */
 	  BottleTime = gsl_ran_flat (gBaseRand, 0.000001, 1.0);
 
 	  /* migration rate prior */
@@ -344,8 +360,8 @@ main (int argc, char *argv[])
 	  spTheta = gsl_ran_flat (gBaseRand, gParam.lowerTheta,
 				gParam.upperTheta);
 
-	  /* population sizes immediately after the separation, and 
-	     what it grows to after the bottleneck (today) */
+	  /* The ratio of current population sizes.  The populations exponentially
+	     grow to these sizes after bottkleneck is done. */
 	  N1 = gsl_ran_flat (gBaseRand, 0.01, 1.99);
 	  /* WORK: Mike is the upper limit of 1.99 ok, even for nuclear gene? NT Aug 26, 2008*/
 	  /*
@@ -510,22 +526,22 @@ main (int argc, char *argv[])
 	      locTheta = spTheta * taxonPairDat.seqLen * taxonPairDat.ploidy/2;
 	      
 	      /* We can send some extra info to msbayes.pl here */
-	      printf ("%lf %lf %lf %lf %lf %u ",
-		      gParam.upperTheta, locTheta, gaussTime, mig, recTbl[locus], taxonID + 1);
+	      printf ("%u %u %u ", lociTaxonPairIDcntr, taxonID+1, locus+1);
+	      lociTaxonPairIDcntr ++; /* seriral id: 1 to # taxon:locus pairs */
+	      printf ("%lf %lf %lf %lf ",
+		      locTheta, gaussTime, mig, recTbl[locus]);
 	      printf ("%lf %lf %lf ", BottleTime, BottStr1, BottStr2);
 	      printf ("%u %u %u %lf %lf %lf ",
 		      taxonPairDat.numPerTaxa,
 		      taxonPairDat.sample[0], taxonPairDat.sample[1],
 		      taxonPairDat.tstv[0], taxonPairDat.tstv[1],
 		      taxonPairDat.gamma);
-	      printf ("%u %u %lf %lf %lf ",
-		      taxonPairDat.seqLen, numTauClasses, N1, N2, Nanc);
+	      printf ("%u %lf %lf %lf ",
+		      taxonPairDat.seqLen, N1, N2, Nanc);
 	      printf ("%lf %lf %lf %lf ",
 		      taxonPairDat.freqA, taxonPairDat.freqC,
 		      taxonPairDat.freqG, taxonPairDat.freqT);
-
-	      printf ("%u\n", gParam.numLociTaxaPair);
-	      /* The last element numTaxaPair??? CHECK THIS */
+	      printf ("%u\n", numTauClasses);
 	      /* These feed into the system command line (msDQH) within
 	         the perl shell msbayes.  Some of these are used directly
 	         by msDQH, but some are also passed on to the sumstats
@@ -534,6 +550,17 @@ main (int argc, char *argv[])
 	    }
 	}
 
+      /* The followings are used to calculate prior, processed in msbayes.pl */
+      printf ("# TAU_PSI_TBL setting: %d realizedNumTauClasses: %u tauTbl:", 
+	      gParam.numTauClasses, numTauClasses);
+      for (zzz = 0; zzz < numTauClasses; zzz++)
+	printf (",%lf", tauArray[zzz]);
+      printf(" psiTbl:");
+      for (zzz = 0; zzz < numTauClasses; zzz++)
+	printf (",%d", PSIarray[zzz]);
+      printf("\n");
+
+#if 0
       fprintf (fpTauPsiArray, "%d", gParam.numTauClasses);
       if (gParam.numTauClasses > 0)
 	{			/* constrained psi analysis */
@@ -543,6 +570,7 @@ main (int argc, char *argv[])
 	    fprintf (fpTauPsiArray, "\t%d", PSIarray[zzz]);
 	}
       fprintf (fpTauPsiArray, "\n");
+#endif
     }
 
   fclose (fpTauPsiArray);

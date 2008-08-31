@@ -52,7 +52,7 @@ static int InteractiveSetupParams (runParameters * paramPtr);
 static void SetupParams (FILE * fp, runParameters * paramPtr);
 static int SetConfigFile (char *fName);
 static int SetPriorOutFile (char *fName);
-void PrintParam (void);
+void PrintParam (FILE *fp);
 static int InitMutPara (FILE * fp, mutParameterArray * mutParaArray);
 static int ProcessTaxonLociInMutParaArray (mutParameterArray * mpaPtr);
 static int CheckMutParaArray (mutParameterArray * mpaPtr, int index);
@@ -246,13 +246,14 @@ PrintUsage (char *progname)
 
   fprintf (stderr,
 	   "\nUsage: %s [--help] [--reps N] [--debug N] [--seed N] "
-	   "[--config <filename>] [--priorOut <filename>]\n\n"
+	   "[--config <filename>] [--priorOut <filename>] [--info]\n\n"
 	   "       help: Print this usage function (-h)\n"
 	   "       reps: Run N replications (-r)\n"
 	   "      debug: Set the debug level to N (larger N => more info) (-d)\n"
 	   "       seed: Set the pseudo-random number generator seed to N (-s)\n"
 	   "     config: Specify a configuration file (-c)\n"
-	   "     priorOut: Specify output file (-p)\n\n"
+	   "   priorOut: Specify output file (-p)\n"
+	   "       info: Print config and exit (-i)\n\n"
 	   "If config file is not given, the parameter values are set "
 	   "interactively.\n\n", p);
   exit (EXIT_FAILURE);
@@ -270,6 +271,7 @@ static struct option sim_opts[] = {
   {"reps", 1, NULL, 'r'},	/* how many reps */
   {"config", 1, NULL, 'c'},	/* which config file to use */
   {"priorOut", 1, NULL, 'p'},	/* prior output file */
+  {"info", 0, NULL, 'i'},       /* print config info and exit */
   {NULL, 0, NULL, 0}
 };
 
@@ -283,7 +285,7 @@ ParseCommandLine (int argc, char *argv[])
       int opt;
       int opt_index;
 
-      opt = getopt_long (argc, argv, "hd:s:r:c:p:", sim_opts, &opt_index);
+      opt = getopt_long (argc, argv, "hd:s:r:c:p:i", sim_opts, &opt_index);
       if (opt < 0)
 	break;
 
@@ -352,6 +354,9 @@ ParseCommandLine (int argc, char *argv[])
 		       optarg);
 	      PrintUsage (argv[0]);
 	    }
+	  break;
+	case 'i':              /* Print config info and exit */
+	  gParam.printConf = 1;
 	  break;
 	default:
 	  PrintUsage (argv[0]);	/* This function will exit */
@@ -654,15 +659,11 @@ SetupParams (FILE * fp, runParameters * paramPtr)
 			 &paramPtr->numLoci, &paramPtr->constrain,
 			 &paramPtr->subParamConstrain);
 
-
-
-
-
   if (retVal != 0)
     {
       if (debug_level)
 	{
-	  PrintParam ();
+	  PrintParam (stderr);
 	}
       fprintf (stderr, "Error reading in the parameter config file\n");
       exit (EXIT_FAILURE);
@@ -786,9 +787,9 @@ InitMutPara (FILE * fp, mutParameterArray * mpaPtr)
       return -1;
     }
 
-  gParam.numLociTaxaPair = mpaPtr->numElements;
+  gParam.numTaxonLocusPairs = mpaPtr->numElements;
 
-  if (gParam.numLociTaxaPair < 1)
+  if (gParam.numTaxonLocusPairs < 1)
     {
       /* didn't find any sample size, mut para entries */
       return -1;
@@ -892,9 +893,9 @@ ProcessTaxonLociInMutParaArray (mutParameterArray * mpaPtr)
     }
   mpaPtr->locTbl->numTaxon = numUniqTaxon;
   mpaPtr->locTbl->numLoci = numUniqLoc;
-  /* These two values need to be copied to numTaxaPair, numTaxaPair of gParam */
+  /* These two values need to be copied to numTaxonPairs, numTaxonPairs of gParam */
   /* remove earlier configuration of numLoci */
-  gParam.numTaxaPair = numUniqTaxon;
+  gParam.numTaxonPairs = numUniqTaxon;
   gParam.numLoci = numUniqLoc;
 
   mpaPtr->locTbl->tbl = (int **) calloc (numUniqTaxon, sizeof (int *));
@@ -1224,59 +1225,67 @@ ReadConLine (constrainedParameter * cpp, char *line, int ncol)
  * print out the value of parameters, useful for debugging
  */
 void
-PrintParam (void)
+PrintParam (FILE *fp)
 {
   int i;
 
-  fprintf (stderr, "## gParam ##\n");
-  fprintf (stderr, "lowerTheta =\t%lf\n", gParam.lowerTheta);
-  fprintf (stderr, "upperTheta =\t%lf\n", gParam.upperTheta);
-  fprintf (stderr, "upperTau =\t%lf\n", gParam.upperTau);
-  fprintf (stderr, "numTauClasses =\t%u\n", gParam.numTauClasses);
-  fprintf (stderr, "upperMig =\t%lf\n", gParam.upperMig);
-  fprintf (stderr, "upperRec =\t%lf\n", gParam.upperRec);
-  fprintf (stderr, "upperAncPopSize =\t%lf\n", gParam.upperAncPopSize);
-  fprintf (stderr, "reps =\t%llu\n", gParam.reps);
-  fprintf (stderr, "numLociTaxaPair =\t%u\n", gParam.numLociTaxaPair);
-  fprintf (stderr, "numTaxaPair =\t%u\n", gParam.numTaxaPair);
-  fprintf (stderr, "numLoci =\t%u\n", gParam.numLoci);
-  fprintf (stderr, "prngSeed =\t%ld\n", gParam.prngSeed);
-  fprintf (stderr, "configFile =\t%s\n", gParam.configFile);
-
-  fprintf (stderr, "## gMutParam ##\n");
+  fprintf (fp, "## gParam ##\n");
+  fprintf (fp, "lowerTheta =\t%lf\n", gParam.lowerTheta);
+  fprintf (fp, "upperTheta =\t%lf\n", gParam.upperTheta);
+  fprintf (fp, "upperTau =\t%lf\n", gParam.upperTau);
+  fprintf (fp, "upperMig =\t%lf\n", gParam.upperMig);
+  fprintf (fp, "upperRec =\t%lf\n", gParam.upperRec);
+  fprintf (fp, "upperAncPopSize =\t%lf\n", gParam.upperAncPopSize);
+  fprintf (fp, "reps =\t%llu\n", gParam.reps);
+  fprintf (fp, "numTaxonLocusPairs =\t%u\n", gParam.numTaxonLocusPairs);
+  fprintf (fp, "numTaxonPairs =\t%u\n", gParam.numTaxonPairs);
+  fprintf (fp, "numLoci =\t%u\n", gParam.numLoci);
+  fprintf (fp, "numTauClasses =\t%u\n", gParam.numTauClasses);
+  fprintf (fp, "prngSeed =\t%ld\n", gParam.prngSeed);
+  fprintf (fp, "configFile =\t%s\n", gParam.configFile);
+  fprintf (fp, "priorOutFile =\t%s\n", gParam.priorOutFile);
+  fprintf (fp, "scratchFile =\t%s\n", gParam.scratchFile);
+  fprintf (fp, "constrain =\t%u\n", gParam.constrain);
+  fprintf (fp, "printConf =\t%u\n", gParam.printConf);
+  
+  fprintf (fp, "## gMutParam ##\n");
   for (i = 0; i < gMutParam.numElements; i++)
     {
-      fprintf (stderr, "### taxon pair %d ###\n", i + 1);
-      fprintf (stderr, "numPerTaxa =\t%u\n", gMutParam.data[i].numPerTaxa);
-      fprintf (stderr, "sample =\t%u %u\n",
+      fprintf (fp, "### taxon:locus pair ID %d taxonID %u (%s) locusID %u (%s) ploidy %d ###\n",
+	       i + 1, gMutParam.data[i].taxonID+1, gMutParam.data[i].taxonName,
+	       gMutParam.data[i].locusID+1, gMutParam.data[i].locusName,
+	       gMutParam.data[i].ploidy);
+      fprintf (fp, "numPerTaxa =\t%u\n", gMutParam.data[i].numPerTaxa);
+      fprintf (fp, "sample =\t%u %u\n",
 	       gMutParam.data[i].sample[0], gMutParam.data[i].sample[1]);
-      fprintf (stderr, "tstv =\t%lf  %lf\n",
+      fprintf (fp, "tstv =\t%lf  %lf\n",
 	       gMutParam.data[i].tstv[0], gMutParam.data[i].tstv[1]);
-      fprintf (stderr, "gamma =\t%lf\n", gMutParam.data[i].gamma);
-      fprintf (stderr, "seqLen =\t%u\n", gMutParam.data[i].seqLen);
-      fprintf (stderr, "freq:A, C, G, T = %f, %f %f %f\n",
+      fprintf (fp, "gamma =\t%lf\n", gMutParam.data[i].gamma);
+      fprintf (fp, "seqLen =\t%u\n", gMutParam.data[i].seqLen);
+      fprintf (fp, "freq:A, C, G, T = %f, %f %f %f\n",
 	       gMutParam.data[i].freqA, gMutParam.data[i].freqC,
 	       gMutParam.data[i].freqG, gMutParam.data[i].freqT);
+      fprintf (fp, "fileName =\t%s\n", gMutParam.data[i].filename);
     }
 
-  fprintf (stderr, "## gConParam, for contraint only ##\n");
+  fprintf (fp, "## gConParam, for contraint only ##\n");
   for (i = 0; i < gConParam.conNumElements; i++)
     {
-      fprintf (stderr, "### taxon pair %d ###\n", i + 1);
-      fprintf (stderr, "tau = \t%lf\n", gConParam.conData[i].conTau);
-      fprintf (stderr, "bottle neck populations = \t%lf %lf\n",
+      fprintf (fp, "### taxon pair %d ###\n", i + 1);
+      fprintf (fp, "tau = \t%lf\n", gConParam.conData[i].conTau);
+      fprintf (fp, "bottle neck populations = \t%lf %lf\n",
 	       gConParam.conData[i].conBottPop1,
 	       gConParam.conData[i].conBottPop2);
-      fprintf (stderr, "bottle neck time = \t%lf\n",
+      fprintf (fp, "bottle neck time = \t%lf\n",
 	       gConParam.conData[i].conBottleTime);
-      fprintf (stderr, "migration rate= \t%lf\n",
+      fprintf (fp, "migration rate= \t%lf\n",
 	       gConParam.conData[i].conMig);
-      fprintf (stderr, "theta = \t%lf\n", gConParam.conData[i].conTheta);
-      fprintf (stderr, "current population sizes = \t%lf\n",
+      fprintf (fp, "theta = \t%lf\n", gConParam.conData[i].conTheta);
+      fprintf (fp, "current population sizes = \t%lf\n",
 	       gConParam.conData[i].conN1);
-      fprintf (stderr, "ancestral population size = \t%lf\n",
+      fprintf (fp, "ancestral population size = \t%lf\n",
 	       gConParam.conData[i].conNanc);
-      fprintf (stderr, "recombination rate = \t%lf\n",
+      fprintf (fp, "recombination rate = \t%lf\n",
 	       gConParam.conData[i].conRec);
     }
 }
@@ -1290,7 +1299,7 @@ int
 main (int argc, char *argv[])
 {
   LoadConfiguration (argc, argv);
-  PrintParam ();
+  PrintParam (stderr);
 
 }
 

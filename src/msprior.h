@@ -29,15 +29,16 @@ typedef struct
   double upperRec;		/* upper limit of prior dist'n for recombination rate */
   double upperAncPopSize;	/* upper limit of prior dist'n for ancestral pop size */
   unsigned long long reps;
-  unsigned int numLociTaxaPair; /* total number of taxa:loci */
-  unsigned int numTaxaPair;     /* number of unique taxon pairs */ 
-  unsigned int numTauClasses;
+  unsigned int numTaxonLocusPairs; /* total number of taxon:locus pairs */
+  unsigned int numTaxonPairs;     /* number of unique taxon pairs */ 
   unsigned int numLoci;         /* number of unique loci */
+  unsigned int numTauClasses;
   long prngSeed;
   char configFile[MAX_FILENAME_LEN];
   char priorOutFile[MAX_FILENAME_LEN];
   char scratchFile[MAX_FILENAME_LEN];
   unsigned int constrain;
+  int printConf;                /* 1: -i opt print the config and exit (default: 0) */
   char subParamConstrain[NUMBER_OF_CONPARAM];
 } runParameters;
 
