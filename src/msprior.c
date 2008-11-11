@@ -110,7 +110,7 @@ comp_nums (const void *doubleNum1, const void *doubleNum2)
 int
 main (int argc, char *argv[])
 {
-  double N1, N2, Nanc, *tauArray = NULL, spTheta, tauequalizer, gaussTime = 0.0,
+  double N1, N2, Nanc, *tauArray = NULL, *UnconstrainedTauArray = NULL, spTheta, tauequalizer, gaussTime = 0.0,
     mig, rec, BottStr1, BottStr2, BottleTime;
   double *recTbl;
   int tauClass, *PSIarray = NULL;
@@ -133,7 +133,6 @@ main (int argc, char *argv[])
       //initialize constrain indicator
       b_constrain = 1;
 
-
       //initialize subParamConstrainConfig array
       subParamConstrainConfig = calloc (NUMBER_OF_CONPARAM, sizeof (int));
       if (subParamConstrainConfig == NULL)
@@ -143,8 +142,7 @@ main (int argc, char *argv[])
 	  exit (EXIT_FAILURE);
 	}
 
-      int i = 0;
-
+      int i;
       for (i = 0; i < strlen (gParam.subParamConstrain); i++)
 	{
 	  char a = (gParam.subParamConstrain)[i];
@@ -198,9 +196,10 @@ main (int argc, char *argv[])
   /* Sizes are set to the number of taxon pairs (Max number of tau) */
   tauArray = calloc (gParam.numTaxonPairs, sizeof (double));
   PSIarray = calloc (gParam.numTaxonPairs, sizeof (int));
+  UnconstrainedTauArray = calloc(gParam.numTaxonPairs, sizeof (double));
 
   recTbl = calloc (gParam.numLoci, sizeof (double));
-  if (tauArray == NULL || PSIarray == NULL || recTbl == NULL)
+  if (tauArray == NULL || PSIarray == NULL || recTbl == NULL || UnconstrainedTauArray == NULL)
     {
       fprintf (stderr, "ERROR: Not enough memory for tauArray, PSIarray, or recTbl\n");
       exit (EXIT_FAILURE);
@@ -262,7 +261,9 @@ main (int argc, char *argv[])
 		  fprintf (stderr, "DEBUG:%u of %u categories:\t%lf\n",
 			   u, numTauClasses, tauArray[u]);
 		}
-	    }
+	    }// for
+	  
+          qsort(tauArray, numTauClasses, sizeof(double),comp_nums);
 
 	  /* create the recombination rate table for each gene */
 	  rec = gsl_ran_flat (gBaseRand, 0.0, gParam.upperRec);
@@ -277,11 +278,10 @@ main (int argc, char *argv[])
 	}
       else if ((b_constrain == 1) && (subParamConstrainConfig[0] == 1))
 	{
+	  double *conTauArray;
 
 	  for (u = 0; u < numTauClasses; u++)
 	    tauArray[u] = (gConParam.conData[u]).conTau;
-
-	  double *conTauArray = NULL;
 
 	  conTauArray = calloc (gParam.numTaxonPairs, sizeof (double));
 	  if (conTauArray == NULL)
@@ -297,7 +297,6 @@ main (int argc, char *argv[])
 
 	  qsort (conTauArray, (gParam.numTaxonPairs), sizeof (double),
 		 comp_nums);
-
 
 	  //initialize PSIarray
 	  double tempTau = conTauArray[0];
@@ -318,8 +317,27 @@ main (int argc, char *argv[])
 	  free (conTauArray);
 	}
 
-      //if(psiIndex != (numTauClasses-1) )
-      // fprintf(stderr,"numberPsiArray:%d and numTauClasses:%d have problems\n", psiIndex, numTauClasses );
+      if( (b_constrain == 0) || (subParamConstrainConfig[0] != 1) )
+	{
+	  int counter;
+          for (counter = 0; counter < numTauClasses; counter++) 
+	    {
+	      UnconstrainedTauArray[counter] = tauArray[counter];
+	      PSIarray[counter] = 1;
+	    }
+
+          for (counter = numTauClasses; 
+	       counter < gParam.numTaxonPairs; counter++)
+	    {
+	      tauClass = gsl_rng_uniform_int(gBaseRand, numTauClasses);
+	      UnconstrainedTauArray[counter] = tauArray[tauClass];
+	      PSIarray[tauClass] = PSIarray[tauClass] + 1;
+	    }
+
+	  /* randomly shuflling the order of UnconstrainedTauArray */
+	  gsl_ran_shuffle(gBaseRand, UnconstrainedTauArray, 
+			  gParam.numTaxonPairs, sizeof (double));
+        }// if     
 
       int tauPsiIndex = 0;
       int tauCounter = 1;
@@ -437,17 +455,8 @@ main (int argc, char *argv[])
 
 	  if ((b_constrain == 0) || (subParamConstrainConfig[0] != 1))
 	    {
-	      // 1-31-2007 it will use new way of picking tau
-	      /* WORK: this method has a bias in multi locus case NT*/
-	      if (taxonID < numTauClasses)
-		tauClass = taxonID;
-	      else
-		tauClass = gsl_rng_uniform_int (gBaseRand, numTauClasses);
-
-	      gaussTime = tauArray[tauClass];
-	      PSIarray[tauClass] = PSIarray[tauClass] + 1;
-
-	      //printf("picking index: %d, gaussTime: %lf  ", tauClass, tauArray[tauClass]);
+	      gaussTime = UnconstrainedTauArray[taxonID];
+              fprintf(stderr, "%lf\n", gaussTime);
 	    }
 	  else if ((b_constrain == 1) && (subParamConstrainConfig[0] == 1))
 	    {
@@ -575,6 +584,7 @@ main (int argc, char *argv[])
 
   fclose (fpTauPsiArray);
   free (tauArray);
+  free (UnconstrainedTauArray);
   free (PSIarray);
   free (recTbl);
   free (subParamConstrainConfig);
