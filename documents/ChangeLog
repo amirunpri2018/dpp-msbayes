@@ -1,3 +1,9 @@
+* Release Version 20081106
+- msprior.c
+ - When Numtau (Psi) is constrained, Tau 1 should always be < Tau2 etc 
+   (If Psi constrained to 2, then Tau1 < Tau2 < Tau3 <Tau ).  This was
+   not working in previous released version 20080613.  This is fixed.
+
 * Release Version 20080515
 - obsSumStats.pl
  -   Output contains a header, easier to identify which column

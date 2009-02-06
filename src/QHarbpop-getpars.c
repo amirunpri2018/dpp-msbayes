@@ -386,11 +386,20 @@ getpars (int argc, char *argv[], struct parameters *pP)
 			  else
 			    pP->config[ii] = atoi (argv[arg++]);
 			  configsum += pP->config[ii];
+			  /* when config doesn't add up to nsam, I think it should stop here, Naoki, Nov 12 2008*/
+			  /*
 			  if (configsum == pP->nsam)
 			    break;
+			  */
 			}
+		      if (configsum != pP->nsam) {
+			fprintf(stderr, "\nERROR: numbers of samples in subpops (config[]) don't add up to nsam in option -D \n\n");
+			argnoerr("D option config[]", *pP);			
+		      }
+		      /* The following doesn't make sense, so commented out, Naoki Nov 12 2008
 		      for (++ii; ii < (*pDint)->npops; ii++)
 			pP->config[ii] = 0;
+		      */
 		    }
 		}
 	      else if ((*pDint + i)->npops > 1)
@@ -864,7 +873,7 @@ usage ()
   fprintf (stderr,
 	   "\t                   ( 'N1' | 'Nc' N[] | Nr11 Np11 [ Nr12 Np12 ... ] ) t1\n");
   fprintf (stderr,
-	   "\t        [ npops2 [ a2[][] Mpattern ( M ) ( N ) ] t3 ]\n");
+	   "\t        [ npops2 [ a2[][] Mpattern ( M ) ( N ) ] t2 ]\n");
   fprintf (stderr, "\t        [ ... ]\n");
   fprintf (stderr,
 	   "\t -P (print the parameters in human-readable format and exit(0))\n");

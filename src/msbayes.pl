@@ -26,7 +26,7 @@ my $usage="Usage: $0 [-hd] [-s seed] [-r numSims] [-c config] [-o outputFileName
     "  -r: number of repetitions".
     "  -c: configuration file for msprior.  Parameters setup interactively,\n".
     "      if this option is not specified\n" .
-    "  -o: output file name\n" .
+    "  -o: output file name.  If not specified, output is STDOUT\n" .
     "  -s: set the initial seed (but not verbose like -d)\n" .
     "      By default (without -s), unique seed is automaically set from time\n".
     "  -d: debug (msprior and msDQH uses the same initial seed = 1)\n";
@@ -103,43 +103,53 @@ END {                   # delete the temp file when done
 $tmpPriorOutfh->close();
 $options = $options . " --priorOut $tmpPriorOut ";
 
-
-#### setting up output filename
-my $outFile;
+#### setting up final output filename
+my $outFile = '-';  # by default, print out to STDOUT
 if(defined($opt_o)) {
     $outFile = $opt_o;
     CheckNBackupFile($outFile);
-} else {
-    $outFile = InteractiveSetup();
-}
+} 
 
-my $mspriorConfOut = `$msprior $options --info`;  # getting the config information
+open FINAL_OUT, ">$outFile" || die "Can't open $outFile";
 
+# obtain configuration from msprior, which read in the config file
+# and return the configuration
+my $mspriorConfOut = `$msprior $options --info`;  # getting the config info
 my %mspriorConf = ExtractMspriorConf($mspriorConfOut);
-# my $numTaxonLocusPairs = $mspriorConf{'numTaxonLocusPairs'};
-# $numTaxonLocusPairs is the total number of taxa:locus pairs.
 
-my $new = 1;
 open (RAND, "$msprior $options |") || 
     die "Hey buddy, where the hell is \"msprior\"?\n";
 
-## Note this file is used as temp file in sumstats.  We need to clean it
-## before computation if there is a leftover.
-CheckNBackupFile("PARarray-E");
-
 my @msOutCache = ();
 my @priorCache = ();
-my $msCacheSize = $mspriorConf{'numTaxonLocusPairs'} * 2; # USE SOME BIGGER NUM HERE
 
 my $prepPriorHeader = 1;
 
-# used to print out the last simulations
+my $msCacheSize = $mspriorConf{'numTaxonLocusPairs'} * 500; # ADJUST MULTIPLIER to reduce I/O
+# $numTaxonLocusPairs is the total number of taxa:locus pairs.  If
+# taxon pair 1 have 3 loci, taxon pair 2 have 4 loci, and taxon pair 3
+# have 1 locus, the 2nd term = 8 So $totalNumSims are the number of
+# times msDQH will be invoked.
+
 my $counter  = 0;
-my $totalNumSims = $mspriorConfOut{reps} * $mspriorConfOut{numTaxonLocusPairs};
+my $totalNumSims = $mspriorConf{reps} * $mspriorConf{numTaxonLocusPairs};
+# This is used to print out the last simulations.
 
-# WORK HERE, currently it output to screen, handle how to deal with output file
-# open FINAL_OUT ">$mspriorConfOut{}" || die "Can't open;
-
+#### Overview of what's going on in the following while loop
+# - msprior spits out a line of the prior parameters drawn from the prior distn.
+# - Each line contains all of the required parameter for 1 msDQH run (= 1 gene 
+#   of 1 taxon pair)
+# - msDQH will run with the specified parameter.  The output of msDQH is 
+#   stored as a single string, and it will be added to @msOutCache array
+# - After every n parameter lines (n = sum n_i, where n_i are the number of 
+#   genes used for i-th taxon pair), msprior print out some information in the
+#   following format:
+#  '# TAU_PSI_TBL setting: 0 realizedNumTauClasses: 2 tauTbl:,1.48,7.92 psiTbl:,1,2'
+# - This line indicates that one set of simulations are run for total n genes
+# - When certain number of runs (specified by $msCacheSize above), sumstats
+#   will be run to process the accumulated outputs of msDQH
+# - Then the results of sumStats (and prior informations) will be 
+#   outputed to the final file
 my $headerOpt = " -H ";
 while (<RAND>) {
     s/^\s+//; s/\s+$//; 
@@ -151,16 +161,15 @@ while (<RAND>) {
 	    $totSampleNum, $sampleNum1, $sampleNum2, $tstv1, $tstv2, $gamma,
 	    $seqLen, $N1, $N2, $Nanc, 
 	    $freqA, $freqC, $freqG, $freqT, $numTauClasses) = split /\s+/;
-	
 	# $numTauClasses can be removed later
-	
+## the output line of msprior contains following parameters in this order	
 #  0 $taxonLocusPairID, $taxonID, $locusID, $theta, $gaussTime, 
 #  6 $mig, $rec, $BottleTime, $BottStr1, $BottStr2,
 # 11 $totSampleNum, $sampleNum1, $sampleNum2, $tstv1, $tstv2, 
 # 16 $gamma, $seqLen, $N1, $N2, $Nanc, 
 # 21 $freqA, $freqC, $freqG, $freqT
 	
-	# The duration of bottleneck after divergence before the population growth
+	# The duration of bottleneck after divergence before the pop. growth
 	my $durationOfBottleneck = $gaussTime - $BottleTime;
 	
 	# option for -r was fixed to 0, so changed to $rec, then forcing
@@ -168,7 +177,8 @@ while (<RAND>) {
 	$rec = 0;
 	
 	$SEED = int(rand(2**32));  # msDQH expect unsigned long, the max val (2**32-1) is chosen here
-		
+	
+	# At the bottom of this script, msDQH options are explained.
 	my $ms1run = `$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 6 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $durationOfBottleneck 1 Nc $Nanc $numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonLocusPairID 1 Nc $Nanc $mspriorConf{numTaxonLocusPairs}`;
 
 	$ms1run = "# taxonID $taxonID locusID $locusID\n" . $ms1run;
@@ -178,12 +188,9 @@ while (<RAND>) {
 	next;
     }
     
-    # When reached here, TAU_PSI_TBL line
-    # At the end of 1 repetition (a set of simulations for all taxon:locus),
-    # msprior print outs the following line:
-    # # TAU_PSI_TBL setting: 0 realizedNumTauClass: 3 tauTbl:,8.713673,4.981266,4.013629 psiTbl:,1,1,1
-    # Processing this line to prepare prior columns.
-
+    # When reached here, msprior printed a TAU_PSI_TBL line which looks like:
+    # # TAU_PSI_TBL setting: 0 realizedNumTauClass: 3 tauTbl:,8.71,4.92,4.01 psiTbl:,1,1,1
+    # Processing this line to prepare 'prior columns' for the final output
     my ($tauClassSetting, $numTauCla);
     if (/setting:\s+(\d+)\s+realizedNumTauClasses:\s+(\d+)\s+tauTbl:,([\d\.,]+)\s+psiTbl:,([\d\.,]+)/) {
 	$tauClassSetting = $1;
@@ -219,14 +226,15 @@ while (<RAND>) {
 	    @tmpPrior = push @tmpPrior, @tauTbl, @psiTbl;
 	}
 	
-	# PRI.Psi PRI.var.t PRI.E.t PRI.omega (= #tauClasses, Var, Mean, weirdCV of tau)
+	# PRI.Psi PRI.var.t PRI.E.t PRI.omega 
+	#  (= #tauClasses, Var, Mean, weirdCV of tau)
 	push @tmpPrior, SummarizeTau(\@tauTbl, \@psiTbl);
 
 	push @priorCache, join("\t", @tmpPrior);
     } else {
 	die "ERROR: TAU_PSI_TBL line is weird.\n$_\n";
     }
-    
+
     # Check if it is time to run sumstats
     if (@msOutCache % $msCacheSize == 0 || $counter == $totalNumSims) {
 	# getting read write access to sumstatsvector
@@ -254,125 +262,16 @@ while (<RAND>) {
 	
 	# print out prior etc.
 	for my $index (0..$#priorCache) {
-	    # print FINAL_OUT "$priorCache[$index]\t$ssOut[$index]";
-	    print "$priorCache[$index]\t$ssOut[$index]";
+	    print FINAL_OUT "$priorCache[$index]\t$ssOut[$index]";
 	}
 	
 	@msOutCache = ();  # clear the cache
 	@priorCache = ();
     }
-
-#    system("$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 6 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $durationOfBottleneck 1 Nc $Nanc $numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonLocusPairID 1 Nc $Nanc $mspriorConf{numTaxonLocusPairs} | $sumstatsvector -T $mspriorConf{upperTheta} --tempFile $tmpSumStatVectScratch $headerOpt >> $tmpMainOut");
-
-# minor change 9/8/06; $N1 $N1 $N2 $N2 to $N1 $BottStr1 $N2 $BottStr2
-
-# The command line format is the same as Dick Hudson's ms except for
-# everything after -D. Everything after -D specifies what happens
-# during X number of time intervals. -D 6 2 means 6 intervals starting
-# with 2 populations at time 0 (going backwards in time).
-
-# The rest -D is explained using the following template:
-#
-# -D 6 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $N1 $N2 $N2 $BottleTime \
-#  -2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $durationOfBottleneck 1 Nc $Nanc \
-#   -$numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonLocusPairID 1 Nc
-#    -$Nanc $mspriorConf{numTaxonLocusPairs}
-#
-# $sampleNum1 $sampleNum2; the 2 sample sizes of the 2 populations
-
-# 0 I $mig;  $mig is migration rate under an island model of migration
-
-# $N1 $N1 $N2 $N2; Relative size pop1 at begening of timestep,
-#   Relative size pop1 at end of timestep, Relative size pop2 at
-#   begening of timestep, Relative size pop2 at end of timestep
-
-# $BottleTime; length of first time step (begining of bottleneck going
-#    backwards in time)
-
-# 2 1 0 0 1; this is the admixture matrix a[][]; this allows
-#   population divergence or admixture, or can specify neither occuring
-#   during the #time step. In this case nothing happens (2 populations
-#   become two #populations)
-#   1 0
-#   0 1
-#   in a[][] this means all of pop1 goes into pop1, and all of pop2 goes
-#   into pop 2 (2 populations remain isolated)
-#   If we had:
-#   2 1 0 1 0 0 1
-#   1 0
-#   1 0
-#   0 1
-#   this would mean that at first we have 3 populaations and then all of
-#   pop2 fuses with pop1 (going back in time and hence divergence), and
-#   pop3 would remain intact
-
-# 0 I $mig;  the migration region of the next time step
-
-# Nc; Nc specifies that all populations have constant size in this
-#   next time step
-
-# $BottStr1 $BottStr2; these are the two constant relative sizes of
-#   the two populations during this next time step.
-
-# $durationOfBottleneck; this is the length of this next time step (in this case it
-#   ends at the divergence time)
-
-# 1 Nc $Nanc $numTauClasses; specifies that the next time step has
-#   only one population (divergence) and the population is constant in
-#   size through the time step
-#     $Nanc; relative size of this ancestral population
-#     $numTauClasses; this is the length of the time step, but has a 2nd
-#        meaning unrelated to msDQH. the actual value gets passed on to the
-#        summary stats program for parameter estimation purposes. The actual
-#        value is somewhat arbitray for msDQH because there is only one
-#        population remaining going back in time.  The length of the period
-#        can be infinite.
-
-# Three more time-steps use the same "1 Nc $Nanc $length" pattern,
-# where "length" has a 2nd use
-
-# If one wants to use msDQH independently on the command line, one can
-# add "-P" to see what population model is being used.  Example below
-#
-# ./msDQH 35 1 -t 20.0 -Q 5.25 0.25 0.25 0.25 0.25 -H 999.000000 -r 0 1000 -D 5 2 20 15 0 I 0.000000 0.8 0.05 0.9 0.05 6.03 2 1 0 0 1 0 I 0.000000 Nc 0.05 0.05 0.001 1 Nc 0.42 6 1 Nc 0.42 1000 1 Nc 0.42 1 -P
- 
-# Output example using "-P"
-
-# In the below example 2 populations (20 and 15 individuals) diverged
-# from a common ancestor of relative size 0.42 at the third time step
-
-#./msDQH 35 1 -t 20.0 -Q 5.25 0.25 0.25 0.25 0.25 -H 999.000000 -r 0 1000 -D 5 2 20 15 0 I 0.000000 0.8 0.05 0.9 0.05 6.03 2 1 0 0 1 0 I 0.000000 Nc 0.05 0.05 0.001 1 Nc 0.42 6 1 Nc 0.42 1000 1 Nc 0.42 1 -P 
-#./msDQH nsam 35 howmany 1
-#  theta 20.00 segsites 0
-#seQmut 1 output 0
-#tstvAG CT 5.25 5.25, freqACGT 0.25 0.25 0.25 0.25
-#gammaHet alpha 999.00
-#  r 0.00 f 0.00 tr_len 0.00 nsites 1000
-#  Dintn 5 
-#    Dint0 npops 2
-#      config[] 20 15 
-#      Mpattern 0
-#      M[][] 0.00 0.00 0.00 0.00 
-#      (Nrec_Npast)[] 0.80 0.05 0.90 0.05 
-#       tpast 6.03
-#    Dint1 npops 2
-#      a[][] 1.00 0.00 0.00 1.00 
-#      Mpattern 0
-#      M[][] 0.00 0.00 0.00 0.00 
-#      (Nrec_Npast)[] 0.05 0.05 0.05 0.05 
-#       tpast 6.03
-#    Dint2 npops 1
-#      (Nrec_Npast)[] 0.42 0.42 
-#       tpast 12.03
-#    Dint3 npops 1
-#      (Nrec_Npast)[] 0.42 0.42 
-#       tpast 1012.03
-#    Dint4 npops 1
-#      (Nrec_Npast)[] 0.42 0.42 
-#       tpast 1013.03
 }
 
 close RAND;
+close FINAL_OUT;
 
 if (0) {  # NOT NEEDED ANYMORE
 # combine the two outputfile to create the final output file
@@ -391,7 +290,7 @@ if ($rc != 1) {
 
 exit(0);
 
-# interactively setting up.
+# interactively setting up. Not used anymore.
 sub InteractiveSetup {
     my $outFileName;
 
@@ -528,7 +427,7 @@ sub ExtractMspriorConf {
     my %result =();
 
     my @generalKwdArr = qw(lowerTheta upperTheta upperTau upperMig upperRec upperAncPopSize reps numTaxonLocusPairs numTaxonPairs numLoci numTauClasses prngSeed constrain);
-    
+
     for my $kkk (@generalKwdArr) {
 	if ($mspriorConfOut =~ /\s*$kkk\s*=\s*([^\s\n]+)\s*\n/) {
 	    $result{$kkk} = $1;
@@ -584,3 +483,114 @@ sub SummarizeTau {
     
     return ($numTauClasses, $var, $mean, $weirdCV);
 }
+
+
+#### Explanation of msDQH commandline options by Eli
+#    system("$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 6 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $durationOfBottleneck 1 Nc $Nanc $numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonLocusPairID 1 Nc $Nanc $mspriorConf{numTaxonLocusPairs} | $sumstatsvector -T $mspriorConf{upperTheta} --tempFile $tmpSumStatVectScratch $headerOpt >> $tmpMainOut");
+
+# minor change 9/8/06; $N1 $N1 $N2 $N2 to $N1 $BottStr1 $N2 $BottStr2
+
+# The command line format is the same as Dick Hudson's ms except for
+# everything after -D. Everything after -D specifies what happens
+# during X number of time intervals. -D 6 2 means 6 intervals starting
+# with 2 populations at time 0 (going backwards in time).
+
+# The rest -D is explained using the following template:
+#
+# -D 6 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $N1 $N2 $N2 $BottleTime \
+#  -2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $durationOfBottleneck 1 Nc $Nanc \
+#   -$numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonLocusPairID 1 Nc
+#    -$Nanc $mspriorConf{numTaxonLocusPairs}
+#
+# $sampleNum1 $sampleNum2; the 2 sample sizes of the 2 populations
+
+# 0 I $mig;  $mig is migration rate under an island model of migration
+
+# $N1 $N1 $N2 $N2; Relative size pop1 at begening of timestep,
+#   Relative size pop1 at end of timestep, Relative size pop2 at
+#   begening of timestep, Relative size pop2 at end of timestep
+
+# $BottleTime; length of first time step (begining of bottleneck going
+#    backwards in time)
+
+# 2 1 0 0 1; this is the admixture matrix a[][]; this allows
+#   population divergence or admixture, or can specify neither occuring
+#   during the #time step. In this case nothing happens (2 populations
+#   become two #populations)
+#   1 0
+#   0 1
+#   in a[][] this means all of pop1 goes into pop1, and all of pop2 goes
+#   into pop 2 (2 populations remain isolated)
+#   If we had:
+#   2 1 0 1 0 0 1
+#   1 0
+#   1 0
+#   0 1
+#   this would mean that at first we have 3 populaations and then all of
+#   pop2 fuses with pop1 (going back in time and hence divergence), and
+#   pop3 would remain intact
+
+# 0 I $mig;  the migration region of the next time step
+
+# Nc; Nc specifies that all populations have constant size in this
+#   next time step
+
+# $BottStr1 $BottStr2; these are the two constant relative sizes of
+#   the two populations during this next time step.
+
+# $durationOfBottleneck; this is the length of this next time step (in this case it
+#   ends at the divergence time)
+
+# 1 Nc $Nanc $numTauClasses; specifies that the next time step has
+#   only one population (divergence) and the population is constant in
+#   size through the time step
+#     $Nanc; relative size of this ancestral population
+#     $numTauClasses; this is the length of the time step, but has a 2nd
+#        meaning unrelated to msDQH. the actual value gets passed on to the
+#        summary stats program for parameter estimation purposes. The actual
+#        value is somewhat arbitray for msDQH because there is only one
+#        population remaining going back in time.  The length of the period
+#        can be infinite.
+
+# Three more time-steps use the same "1 Nc $Nanc $length" pattern,
+# where "length" has a 2nd use
+
+# If one wants to use msDQH independently on the command line, one can
+# add "-P" to see what population model is being used.  Example below
+#
+# ./msDQH 35 1 -t 20.0 -Q 5.25 0.25 0.25 0.25 0.25 -H 999.000000 -r 0 1000 -D 5 2 20 15 0 I 0.000000 0.8 0.05 0.9 0.05 6.03 2 1 0 0 1 0 I 0.000000 Nc 0.05 0.05 0.001 1 Nc 0.42 6 1 Nc 0.42 1000 1 Nc 0.42 1 -P
+ 
+# Output example using "-P"
+
+# In the below example 2 populations (20 and 15 individuals) diverged
+# from a common ancestor of relative size 0.42 at the third time step
+
+#./msDQH 35 1 -t 20.0 -Q 5.25 0.25 0.25 0.25 0.25 -H 999.000000 -r 0 1000 -D 5 2 20 15 0 I 0.000000 0.8 0.05 0.9 0.05 6.03 2 1 0 0 1 0 I 0.000000 Nc 0.05 0.05 0.001 1 Nc 0.42 6 1 Nc 0.42 1000 1 Nc 0.42 1 -P 
+#./msDQH nsam 35 howmany 1
+#  theta 20.00 segsites 0
+#seQmut 1 output 0
+#tstvAG CT 5.25 5.25, freqACGT 0.25 0.25 0.25 0.25
+#gammaHet alpha 999.00
+#  r 0.00 f 0.00 tr_len 0.00 nsites 1000
+#  Dintn 5 
+#    Dint0 npops 2
+#      config[] 20 15 
+#      Mpattern 0
+#      M[][] 0.00 0.00 0.00 0.00 
+#      (Nrec_Npast)[] 0.80 0.05 0.90 0.05 
+#       tpast 6.03
+#    Dint1 npops 2
+#      a[][] 1.00 0.00 0.00 1.00 
+#      Mpattern 0
+#      M[][] 0.00 0.00 0.00 0.00 
+#      (Nrec_Npast)[] 0.05 0.05 0.05 0.05 
+#       tpast 6.03
+#    Dint2 npops 1
+#      (Nrec_Npast)[] 0.42 0.42 
+#       tpast 12.03
+#    Dint3 npops 1
+#      (Nrec_Npast)[] 0.42 0.42 
+#       tpast 1012.03
+#    Dint4 npops 1
+#      (Nrec_Npast)[] 0.42 0.42 
+#       tpast 1013.03

@@ -456,7 +456,6 @@ main (int argc, char *argv[])
 	  if ((b_constrain == 0) || (subParamConstrainConfig[0] != 1))
 	    {
 	      gaussTime = UnconstrainedTauArray[taxonID];
-              fprintf(stderr, "%lf\n", gaussTime);
 	    }
 	  else if ((b_constrain == 1) && (subParamConstrainConfig[0] == 1))
 	    {
