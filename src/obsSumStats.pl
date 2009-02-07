@@ -59,8 +59,8 @@ my $usage = "Usage: $0 [-h] [-t headerTmplFile] SampleSize_MuModel_Vector\n".
 
 use strict;
 use IO::File;
-use POSIX qw(tmpnam);
 use Getopt::Std;
+use IPC::Open2;
 
 # Adding the following paths to @INC, so we can find the R scripts.
 # The R scripts should be in the same directory as this perl script,
@@ -98,8 +98,8 @@ if (@ARGV > 0) {
 
 my @obsSumStats = CreateObsSumStats($filename, $headerTmpl);
 
-print join "\n", @obsSumStats;
-    
+print join "", @obsSumStats;
+
 exit;
 
 ### This is the actual main function
@@ -107,7 +107,12 @@ sub CreateObsSumStats {
     my ($fileName, $header) = @_;
 
     my @master_matrix = ReadInMaster($fileName);
-    my $numTaxonPairs = @master_matrix;
+
+    my ($numTaxonPairs, $numLoci, $taxonIDHashRef, $locusIDHashRef) = 
+	TaxonLocusInfo(@master_matrix);
+    my %taxonID = %$taxonIDHashRef;
+    my %locusID = %$locusIDHashRef;
+    my $numTaxonLocusPairs = @master_matrix;
     # create a matrix from the masterinfile (=$fileName) data.
     # In this master matrix following info will be used later:
     #	v DUM_TotSampleSize = column 0 # total sample
@@ -121,117 +126,122 @@ sub CreateObsSumStats {
     my @directory_files = glob("*");
 
     # get the header from a file
-    # probably we don't need this
+    # probably we don't need this, but keep it for now
     if (defined($opt_t)) {
 	$header = GetFileContentsAsScalar($opt_t);	
     }
-    
-    ## set a temporary file, used as a input for msSumStats
-    my ($fh, $tmpFile);
-    do {$tmpFile = tmpnam()} 
-    until $fh = IO::File->new($tmpFile, O_RDWR|O_CREAT|O_EXCL);
-    $fh->close;
-    # when we exit or die, automatically delete this temp file
-    END{if (defined($tmpFile) && -e $tmpFile) { unlink($tmpFile) || die "Couldn't unlink $tmpFile : $!"}}
-    #print "TMP file = $tmpFile\n";  #debug
-
-    my ($scratchfh, $scratchFile);
-    do {$scratchFile = tmpnam()} 
-    until $scratchfh = IO::File->new($scratchFile, O_RDWR|O_CREAT|O_EXCL);
-    $scratchfh->close();
-    # when we exit or die, automatically delete this temp file
-    END{if (defined($scratchFile) && -e $scratchFile) { unlink($scratchFile) || die "Couldn't unlink $scratchFile : $!"}}
-    
+        
     # Each row in @master_matrix corresponds to an alignment file
     # For each row, modify the header template with appropriate values of
     # @master_matrix, and write to $tmpFile.  This file get fed to
     # sumstats program, and receive the results with @sumStatsResultArr.
     my @sumStatsResultArr = ();
-     for (my $i = 0; $i < @master_matrix; ++ $i) {
-	 ## the following 5 columns are relevant
-	 my ($totSampleSize, $sampleSize1, $sampleSize2) = 
-	     @{$master_matrix[$i]}[0..2];
-	 my ($seqLen, $taxonName) = @{$master_matrix[$i]}[4,8];
-	 
-	 ### read in the aligned sequence file, and process it.
-	 # column 9 (index 8) contains a name for a taxon-pair
-	 my $fileName = FindSeqFile($taxonName, \@directory_files);
-	 if ($fileName eq "") {
-	     die "ERROR: Couldn't open a file for taxon, $taxonName\n";
-	 }
-	 
-	 my @alignedSeq =  (IsFASTA($fileName)) ? ReadInFASTA($fileName) : 
-	     ReadInTxt($fileName);
-	 
-	 # '?' attached to shorter seqs
-	 @alignedSeq = AdjustSeqLength(@alignedSeq);
-	 
-	 unless  (defined($opt_g)) {
-	     @alignedSeq = RemoveSitesWithGaps(\@alignedSeq);
-	 }
-	 @alignedSeq = ExtractVarSites(\@alignedSeq);
-	 @alignedSeq = GetSeqDat(@alignedSeq); # get rid of the sequence names
-	 
-	 ### prepare the header file for this taxon pair
-	 my $serialNum = $i + 1;
-	 my $numSeqSites = length($alignedSeq[0]);  # number of variable sites
-	 
-	 my $positionString = "";
-	 foreach my $srNum (1..$numSeqSites) {
-	     $positionString .= sprintf("%7d", $srNum);
-	 }
-	 
-	 my $header_interim = $header;
-	 $header_interim =~ s/DUM_TotSampleSize/$totSampleSize/g;
-	 $header_interim =~ s/DUM_SampleSize1/$sampleSize1/g;
-	 $header_interim =~ s/DUM_SampleSize2/$sampleSize2/g;
-	 $header_interim =~ s/DUM_SeqLen/$seqLen/g;
-	 $header_interim =~ s/DUM_NumSeqSites/$numSeqSites/g;
-	 $header_interim =~ s/DUM_TaxonPairID/$serialNum/g;
-	 $header_interim =~ s/DUM_NumTaxonPairs/$numTaxonPairs/g;
-	 # Mike said the next one doesn't matter, but I'm doing it anyway.
-	 # It is supposed to contain site positions of mutations
-	 $header_interim =~ s/DUM_positions/$positionString/g;
-	 
-	 ### some consistency check
-	 if (@alignedSeq != $totSampleSize) {
-	     die "ERROR: taxon, $taxonName, should have " .
-		 "$totSampleSize samples.\nBut ", scalar(@alignedSeq),
-		 " samples are in the file $fileName\n";
-	 }
-	 if ($totSampleSize != $sampleSize1+$sampleSize2){
-	     die "ERROR: Total sample size ($totSampleSize) for taxon $taxonName".
-		 "should be \n       the sum of sampleSizes for the pairs: ".
-		 "$sampleSize1 + $sampleSize2.\n".
-		 "Check the sampleSize/mutModel File\n";
-	 }
-	 if ($seqLen < $numSeqSites) {
-	     die "ERROR: For taxon, $taxonName, lengths of sequences ($seqLen) " .
-		 "should be\n       longer than number of variable sites " .
-		 "($numSeqSites)\n";
-	 }
 
-	 ### write temporary file as input for sumstat
-	 # Basically this file contains the header (fake msDQH command
-	 # line) with appropriate values.  After the header, extracted
-	 # variable sites data are attached.  It immitates the output
-	 # of msDQH
-	 open (TMP, ">$tmpFile") || die "Can't open the temp file\n";
-	 print TMP $header_interim, "\n", join("\n", @alignedSeq), "\n";
-	 close (TMP);
+    # Stores a string for input of sumstatvector
+    # Basically the following var contains fake outputs of msDQH,
+    # including the header (fake msDQH command line) with appropriate
+    # values.  After the header, extracted variable sites data are
+    # attached.
+    my $sumStatInput = "# BEGIN MSBAYES\n" .
+	"# numTaxonLocusPairs $numTaxonLocusPairs ".
+	"numTaxonPairs $numTaxonPairs numLoci $numLoci\n";
+    for (my $i = 0; $i < @master_matrix; ++ $i) {
+	## Extracting relevant columns
+	my ($taxonName, $locusName, $type) =  @{$master_matrix[$i]}[0..2];
+	my ($totSampleSize, $sampleSize1, $sampleSize2) = 
+	    @{$master_matrix[$i]}[3..5];
+	my ($seqLen, $fastaFile) = @{$master_matrix[$i]}[7,11];
+	
+	$sumStatInput .= "# taxonID $taxonID{$taxonName} locusID " .
+	    "$locusID{$locusName}\n";
+	
+	### read in the aligned sequence file, and process it.
+	# column 12 (index 11) contains a file name for a taxon-pair
+	my $fileName = FindSeqFile($fastaFile, \@directory_files);
+	if ($fileName eq "") {
+	    die "ERROR: Couldn't open a file for taxon, $fastaFile\n";
+	}
+	
+	my @alignedSeq =  (IsFASTA($fileName)) ? ReadInFASTA($fileName) : 
+	    ReadInTxt($fileName);
+	
+	# '?' attached to shorter seqs
+	@alignedSeq = AdjustSeqLength(@alignedSeq);
+	
+	unless  (defined($opt_g)) {  # sites with any gaps are removed
+	    @alignedSeq = RemoveSitesWithGaps(\@alignedSeq);
+	}
+	@alignedSeq = ExtractVarSites(\@alignedSeq);
+	@alignedSeq = GetSeqDat(@alignedSeq); # get rid of the sequence names
+	
+	### prepare the header file for this taxon pair
+	my $serialNum = $i + 1;
+	my $numSeqSites = length($alignedSeq[0]);  # number of variable sites
+	
+	# printing this to make sure correct files are read in.
+	warn "INFO: taxon:locus = $taxonName:$locusName\tfile= $fileName\t".
+	    "# variable sites = $numSeqSites\n";
 
-	 warn "INFO: taxon= $taxonName\tfile= $fileName\t# variable sites" .
-	     "= $numSeqSites\n";
-	 
-	 ### run sumstat.
-	 my $sumStatsResults = `$sumStatsBin -H --tempFile $scratchFile < $tmpFile`;
-	 
-	 if ($sumStatsResults !~ /^\s*$/) {  # ignoring empty returned results
-	     push @sumStatsResultArr, $sumStatsResults;
-	 }
-     }
+	my $positionString = "";  # making fake positions
+	foreach my $srNum (1..$numSeqSites) {
+	    $positionString .= sprintf("%7d", $srNum);
+	}
+	
+	my $header_interim = $header;
+	$header_interim =~ s/DUM_TotSampleSize/$totSampleSize/g;
+	$header_interim =~ s/DUM_SampleSize1/$sampleSize1/g;
+	$header_interim =~ s/DUM_SampleSize2/$sampleSize2/g;
+	$header_interim =~ s/DUM_SeqLen/$seqLen/g;
+	$header_interim =~ s/DUM_NumSeqSites/$numSeqSites/g;
+	$header_interim =~ s/DUM_TaxonPairID/$serialNum/g;
+	$header_interim =~ s/DUM_NumTaxonPairs/$numTaxonLocusPairs/g;
+	# Mike said the next one doesn't matter, but I'm doing it anyway.
+	# It is supposed to contain site positions of mutations
+	$header_interim =~ s/DUM_positions/$positionString/g;
+	
+	### some consistency check
+	if (@alignedSeq != $totSampleSize) {
+	    die "ERROR: taxon, $fastaFile, should have " .
+		"$totSampleSize samples.\nBut ", scalar(@alignedSeq),
+		" samples are in the file $fileName\n";
+	}
+	if ($totSampleSize != $sampleSize1+$sampleSize2){
+	    die "ERROR: Total sample size ($totSampleSize) for taxon $fastaFile".
+		"should be \n       the sum of sampleSizes for the pairs: ".
+		"$sampleSize1 + $sampleSize2.\n".
+		"Check the sampleSize/mutModel File\n";
+	}
+	if ($seqLen < $numSeqSites) {
+	    die "ERROR: For taxon, $fastaFile, lengths of sequences ($seqLen) " .
+		"should be\n       longer than number of variable sites " .
+		"($numSeqSites)\n";
+	}
+	
+	$sumStatInput .= "$header_interim\n" . join("\n", @alignedSeq) . "\n";
+    }  # done with processing all fasta, and making fake msDQH output
+
+    ### run sumstat.
+    open2(\*READ_SS, \*WRITE_SS, "$sumStatsBin -H ");
+    print WRITE_SS "$sumStatInput";;
+    close(WRITE_SS);  # need to close this to prevent dead-lock
+    my @sumStatsResultArr = <READ_SS>;
+    close (READ_SS);
+
+    if (@sumStatsResultArr != 2) {
+	die "ERROR: $sumStatsBin returned " . scalar(@sumStatsResultArr) .
+	    " lines. It should be 2 lines.\n\nOutput is:\n".
+	    join("", @sumStatsResultArr) . "\n";
+    }
     
-    warn "INFO: Number of taxon pairs in the data set = $numTaxonPairs pairs\n";
+    ### Attaching completely fake prior columns, is this needed? NT Feb 6, 2009
+    $sumStatsResultArr[0] = 
+	join("\t", ('PRI.Psi', 'PRI.var.t', 'PRI.E.t', 'PRI.omega')) . 
+	"\t$sumStatsResultArr[0]";
+    $sumStatsResultArr[1] = 
+	join("\t", ('1', '0', '1', '0')) . "\t$sumStatsResultArr[1]";
+    
+    warn "INFO: Total number of (taxon pairs):locus in the data set = $numTaxonLocusPairs\n";
+    
     return @sumStatsResultArr;
 }
 
@@ -249,20 +259,44 @@ sub GetFileContentsAsScalar {
     return $contents;
 }
 
+sub TaxonLocusInfo {
+    my @matrix = @_;
+    my %nameHash = ();
+    my %locusNameHash = ();
+    my $cntr = 1;
+    for my $i (0..$#matrix) {
+	next if (defined ($nameHash{$matrix[$i][0]}));
+	$nameHash{$matrix[$i][0]} = $cntr;
+	$cntr++;
+    }
+    my $numUniqTaxon = $cntr - 1;
+    $cntr = 1;
+    for my $i (0..$#matrix) {
+	next if (defined ($locusNameHash{$matrix[$i][1]}));
+	$locusNameHash{$matrix[$i][1]} = $cntr;
+	$cntr++;
+    }
+    my $numUniqLoci = $cntr - 1;
+
+    return ($numUniqTaxon, $numUniqLoci, \%nameHash, \%locusNameHash);
+}
+
 # Takes a filename as an argument
 # Parse the file, and returun a 2-dim matrix
 # The file contains information about sample sizes and mutational models.
 # It should be tab delimited text file with following columns.
-#   1: TotalSampleSize
-#   2: SampleSize1 
-#   3: SampleSize2
-#   4: transition/transversion Ratio
-#   5: gamma parameter (not used)
-#   6: baseTotalpairs (length of sequences)
-#   7: Afreq 
-#   8: Cfreq
-#   9: Gfreq
-#  10: TaxonPairName
+#   1: TaxonPairName
+#   2: locusName
+#   3: ploidy (1 for mitochodria chloroploast, 2 for diploid nuclear genes)
+#   4: TotalSampleSize
+#   5: SampleSize1 
+#   6: SampleSize2
+#   7: transition/transversion Ratio
+#   8: baseTotalpairs (length of sequences)
+#   9: Afreq 
+#  10: Cfreq
+#  11: Gfreq
+#  12: Filename
 # Each line contains a data for 1 taxon pair (sp.1 and sp.2).
 # The returned 2-dim matrix contain these information, each line = each row.
 # '#' is used to indicate comments, and ignored.
@@ -315,9 +349,9 @@ sub ReadInMaster {
 	# check all rows have good column numbers
 	if ($numCol < 0) {
 	    $numCol = @master;
-	    if ($numCol >9 || $numCol < 8) {
+	    if ($numCol >12 || $numCol < 11) {
 		die "ERROR: reading $filename, the 1st line of sample " .
-		    "sizes/mutation parameter lines should have 8 or 9 " .
+		    "sizes/mutation parameter lines should have 11 or 12 " .
 		    "columns.  But, it has $numCol:  $_\n";
 	    }
 	} elsif ($numCol != @master) {
@@ -327,8 +361,8 @@ sub ReadInMaster {
 	
 	# total sample numbers should be calculated from the sample sizes of
         # taxon pairs.
-	if ($numCol == 8) {
-	    unshift @master, $master[0] + $master[1];
+	if ($numCol == 11) {
+	    splice @master, 3, 0, $master[3] + $master[4];
 	}
 	push @master_matrix, [ @master ];
     }
