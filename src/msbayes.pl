@@ -21,11 +21,13 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA
 
-my $usage="Usage: $0 [-hd] [-s seed] [-r numSims] [-c config] [-o outputFileName]\n".
+my $usage="Usage: $0 [-hd] [-s seed] [-r numSims] [-c config] [-i IMconfig] [-o outputFileName]\n".
     "  -h: help\n".
     "  -r: number of repetitions".
     "  -c: configuration file for msprior.  Parameters setup interactively,\n".
     "      if this option is not specified\n" .
+    "  -i: IM format configuration file for msprior,\n" .
+    "      it will be converted so that msprior can read \n" .      
     "  -o: output file name.  If not specified, output is STDOUT\n" .
     "  -s: set the initial seed (but not verbose like -d)\n" .
     "      By default (without -s), unique seed is automaically set from time\n".
@@ -40,8 +42,10 @@ use IPC::Open2;
 
 use Getopt::Std;
 
-getopts('hdo:c:r:s:') || die "$udage\n";
+getopts('hdo:c:i:r:s:') || die "$udage\n";
 die "$usage\n" if (defined($opt_h));
+
+my $batchFile;
 
 my $debug=0;
 if (defined($opt_d)) {
@@ -60,13 +64,37 @@ if (defined($opt_r)) {
     $options = $options . " --reps $opt_r ";
 }
 
+if (defined($opt_i) && defined($opt_c))
+{
+    die "Configuaration file can be in only one format\n";
+}
+
+if (defined($opt_i))
+{   
+    # change convertIM.pl to executable mode
+    my $temp = `chmod a+x convertIM.pl`;
+    die "ERROR: $opt_i is not readable\n" unless (-r $opt_i);
+    die "ERROR: $opt_i is empty\n" if (-z $opt_i);
+    die "ERROR: $opt_i is not a text file\n" unless (-T $opt_i);
+	   	        
+    $batchFile = `perl convertIM.pl $opt_i`;
+    chomp $batchFile;
+    print "batchFile : $batchFile \n";
+    $options = $options . " --config $batchFile";
+   
+}
+
 if (defined($opt_c)) {
     die "ERROR: $opt_c is not readable\n" unless (-r $opt_c);
     die "ERROR: $opt_c is empty\n" if (-z $opt_c);
     die "ERROR: $opt_c is not a text file\n" unless (-T $opt_c);
     $options = $options . " --config $opt_c ";
+    $batchFile = $opt_c;
+    print "$options \n";
 }
 
+my $callOSS = `perl obsSumStats.pl $batchFile > obsSumVect`;
+ 
 if (defined ($opt_s)) {
     $options = $options . " --seed $opt_s ";
 }
