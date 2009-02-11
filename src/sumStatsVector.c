@@ -145,7 +145,6 @@ ReadInMSoutput (FILE * pfin){
 				 */
   char dum1[100], dum2[100], dum3[100], dum4[100], dum5[100];
 
-
   /* read in first line of output (command line options of msDQH) */
   fgets (line, MAX_LNSZ, pfin);
 

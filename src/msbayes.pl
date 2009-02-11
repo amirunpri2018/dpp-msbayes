@@ -64,24 +64,23 @@ if (defined($opt_r)) {
     $options = $options . " --reps $opt_r ";
 }
 
-if (defined($opt_i) && defined($opt_c))
-{
-    die "Configuaration file can be in only one format\n";
+if (defined($opt_i) && defined($opt_c)) {
+    die "ERROR: Configuaration file can be in only one format. " .
+	"Specify EITHER -i OR -c\n";
 }
 
-if (defined($opt_i))
-{   
-    # change convertIM.pl to executable mode
-    my $temp = `chmod a+x convertIM.pl`;
+if (defined($opt_i)) {   
     die "ERROR: $opt_i is not readable\n" unless (-r $opt_i);
     die "ERROR: $opt_i is empty\n" if (-z $opt_i);
     die "ERROR: $opt_i is not a text file\n" unless (-T $opt_i);
+
+    my $convertIM = FindExec("convertIM.pl");
 	   	        
-    $batchFile = `perl convertIM.pl $opt_i`;
+    $batchFile = `$convertIM $opt_i`;
     chomp $batchFile;
-    print "batchFile : $batchFile \n";
+
+    print STDERR "INFO: batchFile : $batchFile \n";
     $options = $options . " --config $batchFile";
-   
 }
 
 if (defined($opt_c)) {
@@ -90,7 +89,9 @@ if (defined($opt_c)) {
     die "ERROR: $opt_c is not a text file\n" unless (-T $opt_c);
     $options = $options . " --config $opt_c ";
     $batchFile = $opt_c;
-    print "$options \n";
+    if ($debug) {
+	print STDERR "INFO: msprior options are: $options\n";
+    }
 }
 
 my $callOSS = `perl obsSumStats.pl $batchFile > obsSumVect`;

@@ -131,17 +131,16 @@ sub CreateObsSumStats {
 	$header = GetFileContentsAsScalar($opt_t);	
     }
         
-    # Each row in @master_matrix corresponds to an alignment file
-    # For each row, modify the header template with appropriate values of
-    # @master_matrix, and write to $tmpFile.  This file get fed to
-    # sumstats program, and receive the results with @sumStatsResultArr.
-    my @sumStatsResultArr = ();
+    # Each row in @master_matrix corresponds to an alignment file For
+    # each row, modify the header template (fake msDQH command line)
+    # with appropriate values of @master_matrix, and save it to
+    # $sumStatInput.  After the header, extracted variable sites data
+    # (and their fake positions) are attached. Basically,
+    # $sumStatInput is a long string variable, cotaining fake outputs
+    # of msDQH.
 
-    # Stores a string for input of sumstatvector
-    # Basically the following var contains fake outputs of msDQH,
-    # including the header (fake msDQH command line) with appropriate
-    # values.  After the header, extracted variable sites data are
-    # attached.
+    # This info get fed to sumstats program, and receive the results
+    # with @sumStatsResultArr.
     my $sumStatInput = "# BEGIN MSBAYES\n" .
 	"# numTaxonLocusPairs $numTaxonLocusPairs ".
 	"numTaxonPairs $numTaxonPairs numLoci $numLoci\n";

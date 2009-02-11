@@ -50,7 +50,7 @@ CFLAGS = $(DEFS) $(INCLS) $(CCOPT)
 .c.o:; $(CC) -c -o $@ $(CFLAGS) $<
 
 TARGET = sumstatsvector msDQH msprior msReject
-PERL_SCRIPTS = acceptRej.pl msbayes.pl obsSumStats.pl
+PERL_SCRIPTS = acceptRej.pl msbayes.pl obsSumStats.pl convertIM.pl
 # header.pl is not needed anymore, superceded by acceptRej.pl
 
 LIB_EXEC_FILES = acceptRej.r make_pd2005.r loc2plot.r

@@ -81,38 +81,6 @@ char ssNameVect[][MAX_LEN_COLUMN_NAME] =
 };
 
 
-#if 0				/* commented out since it is not used */
-/*
- * used for qsort to compare two doubles.
- * Takes two pointers to double as the arguments.
- *
- * Returns: 1  if a > b
- *          0  if a == b
- *         -1  if a < b
- */
-
-static int
-compare_doubles (const void *a, const void *b)
-{
-  const double *da = (const double *) a;
-  const double *db = (const double *) b;
-
-  return (*da > *db) - (*da < *db);
-}
-#endif
-
-
-static int
-SS_comp (const void *p1, const void *p2)
-{
-  const struct SumStat *sp1 = (struct SumStat *) p1;
-  const struct SumStat *sp2 = (struct SumStat *) p2;
-
-  return ((sp1->PI_b) > (sp2->PI_b)) - ((sp1->PI_b) < (sp2->PI_b));
-  /*return  ( sp1->PI_b) - ( sp2->PI_b); */
-}
-
-
 /* Print out the available summary stats and Exit */
 void
 PrintSumStatNames (void)
@@ -291,17 +259,48 @@ CalcSumStats (msOutput *msOut)
   return resultSS;
 }
 
+#if 0				/* commented out since it is not used */
+/*
+ * used for qsort to compare two doubles.
+ * Takes two pointers to double as the arguments.
+ *
+ * Returns: 1  if a > b
+ *          0  if a == b
+ *         -1  if a < b
+ */
+
+static int
+compare_doubles (const void *a, const void *b)
+{
+  const double *da = (const double *) a;
+  const double *db = (const double *) b;
+
+  return (*da > *db) - (*da < *db);
+}
+#endif
+
+/* 
+ * Used for qsort to sort the array of SumStat
+ *   Uses PI_b as the criteria of sorting
+ * Returns: 1  if p1 > p2
+ *          0  if p1 == p2
+ *         -1  if p1 < p2
+ */
+static int
+SS_comp (const void *p1, const void *p2)
+{
+  const struct SumStat *sp1 = (struct SumStat *) p1;
+  const struct SumStat *sp2 = (struct SumStat *) p2;
+
+  return ((sp1->PI_b) > (sp2->PI_b)) - ((sp1->PI_b) < (sp2->PI_b));
+}
+
 /*
 */
 void
 PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs)
 {
   int a;
-  /* double MeanTAU, VarTAU, CV; */
-
-  /* struct SumStat SumStat_list[numTaxonLocusPairs]; */
-  /* WORK HERE, Mike I disabled sorting, this may need to be enabled later */
-  //qsort (SumStat_list, numTaxonLocusPairs, sizeof (SumStat_list[0]), SS_comp);
   
   /****** NOTE ******
    *
@@ -318,6 +317,15 @@ PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs)
    * ORDER of names is important!
    */
 
+  /* WORK HERE: Is this sorting appropriate? */
+  
+  /* Simple sorting of summary statistics without paying attention to
+   * taxonPairs:genes.
+   * The taxonPairs:gene with the largerest pi.b (divergence between the
+   * pair) becomes the 1st column (left most).
+   */
+  qsort (SumStat_list, numTaxonLocusPairs, sizeof (SumStat_list[0]), SS_comp);
+  
   if (gPrintHeader)
     {
       int numPriorColumns = 0; /* Prior is not printed anymore */
