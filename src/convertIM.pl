@@ -1,4 +1,4 @@
-#!/user/bin/perl
+#!/usr/bin/perl
 
 #use strict;  # need to check the exact syntax
 use File::Copy;

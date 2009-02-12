@@ -75,7 +75,8 @@ if (defined($opt_i)) {
     die "ERROR: $opt_i is not a text file\n" unless (-T $opt_i);
 
     my $convertIM = FindExec("convertIM.pl");
-	   	        
+
+    print "FOUND: $convertIM YO\n";
     $batchFile = `$convertIM $opt_i`;
     chomp $batchFile;
 
