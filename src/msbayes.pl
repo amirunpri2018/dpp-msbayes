@@ -23,7 +23,7 @@
 
 my $usage="Usage: $0 [-hd] [-s seed] [-r numSims] [-c config] [-i IMconfig] [-o outputFileName]\n".
     "  -h: help\n".
-    "  -r: number of repetitions".
+    "  -r: number of repetitions\n".
     "  -c: configuration file for msprior.  Parameters setup interactively,\n".
     "      if this option is not specified\n" .
     "  -i: IM format configuration file for msprior,\n" .
@@ -48,11 +48,14 @@ die "$usage\n" if (defined($opt_h));
 my $batchFile;
 
 my $debug=0;
+my $rmTempFiles = 1; # if this is set to 0, temp files will NOT be deleted
 if (defined($opt_d)) {
     $debug = 1;
+    $rmTempFiles = 0;
 }
 
 my $options = "";
+
 if($debug) {  # force msprior to use the same seed
     $options = "-d 1 ";
 }
@@ -75,8 +78,7 @@ if (defined($opt_i)) {
     die "ERROR: $opt_i is not a text file\n" unless (-T $opt_i);
 
     my $convertIM = FindExec("convertIM.pl");
-
-    print "FOUND: $convertIM YO\n";
+    
     $batchFile = `$convertIM $opt_i`;
     chomp $batchFile;
 
@@ -88,7 +90,6 @@ if (defined($opt_c)) {
     die "ERROR: $opt_c is not readable\n" unless (-r $opt_c);
     die "ERROR: $opt_c is empty\n" if (-z $opt_c);
     die "ERROR: $opt_c is not a text file\n" unless (-T $opt_c);
-    $options = $options . " --config $opt_c ";
     $batchFile = $opt_c;
     if ($debug) {
 	print STDERR "INFO: msprior options are: $options\n";
@@ -114,25 +115,6 @@ my $msprior = FindExec("msprior");
 my $msDQH = FindExec("msDQH");
 my $sumstatsvector = FindExec("sumstatsvector");
 
-my $rmTempFiles = 1; # set this to 0 for debugging
-
-# open and close a temp file
-# This is used to store the prior paras from msprior (psiarray and tauarray)
-my ($tmpPriorOut, $tmpPriorOutfh);
-do {$tmpPriorOut = tmpnam()} until $tmpPriorOutfh = 
-    IO::File->new($tmpPriorOut, O_RDWR|O_CREAT|O_EXCL);
-END {                   # delete the temp file when done
-    if (defined($tmpPriorOut) && -e $tmpPriorOut) {
-	if (defined($rmTempFiles)) {
-	    unlink($tmpPriorOut) || die "Couldn't unlink $tmpPriorOut : $!";
-	} else {
-	    print STDERR "FILE: \$tmpPriorOut = $tmpPriorOut\n";
-	}
-    }
-};
-$tmpPriorOutfh->close();
-$options = $options . " --priorOut $tmpPriorOut ";
-
 #### setting up final output filename
 my $outFile = '-';  # by default, print out to STDOUT
 if(defined($opt_o)) {
@@ -143,9 +125,37 @@ if(defined($opt_o)) {
 open FINAL_OUT, ">$outFile" || die "Can't open $outFile";
 
 # obtain configuration from msprior, which read in the config file
-# and return the configuration
-my $mspriorConfOut = `$msprior $options --info`;  # getting the config info
+# and return the configuration.
+# This may invoke the Interactive parameter set up mode.
+my $mspriorConfOut = (defined ($opt_c)) ? 
+    `$msprior $options --config $opt_c --info` :
+    `$msprior $options --info` ;  # getting the config info
 my %mspriorConf = ExtractMspriorConf($mspriorConfOut);
+
+# If interactively parameters are inputed by the user, we need to incorporate
+# this info to make an updated config file to do the real msprior run.
+# Create a new temp file with this updated parameter info here.
+my $newMspriorConf = MkNewMspriorBatchConf($mspriorConf{configFile}, 
+					   \%mspriorConf);
+
+# open and close a temp file
+# This is used to store the new msprior conf file
+my ($tmpMspriorConf, $tmpMspriorConffh);
+do {$tmpMspriorConf = tmpnam()} until $tmpMspriorConffh = 
+    IO::File->new($tmpMspriorConf, O_RDWR|O_CREAT|O_EXCL);
+END {                   # delete the temp file when done
+    if (defined($tmpMspriorConf) && -e $tmpMspriorConf) {
+	if ($rmTempFiles) {
+	    unlink($tmpMspriorConf) || die "Couldn't unlink $tmpMspriorConf : $!";
+	} else {
+	    print STDERR "FILE: \$tmpMspriorConf = $tmpMspriorConf\n";
+	}
+    }
+};
+print $tmpMspriorConffh "$newMspriorConf";
+$tmpMspriorConffh->close();
+
+$options = $options . " --config $tmpMspriorConf ";
 
 open (RAND, "$msprior $options |") || 
     die "Hey buddy, where the hell is \"msprior\"?\n";
@@ -456,7 +466,7 @@ sub ExtractMspriorConf {
 
     my %result =();
 
-    my @generalKwdArr = qw(lowerTheta upperTheta upperTau upperMig upperRec upperAncPopSize reps numTaxonLocusPairs numTaxonPairs numLoci numTauClasses prngSeed constrain);
+    my @generalKwdArr = qw(lowerTheta upperTheta upperTau upperMig upperRec upperAncPopSize reps numTauClasses  constrain subParamConstrain numTaxonLocusPairs numTaxonPairs numLoci prngSeed configFile);
 
     for my $kkk (@generalKwdArr) {
 	if ($mspriorConfOut =~ /\s*$kkk\s*=\s*([^\s\n]+)\s*\n/) {
@@ -474,7 +484,7 @@ sub ExtractMspriorConf {
 	warn "Couldn't find mutation parameter table";
     }    
     # I'm not using this, but following info can be extrcted
-# ### taxon:locus pair ID 1 taxonID 1 (lamarckii) locusID 1 (mt) ploidy 1 ###
+# ### taxon:locus pair ID 1 taxonID 1 (lamarckii) locusID 1 (mt) thetaScaler 1 ###
 # numPerTaxa =    15
 # sample =        10 5
 # tstv =  11.600000  0.000000
@@ -482,7 +492,7 @@ sub ExtractMspriorConf {
 # seqLen =        614
 # freq:A, C, G, T = 0.323000, 0.268000 0.212000 0.197000
 # fileName =      lamarckii.fasta
-# ### taxon:locus pair ID 2 taxonID 2 (erosa) locusID 1 (mt) ploidy 1 ###
+# ### taxon:locus pair ID 2 taxonID 2 (erosa) locusID 1 (mt) thetaScaler 1 ###
 # numPerTaxa =    16
 # sample =        10 6
 # tstv =  13.030000  0.000000
@@ -490,9 +500,56 @@ sub ExtractMspriorConf {
 # seqLen =        614
 # freq:A, C, G, T = 0.266000, 0.215000 0.265000 0.254000
 # fileName =      erosa.fasta
-# ### taxon:locus pair ID 3 taxonID 3 (clandestina) locusID 2 (adh) ploidy 2 ###
+# ### taxon:locus pair ID 3 taxonID 3 (clandestina) locusID 2 (adh) thetaScaler 2 ###
 
     return %result;
+}
+
+# This takes a filename of a msprior config file and a hash containing
+# the msprior config parameters.  From the file, SAMPLE_TBL (and
+# CONSTRAIN_TBL if it exists) are extracted.  Then the tables and the
+# parameters in the hash table are combined to create a new string
+# corresponding to the config file.  parameters in the config file are
+# ignored.
+sub MkNewMspriorBatchConf {
+    my ($oldConfFileName, $mspriorConfHashRef) = @_;
+    my %confHash = %$mspriorConfHashRef;
+
+    # the following kwd should match with SetupParams() in setup.c
+    my @generalKwdArr = qw(lowerTheta upperTheta upperTau upperMig upperRec upperAncPopSize reps numTauClasses constrain subParamConstrain prngSeed);
+
+    open CONFIN, "<$oldConfFileName" || die "Can't open $oldConfFileName\n";
+    my $conf = "";
+    while (<CONFIN>) {
+	s/#.*$//;  # remove any comments
+	next if (/^\s*$/);
+	$conf = $conf . $_;
+    }
+    close CONFIN;
+
+    my $newConf = "";
+    if ($conf =~ /\s*(BEGIN\s+SAMPLE_TBL\s*\n.+END\s+SAMPLE_TBL)\s*\n/s) {
+	# /s means . match newline
+	$newConf = $newConf . "$1\n";
+    } else  {
+	die "ERROR: BEGIN SAMPLE_TBL and END SAMPLE_TBL not found in " .
+	    "$oldConfFileName\n";
+    }
+
+    if ($conf =~ /\s*(BEGIN\s+CONSTRAIN\s*\n.+END\s+CONSTRAIN)\s*\n/s) {
+	$newConf = $newConf . "$1\n";
+    }
+
+    foreach my $kwd (@generalKwdArr) {
+	if (defined ($$mspriorConfHashRef{$kwd})) {
+	    $newConf = "$kwd = $$mspriorConfHashRef{$kwd}\n" . $newConf;
+	} else {
+	    warn "WEIRD: in MkNewMspriorBatchConf(), confHash doesn't have ".
+		"$kwd\n";
+	}
+    }
+
+    return $newConf;
 }
 
 sub SummarizeTau {

@@ -119,7 +119,6 @@ main (int argc, char *argv[])
   unsigned long long rep;
   extern const gsl_rng *gBaseRand;
   int comp_nums (const void *, const void *);
-  FILE *fpTauPsiArray;
 
   int b_constrain = 0;
   int *subParamConstrainConfig = NULL;
@@ -205,26 +204,6 @@ main (int argc, char *argv[])
       exit (EXIT_FAILURE);
     }
   
-  /* open the stream to output tauArray and PSIarray */
-  if ((fpTauPsiArray = fopen (gParam.priorOutFile, "w")) == NULL)
-    {
-      fprintf (stderr, "Cannot open the file.\n");
-      exit (1);
-    }
-
-  /* print out the column headers to the tauArray and PSIarray  */
-  /* PRI.numTauClass PRI.Tau.1  PRI.Tau.2 PRI.Tau.3 ... PRI.Psi.1 PRI.Psi.2 PRI.Psi.3 ... */
-  fprintf (fpTauPsiArray, "PRI.numTauClass");
-  if (gParam.numTauClasses > 0)
-    {				/* constrained psi analysis */
-      for (zzz = 0; zzz < numTauClasses; zzz++)
-	fprintf (fpTauPsiArray, "\tPRI.Tau.%d", zzz + 1);
-      for (zzz = 0; zzz < numTauClasses; zzz++)
-	fprintf (fpTauPsiArray, "\tPRI.Psi.%d", zzz + 1);
-    }
-  fprintf (fpTauPsiArray, "\n");
-
-
   /* Beginning of the main loop */
   for (rep = 0; rep < gParam.reps; rep++)
     {
@@ -531,7 +510,7 @@ main (int argc, char *argv[])
 	         4 Ne mu with mu per site, not per gene.
 		 Assumes mu is constant.  This may be a problem with
 	         mitochondoria */
-	      locTheta = spTheta * taxonPairDat.seqLen * taxonPairDat.ploidy/2;
+	      locTheta = spTheta * taxonPairDat.seqLen * taxonPairDat.thetaScaler;
 	      
 	      /* We can send some extra info to msbayes.pl here */
 	      printf ("%u %u %u ", lociTaxonPairIDcntr, taxonID+1, locus+1);
@@ -568,20 +547,8 @@ main (int argc, char *argv[])
 	printf (",%d", PSIarray[zzz]);
       printf("\n");
 
-#if 0
-      fprintf (fpTauPsiArray, "%d", gParam.numTauClasses);
-      if (gParam.numTauClasses > 0)
-	{			/* constrained psi analysis */
-	  for (zzz = 0; zzz < numTauClasses; zzz++)
-	    fprintf (fpTauPsiArray, "\t%lf", tauArray[zzz]);
-	  for (zzz = 0; zzz < numTauClasses; zzz++)
-	    fprintf (fpTauPsiArray, "\t%d", PSIarray[zzz]);
-	}
-      fprintf (fpTauPsiArray, "\n");
-#endif
     }
 
-  fclose (fpTauPsiArray);
   free (tauArray);
   free (UnconstrainedTauArray);
   free (PSIarray);

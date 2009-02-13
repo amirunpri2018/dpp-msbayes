@@ -8,10 +8,8 @@
 #define DEFAULT_UPPER_MIG  0.0	/* when set 0, it is a constant */
 #define DEFAULT_UPPER_REC  0.0
 #define DEFAULT_UPPER_ANC_POPSIZE 0.5
-#define DEFAULT_NUM_LOCI 1;
 #define DEFAULT_REPS  500000
 #define DEFAULT_MUT_FILE "SampleSize_MuModel_Vector"
-#define DEFAULT_PRIOR_OUT_FILE "msBayesPriorOut.csv"
 #define DEFAULT_SUBPARAMCONSTRAIN "000000000"
 
 #define MAX_FILENAME_LEN 1024
@@ -35,7 +33,6 @@ typedef struct
   unsigned int numTauClasses;
   long prngSeed;
   char configFile[MAX_FILENAME_LEN];
-  char priorOutFile[MAX_FILENAME_LEN];
   char scratchFile[MAX_FILENAME_LEN];
   unsigned int constrain;
   int printConf;                /* 1: -i opt print the config and exit (default: 0) */
@@ -50,7 +47,7 @@ typedef struct
   char locusName[MAX_NAME_CHAR_LEN];
   unsigned int taxonID;  /* integer (0-) representation of taxon pair name */
   unsigned int locusID;  /* integer (0-) representation of locus name */
-  int ploidy;
+  double thetaScaler;
   unsigned int numPerTaxa;
   unsigned int sample[2];
   double tstv[2];

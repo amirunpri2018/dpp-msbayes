@@ -21,15 +21,16 @@
  * 02110-1301, USA
  */
 
+/* for strcasestr */
+#define _GNU_SOURCE
+#include <string.h>
+
 #include <errno.h>
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
-/* for strcasestr */
-#define _GNU_SOURCE
-#include <string.h>
 
 #include "setup.h"
 #include "msprior.h"
@@ -43,15 +44,10 @@
 int setup_done = 0;
 int debug_level = 0;
 
-
-//FILE *squirrel1;
-//squirrel1 = fopen("squirrel", "w");
-
 static void ParseCommandLine (int argc, char *agv[]);
 static int InteractiveSetupParams (runParameters * paramPtr);
 static void SetupParams (FILE * fp, runParameters * paramPtr);
 static int SetConfigFile (char *fName);
-static int SetPriorOutFile (char *fName);
 void PrintParam (FILE *fp);
 static int InitMutPara (FILE * fp, mutParameterArray * mutParaArray);
 static int ProcessTaxonLociInMutParaArray (mutParameterArray * mpaPtr);
@@ -203,28 +199,6 @@ SetConfigFile (char *fName)
   return 0;
 }
 
-/*
- * Set the prior outpuf file if it hasn't already been set.
- *
- * Return -1 on error,
- *         0 on success.
- */
-static int
-SetPriorOutFile (char *fName)
-{
-  int len;
-
-  if (!fName || !fName[0])
-    return -1;
-
-  len = strlen (fName);
-  if ((len + 1) >= MAX_FILENAME_LEN)
-    return -1;
-
-  strncpy (gParam.priorOutFile, fName, MAX_FILENAME_LEN);
-
-  return 0;
-}
 
 /*
  * Print out the usage, and exit
@@ -246,13 +220,12 @@ PrintUsage (char *progname)
 
   fprintf (stderr,
 	   "\nUsage: %s [--help] [--reps N] [--debug N] [--seed N] "
-	   "[--config <filename>] [--priorOut <filename>] [--info]\n\n"
+	   "[--config <filename>] [--info]\n\n"
 	   "       help: Print this usage function (-h)\n"
 	   "       reps: Run N replications (-r)\n"
 	   "      debug: Set the debug level to N (larger N => more info) (-d)\n"
 	   "       seed: Set the pseudo-random number generator seed to N (-s)\n"
 	   "     config: Specify a configuration file (-c)\n"
-	   "   priorOut: Specify output file (-p)\n"
 	   "       info: Print config and exit (-i)\n\n"
 	   "If config file is not given, the parameter values are set "
 	   "interactively.\n\n", p);
@@ -267,10 +240,8 @@ static struct option sim_opts[] = {
   {"help", 0, NULL, 'h'},	/* list available options */
   {"debug", 1, NULL, 'd'},	/* specify debug level */
   {"seed", 1, NULL, 's'},	/* specify the prng seed */
-  /*  { "interactive", 0, NULL, 'i' }, *//* interactive mode */
   {"reps", 1, NULL, 'r'},	/* how many reps */
   {"config", 1, NULL, 'c'},	/* which config file to use */
-  {"priorOut", 1, NULL, 'p'},	/* prior output file */
   {"info", 0, NULL, 'i'},       /* print config info and exit */
   {NULL, 0, NULL, 0}
 };
@@ -346,15 +317,6 @@ ParseCommandLine (int argc, char *argv[])
 	      PrintUsage (argv[0]);
 	    }
 	  break;
-	case 'p':		/* PriorOutput file, PsiTauArray */
-	  rc = SetPriorOutFile (optarg);
-	  if (rc < 0)
-	    {
-	      fprintf (stderr, "Could not use prior out filename as '%s'\n",
-		       optarg);
-	      PrintUsage (argv[0]);
-	    }
-	  break;
 	case 'i':              /* Print config info and exit */
 	  gParam.printConf = 1;
 	  break;
@@ -424,15 +386,6 @@ SetDefaultParams (runParameters * paramPtr)
     {
       strncpy (paramPtr->configFile, DEFAULT_MUT_FILE, MAX_FILENAME_LEN);
     }
-  if (!paramPtr->numLoci)
-    {
-      paramPtr->numLoci = DEFAULT_NUM_LOCI;
-    }
-  if (!paramPtr->priorOutFile || !paramPtr->priorOutFile[0])
-    {
-      strncpy (paramPtr->priorOutFile, DEFAULT_PRIOR_OUT_FILE,
-	       MAX_FILENAME_LEN);
-    }
   if (!paramPtr->subParamConstrain || !paramPtr->subParamConstrain[0])
     {
       strncpy (paramPtr->subParamConstrain, DEFAULT_SUBPARAMCONSTRAIN,
@@ -464,20 +417,6 @@ InteractiveSetupParams (runParameters * paramPtr)
   fprintf (stderr, "\nPress [return] to accept the default value in [ ]\n\n");
 
   SetDefaultParams (paramPtr);
-
-  /* numLoci */
-  for (badInput = 1; badInput;)
-    {
-      fprintf (stderr, "Number of Loci " "[%u]: \n", paramPtr->numLoci);
-      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
-      if (lineLen == 1)
-	badInput = 0;		/* use default value */
-      else if ((lineLen > 1) && (sscanf (line, "%u", &tempValUI) == 1))
-	{
-	  badInput = 0;
-	  paramPtr->numLoci = tempValUI;
-	}
-    }
 
   /* theta */
   for (badInput = 1; badInput;)
@@ -650,14 +589,13 @@ SetupParams (FILE * fp, runParameters * paramPtr)
   SetDefaultParams (paramPtr);
 
   retVal = init_globals (fp,
-			 "lowerTheta upperTheta upperTau numTauClasses upperMig upperRec upperAncPopSize reps numLoci constrain subParamConstrain",
-			 "dddudddVuus",
+			 "lowerTheta upperTheta upperTau upperMig upperRec upperAncPopSize numTauClasses reps constrain subParamConstrain",
+			 "dddddduVus",
 			 &paramPtr->lowerTheta, &paramPtr->upperTheta,
-			 &paramPtr->upperTau, &paramPtr->numTauClasses,
-			 &paramPtr->upperMig, &paramPtr->upperRec,
-			 &paramPtr->upperAncPopSize, &paramPtr->reps,
-			 &paramPtr->numLoci, &paramPtr->constrain,
-			 &paramPtr->subParamConstrain);
+			 &paramPtr->upperTau, &paramPtr->upperMig, 
+			 &paramPtr->upperRec, &paramPtr->upperAncPopSize, 
+			 &paramPtr->numTauClasses, &paramPtr->reps,
+			 &paramPtr->constrain, &paramPtr->subParamConstrain);
 
   if (retVal != 0)
     {
@@ -894,7 +832,7 @@ ProcessTaxonLociInMutParaArray (mutParameterArray * mpaPtr)
   mpaPtr->locTbl->numTaxon = numUniqTaxon;
   mpaPtr->locTbl->numLoci = numUniqLoc;
   /* These two values need to be copied to numTaxonPairs, numTaxonPairs of gParam */
-  /* remove earlier configuration of numLoci */
+  
   gParam.numTaxonPairs = numUniqTaxon;
   gParam.numLoci = numUniqLoc;
 
@@ -1164,8 +1102,8 @@ ReadMutLine (mutParameter * mpp, char *line, int ncol)
 
   if (ncol == 12)
     {				/* 12 column */
-      rc = sscanf (line, "%s %s %d %u %u %lf %lf %u %lf %lf %lf %s",
-		   mpp->taxonName, mpp->locusName, &mpp->ploidy,
+      rc = sscanf (line, "%s %s %lf %u %u %lf %lf %u %lf %lf %lf %s",
+		   mpp->taxonName, mpp->locusName, &mpp->thetaScaler,
 		   &mpp->sample[0], &mpp->sample[1],
 		   &mpp->tstv[0], &mpp->gamma, &mpp->seqLen,
 		   &mpp->freqA, &mpp->freqC, &mpp->freqG, mpp->filename);
@@ -1180,8 +1118,8 @@ ReadMutLine (mutParameter * mpp, char *line, int ncol)
 
   if (ncol == 11)
     {
-      rc = sscanf (line, "%s %s %d %u %u %lf %u %lf %lf %lf %s",
-		   mpp->taxonName, mpp->locusName, &mpp->ploidy,
+      rc = sscanf (line, "%s %s %lf %u %u %lf %u %lf %lf %lf %s",
+		   mpp->taxonName, mpp->locusName, &mpp->thetaScaler,
 		   &mpp->sample[0], &mpp->sample[1],
 		   &mpp->tstv[0], &mpp->seqLen,
 		   &mpp->freqA, &mpp->freqC, &mpp->freqG, mpp->filename);
@@ -1243,18 +1181,18 @@ PrintParam (FILE *fp)
   fprintf (fp, "numTauClasses =\t%u\n", gParam.numTauClasses);
   fprintf (fp, "prngSeed =\t%ld\n", gParam.prngSeed);
   fprintf (fp, "configFile =\t%s\n", gParam.configFile);
-  fprintf (fp, "priorOutFile =\t%s\n", gParam.priorOutFile);
   fprintf (fp, "scratchFile =\t%s\n", gParam.scratchFile);
   fprintf (fp, "constrain =\t%u\n", gParam.constrain);
+  fprintf (fp, "subParamConstrain =\t%s\n", gParam.subParamConstrain);
   fprintf (fp, "printConf =\t%u\n", gParam.printConf);
   
   fprintf (fp, "## gMutParam ##\n");
   for (i = 0; i < gMutParam.numElements; i++)
     {
-      fprintf (fp, "### taxon:locus pair ID %d taxonID %u (%s) locusID %u (%s) ploidy %d ###\n",
+      fprintf (fp, "### taxon:locus pair ID %d taxonID %u (%s) locusID %u (%s) thetaScaler %lf ###\n",
 	       i + 1, gMutParam.data[i].taxonID+1, gMutParam.data[i].taxonName,
 	       gMutParam.data[i].locusID+1, gMutParam.data[i].locusName,
-	       gMutParam.data[i].ploidy);
+	       gMutParam.data[i].thetaScaler);
       fprintf (fp, "numPerTaxa =\t%u\n", gMutParam.data[i].numPerTaxa);
       fprintf (fp, "sample =\t%u %u\n",
 	       gMutParam.data[i].sample[0], gMutParam.data[i].sample[1]);

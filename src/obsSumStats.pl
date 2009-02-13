@@ -286,7 +286,7 @@ sub TaxonLocusInfo {
 # It should be tab delimited text file with following columns.
 #   1: TaxonPairName
 #   2: locusName
-#   3: ploidy (1 for mitochodria chloroploast, 2 for diploid nuclear genes)
+#   3: thetaScaler (0.25 for chloroploast in dioecy, 1 for nuclear genes, etc.)
 #   4: TotalSampleSize
 #   5: SampleSize1 
 #   6: SampleSize2
