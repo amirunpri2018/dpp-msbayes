@@ -14,8 +14,6 @@ $batchFileName;
 $pop1;
 $pop2;
 
-
-#print "convertIM started \n";
 unless (open LISTFILE, "< $ARGV[0]")
 {
    die "Can't open file $ARGV[0] : $! \n";    
@@ -67,7 +65,7 @@ foreach my $currentFile (@fileList)
    if( ($fileSuffix = index($currentFile, ".im")) == (length($currentFile)-3) )
    {
           my $pop1Name,$pop2Name,$lineRead = 0,$numLoci,$locus_name, $number_pop1,$number_pop2, $sample_length, 
-             $mutation_model,$inheritance_scalar, $ploidy, $line,$A = 0,$C = 0,$T = 0,$G = 0,$total,$allele_count;
+             $mutation_model,$ploidy, $line,$A = 0,$C = 0,$T = 0,$G = 0,$total,$allele_count, @theAlleles;
               
 	  # open a .im file, grap the data, then close it (to save resource)
 	  unless (open IMFILE, "< $currentFile")
@@ -93,7 +91,12 @@ foreach my $currentFile (@fileList)
 		 {
 		      next;
 		 } # the line is a comment
-
+		 
+		 if ( $line eq undef)
+		 {
+		      next;
+		 } # empty line
+		 
 		 # increment $lineRead for each valid line
 		 $lineRead++ ;
 
@@ -120,16 +123,8 @@ foreach my $currentFile (@fileList)
 	            {
 
 			 ($locus_name, $number_pop1, $number_pop2, $sample_length, 
-			  $mutation_model, $inheritance_scalar) = split /\s+/, $line;
+			  $mutation_model, $ploidy) = split /\s+/, $line;
                           
-                          if($inheritance_scalar == 1)
-			  {
-			      $ploidy = 2;
-                          }else
-                          {
-                              $ploidy = 1;
-                          }      
-
 			  $total = $number_pop1 + $number_pop2;
  			  $readingHeader = 0;
 			  $readingData = 1;
@@ -142,49 +137,11 @@ foreach my $currentFile (@fileList)
 		     {
                         if($allele_count < $total)
 			{
-			    my ($tname, $allele) = split /\s+/, $line;
-
-			    my $i = rindex($tname,"_");
-			    $name = substr $tname, 0, $i;
-
-			    if ($pop1 eq undef && $pop2 eq undef)
-			    {
-			       $pop1 = $name;  
-			       push(@pop1_data, $allele);
-			    }
-			    elsif($name eq $pop1)  
-			    { 
-				push(@pop1_data, $allele);
-			    }elsif ($pop2 eq undef)
-			    {
-				$pop2 = $name;
-				 push(@pop2_data, $allele);
-			    }elsif($name eq $pop2)
-			    {
-				 push(@pop2_data, $allele);
-			    }
-
-			    # get precentage of A,T,C,G
-			    my @charArray = split //, $allele;
-			    foreach my $cc (@charArray)
-			    {
-		              if($cc eq "A")
-				   {
-				     $A++;
-				   }elsif ($cc eq "T"){
-				     $T++;
-				   }elsif ($cc eq "C"){
-				     $C++;
-				   }elsif ($cc eq "G"){
-				    $G++;
-				   }
-				  else{
-				    # print STDERR "found something weired $cc in an allele sequence \n";
-				   }
-			     } # foreach in @charArray
-
+			     my $allele = substr $line, 10;
+			     push(@theAlleles, $allele);
+			     
 			     $allele_count++ ;
-
+			     
 			     if($allele_count < $total)
 			     {
 				  next;
@@ -200,6 +157,39 @@ foreach my $currentFile (@fileList)
 		    $readingData = 0;
 		    $readingHeader = 1;
 
+                    my @pop1_data, @pop2_data;
+                    for(my $i = 0; $i < $total; $i++)
+                    {
+                      $allele = shift(@theAlleles);
+                      if($i < $number_pop1)
+                      {
+                         push(@pop1_data, $allele);
+                      }elsif ($i >= $number_pop2 && $i < ($number_pop1 + $number_pop2))
+                      {
+                         push(@pop2_data, $allele);                         
+                      }
+                      
+		      # get precentage of A,T,C,G
+		      my @charArray = split //, $allele;
+		      foreach my $cc (@charArray)
+		      {
+		           if($cc eq "A" || $cc eq "a")
+		           {
+		              $A++;
+		           }elsif ($cc eq "T" || $cc eq "t"){
+			      $T++;
+		           }elsif ($cc eq "C" || $cc eq "c"){
+			      $C++;
+		           }elsif ($cc eq "G" || $cc eq "g"){
+		              $G++;
+			   }
+		           else{
+			      # print STDERR "found something weired $cc in an allele sequence \n";
+			   }
+		       } # foreach in @charArray
+	               
+		    }# procoss alleles
+		    
 		    # calculate the proportion of A,T,C and G
 		    my $totalSampleLength = $sample_length * $total;
 		    if ($totalSampleLength == 0)
@@ -213,12 +203,22 @@ foreach my $currentFile (@fileList)
 		     $T = $T / $totalSampleLength;
 		     $G = $G / $totalSampleLength;
 		    }
-
+                    
 		    # construct the header for batch.masterIn file
 		    my $ii = rindex($currentFile, ".");
 		    my $theAllele = substr $currentFile, 0, $ii;
 		    my $fastaFileName = $theAllele . "." . $locus_name . ".fasta";
-		    $theHeader = sprintf ("%s\t%s\t%d\t%d\t%d\t1.00\t%d\t%.3f\t%.3f\t%.3f\t%s\n", $theAllele, $locus_name, $ploidy, $number_pop1, $number_pop2, $sample_length, $A, $C, $G, $fastaFileName );
+		    if($ploidy == 1)
+		    {
+		    	$theHeader = sprintf ("%s\t%s\t1\t%d\t%d\t1.00\t%d\t%.3f\t%.3f\t%.3f\t%s\n", $theAllele, $locus_name, $number_pop1, $number_pop2, $sample_length, $A, $C, $G, $fastaFileName );
+		    }elsif ($ploidy == 0.25)
+		    {
+		        $theHeader = sprintf ("%s\t%s\t0.25\t%d\t%d\t1.00\t%d\t%.3f\t%.3f\t%.3f\t%s\n", $theAllele, $locus_name, $number_pop1, $number_pop2, $sample_length, $A, $C, $G, $fastaFileName );
+		    }
+		    elsif ($ploidy == 0.75)
+		    {
+		        $theHeader = sprintf ("%s\t%s\t0.75\t%d\t%d\t1.00\t%d\t%.3f\t%.3f\t%.3f\t%s\n", $theAllele, $locus_name, $number_pop1, $number_pop2, $sample_length, $A, $C, $G, $fastaFileName );
+		    }
 		    printf BATCH ($theHeader);
        		    $A = $C = $T = $G = 0;
 

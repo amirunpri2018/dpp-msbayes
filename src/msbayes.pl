@@ -21,7 +21,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA
 
-my $usage="Usage: $0 [-hd] [-s seed] [-r numSims] [-c config] [-i IMconfig] [-o outputFileName]\n".
+my $usage="Usage: $0 [-hd] [-b observedSummaryStatistics] [-s seed] [-r numSims] [-c config] [-i IMconfig] [-o outputFileName]\n".
     "  -h: help\n".
     "  -r: number of repetitions\n".
     "  -c: configuration file for msprior.  Parameters setup interactively,\n".
@@ -29,6 +29,7 @@ my $usage="Usage: $0 [-hd] [-s seed] [-r numSims] [-c config] [-i IMconfig] [-o 
     "  -i: IM format configuration file for msprior,\n" .
     "      it will be converted so that msprior can read \n" .      
     "  -o: output file name.  If not specified, output is STDOUT\n" .
+    "  -b: observed summary statistics file name. If not specified, it won't calculate summary statisctics \n".
     "  -s: set the initial seed (but not verbose like -d)\n" .
     "      By default (without -s), unique seed is automaically set from time\n".
     "  -d: debug (msprior and msDQH uses the same initial seed = 1)\n";
@@ -42,7 +43,7 @@ use IPC::Open2;
 
 use Getopt::Std;
 
-getopts('hdo:c:i:r:s:') || die "$udage\n";
+getopts('hdo:b:c:i:r:s:') || die "$udage\n";
 die "$usage\n" if (defined($opt_h));
 
 my $batchFile;
@@ -76,7 +77,8 @@ if (defined($opt_i)) {
     die "ERROR: $opt_i is not readable\n" unless (-r $opt_i);
     die "ERROR: $opt_i is empty\n" if (-z $opt_i);
     die "ERROR: $opt_i is not a text file\n" unless (-T $opt_i);
-
+    
+    `chmod a+x convertIM.pl`;
     my $convertIM = FindExec("convertIM.pl");
     
     $batchFile = `$convertIM $opt_i`;
@@ -96,7 +98,9 @@ if (defined($opt_c)) {
     }
 }
 
-my $callOSS = `perl obsSumStats.pl $batchFile > obsSumVect`;
+if (defined($opt_b)) {
+    my $callOSS = `perl obsSumStats.pl $batchFile > $opt_b`;
+}
  
 if (defined ($opt_s)) {
     $options = $options . " --seed $opt_s ";
