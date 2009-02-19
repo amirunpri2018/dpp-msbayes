@@ -315,7 +315,7 @@ sub ReadInMaster {
 	next if (/^\s*$/);
 	if ($warnFlag) {   # Maybe we should handle line ending better at some point
 	    if (/\r\n$/) {
-		warn "WARN: the file $filename appear to have DOS style line ending, it may not work correctly if it's not converted to unix style newline characters\n";
+		warn "WARN: the file $filename appears to have DOS style line ending, it may not work correctly if it's not converted to unix style newline characters\n";
 	    }
 	    $warnFlag = 0;
 	}

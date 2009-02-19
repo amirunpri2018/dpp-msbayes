@@ -21,13 +21,24 @@ unless (open LISTFILE, "< $ARGV[0]")
 my @fileList = <LISTFILE>;
 close LISTFILE;
 
+my $warnFlag = 1;
 foreach my $currentFile (@fileList)
 { 
+   if ($warnFlag) {   # Maybe we should handle line ending better at some point
+       if (/\r\n$/) {
+	   warn "WARN: In convertIM.pl, the file $ARGV[0] appears to have DOS style line ending, it may not work correctly if it's not converted to unix style newline characters\n";
+       }
+       $warnFlag = 0;
+   }
+
    # trim the line
    chomp $currentFile;         # remove newline
+   $currentFile =~ s/#.*//;    # remove comments
    $currentFile =~ s/^\s+//;   # remove leading whitespace
    $currentFile =~ s/\s+$//;   # remove trailing whitespace
    
+   next if ($currentFile =~ /^\s*$/); # skip empty line   
+
    # check whether currentFile is OK
    die "ERROR: $currentFile is not readable\n" unless (-r $currentFile);
    die "ERROR: $currentFile is empty\n" if (-z $currentFile);
@@ -67,7 +78,7 @@ foreach my $currentFile (@fileList)
           my $pop1Name,$pop2Name,$lineRead = 0,$numLoci,$locus_name, $number_pop1,$number_pop2, $sample_length, 
              $mutation_model,$ploidy, $line,$A = 0,$C = 0,$T = 0,$G = 0,$total,$allele_count, @theAlleles;
               
-	  # open a .im file, grap the data, then close it (to save resource)
+	  # open a .im file, grab the data, then close it (to save resource)
 	  unless (open IMFILE, "< $currentFile")
 	   {
 	      die "Can't open file $currentFile : $! \n";    

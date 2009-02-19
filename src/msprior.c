@@ -142,7 +142,10 @@ main (int argc, char *argv[])
 {
   double N1, N2, Nanc, *tauArray = NULL, *UnconstrainedTauArray = NULL, spTheta, tauequalizer, gaussTime = 0.0,
     mig, rec, BottStr1, BottStr2, BottleTime;
-  double *recTbl, *mutScalerTbl;
+  double *recTbl;
+#ifndef HOMOGENEOUS_MUT
+  double *mutScalerTbl;
+#endif
   int tauClass, *PSIarray = NULL;
   unsigned int numTauClasses = -1, u, locus, taxonID, zzz, c;
   unsigned long randSeed;
@@ -227,13 +230,18 @@ main (int argc, char *argv[])
   UnconstrainedTauArray = calloc(gParam.numTaxonPairs, sizeof (double));
 
   recTbl = calloc (gParam.numLoci, sizeof (double));
-  mutScalerTbl = calloc(gParam.numLoci, sizeof(double));
   if (tauArray == NULL || PSIarray == NULL || recTbl == NULL || 
-      mutScalerTbl == NULL || UnconstrainedTauArray == NULL)
+      UnconstrainedTauArray == NULL)
     {
       fprintf (stderr, "ERROR: Not enough memory for tauArray, PSIarray, or recTbl\n");
       exit (EXIT_FAILURE);
     }
+#ifndef HOMOGENEOUS_MUT
+  if ((mutScalerTbl = calloc(gParam.numLoci, sizeof(double))) == NULL) {
+    fprintf (stderr, "ERROR: Not enough memory for mutScalerTbl\n");
+    exit(EXIT_FAILURE);
+  }
+#endif
 
 
   /* Beginning of the main loop */
@@ -269,6 +277,7 @@ main (int argc, char *argv[])
 	  */
 	}
       
+#ifndef HOMOGENEOUS_MUT
       /* create regional heterogeneity in the mutation rate */
       if (gParam.numLoci > 1) {
 	double shape, scale;
@@ -286,6 +295,7 @@ main (int argc, char *argv[])
       } else {
 	mutScalerTbl[0] = 1.0;
       }
+#endif
 
       int psiIndex = 0;
       // Randomly generate TauArray only when NOT constrain
@@ -517,8 +527,10 @@ main (int argc, char *argv[])
 		 Assumes mu is constant.  This may be a problem with
 	         mitochondoria */
 	      locTheta = spTheta * taxonPairDat.seqLen * 
-		taxonPairDat.thetaScaler * mutScalerTbl[locus];
-
+		taxonPairDat.thetaScaler;
+#ifndef HOMOGENEOUS_MUT
+	      locTheta *=  mutScalerTbl[locus]
+#endif
 	      /* Nanc become random deviate from a uniform distribution:
 		 [0.01 / locTheta, 
 		 gParam.upperAncPopSize * gParam.upperTheta/locTheta) 
