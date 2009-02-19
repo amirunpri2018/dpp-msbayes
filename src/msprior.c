@@ -70,6 +70,36 @@
    this arbitrary preference to stronger bottleneck, the results are 
    completely identical with the same seed.
 */
+
+/*
+ * Summary of prior distributions, created.
+ * [low,high) means uniform distribution with low <= x < high.
+ *
+ * rec: [0, upperRec * (seqLen-1))
+ * mig: [0, upperMig)
+ *
+ * -- Pop. size (demography) related
+ * BottStr1 & 2: [0.01, 1.0) * (N1 or N2)
+ *   This assumes the pop size (during the bottleneck) was smaller than current
+ * N1 and N2:   (0.01 to 1.99)  (constrained to be N1 + N2 = 2)
+ * Nanc  [0.01/locTheta, gParam.upperAncPopSize * gParam.upperTheta/locTheta)
+ *
+ * spTheta:  [lowerTheta, upperTheta)       (theta per site)
+ * locTheta: spTheta * seqLen * thetaScaler (theta per gene)
+ *
+ * -- time related
+ * tauequalizer = upperTheta/ (2 * locTheta)
+ *
+ * # close to 0 means that pop. hasn't started to expand until recently.
+ * Bottletime [0.000001, 1.0) * 0.95 * tauequalizer
+ *      = [9.5e-7, 0.95 * upperTheta / (2 * locTheta))
+ *     Some weird lower bound is used.
+ *
+ * gaussTime: [0.0, upperTau * upperTheta / (2 * locTheta))
+ *     from UnconstrainedTauArray
+ *    Then weird lower bound
+ */
+
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -112,7 +142,7 @@ main (int argc, char *argv[])
 {
   double N1, N2, Nanc, *tauArray = NULL, *UnconstrainedTauArray = NULL, spTheta, tauequalizer, gaussTime = 0.0,
     mig, rec, BottStr1, BottStr2, BottleTime;
-  double *recTbl;
+  double *recTbl, *mutScalerTbl;
   int tauClass, *PSIarray = NULL;
   unsigned int numTauClasses = -1, u, locus, taxonID, zzz, c;
   unsigned long randSeed;
@@ -151,7 +181,6 @@ main (int argc, char *argv[])
 	  else if (a == '0')
 	    subParamConstrainConfig[i] = 0;
 	}
-
     }
 
   /* for initiating the gsl random number generator */
@@ -165,7 +194,7 @@ main (int argc, char *argv[])
 						   Mersenne Twister */
   gsl_rng_set (gBaseRand, randSeed);	/* seed the PRNG */
 
-  if (b_constrain == 0)
+  if (b_constrain == 0)  /* Naoki thinks this if condition is not needed */
     {
       /* fixed numTauClasses configuration */
       if (gParam.numTauClasses != 0)
@@ -198,12 +227,15 @@ main (int argc, char *argv[])
   UnconstrainedTauArray = calloc(gParam.numTaxonPairs, sizeof (double));
 
   recTbl = calloc (gParam.numLoci, sizeof (double));
-  if (tauArray == NULL || PSIarray == NULL || recTbl == NULL || UnconstrainedTauArray == NULL)
+  mutScalerTbl = calloc(gParam.numLoci, sizeof(double));
+  if (tauArray == NULL || PSIarray == NULL || recTbl == NULL || 
+      mutScalerTbl == NULL || UnconstrainedTauArray == NULL)
     {
       fprintf (stderr, "ERROR: Not enough memory for tauArray, PSIarray, or recTbl\n");
       exit (EXIT_FAILURE);
     }
-  
+
+
   /* Beginning of the main loop */
   for (rep = 0; rep < gParam.reps; rep++)
     {
@@ -226,34 +258,63 @@ main (int argc, char *argv[])
       for (c = 0; c < numTauClasses; c++)
 	PSIarray[c] = 0;	/* Reset the PSIarray counters */
 
+      /* create the recombination rate table for each gene */
+      rec = gsl_ran_flat (gBaseRand, 0.0, gParam.upperRec);
+      for (u=0; u < gParam.numLoci; u++)
+	{
+	  /* all loci shares same recombination rate */
+	  recTbl[u] = rec;
+	  /* each locus has different recomb. rate 
+	     recTbl[u] = gsl_ran_flat (gBaseRand, 0.0, gParam.upperRec);
+	  */
+	}
+      
+      /* create regional heterogeneity in the mutation rate */
+      if (gParam.numLoci > 1) {
+	double shape, scale;
+	
+	/* arbitrary sample the shape parameter from uniform dist'n */
+	shape = gsl_ran_flat(gBaseRand, 1.0, 20);
+	/* shape = 1 is exponential with lambda=1, 
+	   larger shape -> normal dist'n with smaller var */
+	scale = 1/shape; /* E[x] = 1, Var[x] = shape * scale62 = 1/shape */
+	
+	/* use gamma */
+	for (u=0; u < gParam.numLoci; u++) {
+	  mutScalerTbl[u] = gsl_ran_gamma(gBaseRand, shape, scale);
+	}
+      } else {
+	mutScalerTbl[0] = 1.0;
+      }
+
       int psiIndex = 0;
       // Randomly generate TauArray only when NOT constrain
       if ((b_constrain == 0) || (subParamConstrainConfig[0] != 1))
 	{
+	  int counter;
 	  /* sample tau's from uniform prior dist'n */
 	  for (u = 0; u < numTauClasses; u++)
-	    {
-	      tauArray[u] = gsl_ran_flat (gBaseRand, 0.0, gParam.upperTau);
-
-	      if (debug_level)
-		{
-		  fprintf (stderr, "DEBUG:%u of %u categories:\t%lf\n",
-			   u, numTauClasses, tauArray[u]);
-		}
-	    }// for
+	    tauArray[u] = gsl_ran_flat (gBaseRand, 0.0, gParam.upperTau);
 	  
           qsort(tauArray, numTauClasses, sizeof(double),comp_nums);
 
-	  /* create the recombination rate table for each gene */
-	  rec = gsl_ran_flat (gBaseRand, 0.0, gParam.upperRec);
-	  for (u=0; u <gParam.numLoci; u++)
+          for (counter = 0; counter < numTauClasses; counter++) 
 	    {
-	      /* all loci shares same recombination rate */
-	      recTbl[u] = rec;
-	      /* each locus has different recomb. rate 
-	      recTbl[u] = gsl_ran_flat (gBaseRand, 0.0, gParam.upperRec);
-	      */
+	      UnconstrainedTauArray[counter] = tauArray[counter];
+	      PSIarray[counter] = 1;
 	    }
+
+          for (counter = numTauClasses; 
+	       counter < gParam.numTaxonPairs; counter++)
+	    {
+	      tauClass = gsl_rng_uniform_int(gBaseRand, numTauClasses);
+	      UnconstrainedTauArray[counter] = tauArray[tauClass];
+	      PSIarray[tauClass] = PSIarray[tauClass] + 1;
+	    }
+
+	  /* randomly shuflling the order of UnconstrainedTauArray */
+	  gsl_ran_shuffle(gBaseRand, UnconstrainedTauArray, 
+			  gParam.numTaxonPairs, sizeof (double));
 	}
       else if ((b_constrain == 1) && (subParamConstrainConfig[0] == 1))
 	{
@@ -283,7 +344,6 @@ main (int argc, char *argv[])
 	  PSIarray[psiIndex] = 1;
 	  for (u = 1; u < gParam.numTaxonPairs; u++)
 	    {
-
 	      if (conTauArray[u] == tempTau)
 		PSIarray[psiIndex]++;
 	      else
@@ -295,28 +355,6 @@ main (int argc, char *argv[])
 
 	  free (conTauArray);
 	}
-
-      if( (b_constrain == 0) || (subParamConstrainConfig[0] != 1) )
-	{
-	  int counter;
-          for (counter = 0; counter < numTauClasses; counter++) 
-	    {
-	      UnconstrainedTauArray[counter] = tauArray[counter];
-	      PSIarray[counter] = 1;
-	    }
-
-          for (counter = numTauClasses; 
-	       counter < gParam.numTaxonPairs; counter++)
-	    {
-	      tauClass = gsl_rng_uniform_int(gBaseRand, numTauClasses);
-	      UnconstrainedTauArray[counter] = tauArray[tauClass];
-	      PSIarray[tauClass] = PSIarray[tauClass] + 1;
-	    }
-
-	  /* randomly shuflling the order of UnconstrainedTauArray */
-	  gsl_ran_shuffle(gBaseRand, UnconstrainedTauArray, 
-			  gParam.numTaxonPairs, sizeof (double));
-        }// if     
 
       int tauPsiIndex = 0;
       int tauCounter = 1;
@@ -333,22 +371,20 @@ main (int argc, char *argv[])
 	      exit (EXIT_FAILURE);
 	    }
 
-
 	  constrainedParameter conTaxonPairDat;
 
-	  /* Population sizes during the bottleneck after the divergence of 2 pops.
-	     This is same as the population sizes, immediately after the 
+	  /* Population sizes during the bottleneck after the divergence of 2 
+	     pops. This is same as the population sizes, immediately after the 
 	     divergence/separation of the 2 pops. These are relative sizes. */
 	  BottStr1 = gsl_ran_flat (gBaseRand, 0.01, 1.0);
 	  BottStr2 = gsl_ran_flat (gBaseRand, 0.01, 1.0);
 
-	  /* timing of bottle neck. This is the time when
-	     After the populations diverge, they experience pop. bottleneck.  Then
-	     the population size exponentially grow until current.
+	  /* After the populations diverge, they experience pop. bottleneck.
+	     Then the population size exponentially grows until current size.
 	     BottleTime indicate the time when population start to grow.  
-	     BottleTime of 1 means, populations start to expand immediately after
-	     divergence. Closer to 0 means, populations hasn't started to expand
-	     until very recently.  */
+	     BottleTime of 1 means, populations start to expand immediately
+	     after divergence. Closer to 0 means, populations hasn't started
+	     to expand until very recently.  */
 	  BottleTime = gsl_ran_flat (gBaseRand, 0.000001, 1.0);
 
 	  /* migration rate prior */
@@ -357,81 +393,22 @@ main (int argc, char *argv[])
 	  spTheta = gsl_ran_flat (gBaseRand, gParam.lowerTheta,
 				gParam.upperTheta);
 
-	  /* The ratio of current population sizes.  The populations exponentially
-	     grow to these sizes after bottkleneck is done. */
-	  N1 = gsl_ran_flat (gBaseRand, 0.01, 1.99);
-	  /* WORK: Mike is the upper limit of 1.99 ok, even for nuclear gene? NT Aug 26, 2008*/
-	  /*
-	     Nmax=((gParam.upperAncPopSize*gParam.upperTheta)*gParam.upperTheta)
-	     /spTheta; 
-	     Nanc = gsl_ran_flat (gBaseRand, 0.01, Nmax);
-	   */
+	  /* The ratio of current population sizes.  The populations
+	     exponentially grow to these sizes after bottkleneck is done. */
+	  /* both ends excluded for symmetry */
+	  while ((N1 = gsl_ran_flat (gBaseRand, 0.01, 1.99)) == 0.01)
+	    ;
+	  
+	  N2 = 2.0 - N1;
 
 	  /* The upper limit of ancestral theta is defined by the product
 	     of upper Theta (e.g. 40) and upper AncPopSize (e.g. 0.5) */
 	  Nanc = gsl_ran_flat (gBaseRand, 0.01,
 			       gParam.upperAncPopSize * gParam.upperTheta);
 	  
-	  /* sample sizes, constrain model for taxonID-th taxon-pair */
-	  //conTaxonPairDat = gConParam.conData[taxonID];
-
-	  if (b_constrain == 1)
-	    {
-	      int gInd;
-	      conTaxonPairDat = gConParam.conData[taxonID];
-
-	      /** bottleneck priors **/
-	      /* severity of bottle neck (how small the population become) */
-	      if (subParamConstrainConfig[1] == 1)
-		BottStr1 = conTaxonPairDat.conBottPop1;
-	      if (subParamConstrainConfig[2] == 1)
-		BottStr2 = conTaxonPairDat.conBottPop2;
-	      /* timing of bottle neck */
-	      if (subParamConstrainConfig[3] == 1)
-		BottleTime = conTaxonPairDat.conBottleTime;
-
-	      /* migration rate prior */
-	      if (subParamConstrainConfig[4] == 1)
-		mig = conTaxonPairDat.conMig;
-
-	      /* theta prior */
-	      if (subParamConstrainConfig[5] == 1)
-		spTheta = conTaxonPairDat.conTheta;
-
-	      /* population sizes immediately after the separation, and 
-	         what it grows to after the bottleneck (today) */
-	      if (subParamConstrainConfig[6] == 1)
-		N1 = conTaxonPairDat.conN1;
-
-	      /* The upper limit of ancestral theta is defined by the product
-	         of upper Theta (e.g. 40) and upper AncPopSize (e.g. 0.5) */
-	      if (subParamConstrainConfig[7] == 1)
-		Nanc = conTaxonPairDat.conNanc;
-
-	      /* recombination rate */
-	      if (subParamConstrainConfig[8] == 1) {
-		rec = conTaxonPairDat.conRec;
-		/* all loci have the same recombination rate */
-		/* check this with Wen and Mike */
-		for (gInd = 0; gInd < gParam.numLoci; gInd++) {
-		  recTbl[gInd] = rec;
-		}
-	      }
-	    }
-
-	  N2 = 2.0 - N1;
-	  /* WORK: Mike, is 2.0 ok, even for nuclear gene? NT Aug 26, 2008*/
-
-	  Nanc = Nanc / spTheta; /* get the ratio of theta_anc / spTheta_cur 
-				    This ratio is required for msDQH */
-
-	  tauequalizer = gParam.upperTheta / 2 / spTheta;
-	  /* WORK: Mike, is "2" ok for nuclear gene? NT Aug 26, 2008 */
-
 	  /* pick a tau for every taxon-pair with replacement from the
 	     array of X taxon-pairs, where X is a uniform discrete RV
 	     from 1 to number of taxon-pairs */
-
 	  if ((b_constrain == 0) || (subParamConstrainConfig[0] != 1))
 	    {
 	      gaussTime = UnconstrainedTauArray[taxonID];
@@ -467,28 +444,11 @@ main (int argc, char *argv[])
 	      else
 		fprintf (stderr, "what happened to tauClass?\n");
 	    }
-	  //gaussTime = tauArray[taxonID];
-	  //fprintf(stderr, "gaussTime")
 
 	  /* use the following if simulating a particular fixed history */
 	  /* gaussTime = tauArray[taxonID]; */
-
-	  gaussTime = gaussTime * tauequalizer;
-
-	  /* The following 2 if's are weird */
-	  if (gaussTime < 0.0001)
-	    gaussTime = 0.0001;
-
-	  BottleTime = BottleTime * 0.95 * gaussTime;
-
-	  if (gaussTime < 0.0001)
-	    BottleTime = 0.00005;
-
-	  if (debug_level)
-	    fprintf (stderr, "DEBUG: BottleTime:%lf\tgaussTime:%lf\n",
-		     BottleTime, gaussTime);
-
-	  /* print out the results */
+	  
+	  /* print out the results by going through each locus */
 	  for (locus = 0; locus < gParam.numLoci; locus++)
 	    {
 	      double locTheta;
@@ -501,6 +461,52 @@ main (int argc, char *argv[])
 		continue;
 	      }
 
+	      if (b_constrain == 1)
+		{  /* If constrained, override with the fixed paras */
+		  /* This part is not debugged well 2/14/2008, Naoki */
+		  int mpIndex = gMutParam.locTbl->tbl[taxonID][locus];
+		  conTaxonPairDat = gConParam.conData[mpIndex];
+		  
+		  /** bottleneck priors **/
+		  /* severity of bottle neck (how small the pop become) */
+		  /* these should be [0,1] */
+		  if (subParamConstrainConfig[1] == 1)
+		    BottStr1 = conTaxonPairDat.conBottPop1;
+		  if (subParamConstrainConfig[2] == 1)
+		    BottStr2 = conTaxonPairDat.conBottPop2;
+		  
+		  /* timing of bottle neck */
+		  /* should be [0,1] */
+		  if (subParamConstrainConfig[3] == 1)
+		    BottleTime = conTaxonPairDat.conBottleTime;
+		  
+		  /* migration rate prior */
+		  if (subParamConstrainConfig[4] == 1)
+		    mig = conTaxonPairDat.conMig;
+		  
+		  /* theta per site */
+		  if (subParamConstrainConfig[5] == 1)
+		    spTheta = conTaxonPairDat.conTheta;
+		  
+		  /* population sizes immediately after the separation, and 
+		     what it grows to after the bottleneck (today) */
+		  /* [0.01, 1.99)
+		  if (subParamConstrainConfig[6] == 1) {
+		    N1 = conTaxonPairDat.conN1;
+		    N2 = 2.0 - N1;
+		  }
+		  
+		  /* The upper limit of ancestral theta is defined by the 
+		     product of upper Theta (e.g. 40) and upper 
+		     AncPopSize (e.g. 0.5) */
+		  if (subParamConstrainConfig[7] == 1)
+		    Nanc = conTaxonPairDat.conNanc * gParam.upperTheta;
+		  
+		  /* recombination rate per neighboring site */
+		  if (subParamConstrainConfig[8] == 1)
+		    recTbl[locus] = conTaxonPairDat.conRec;
+		}  /* end of constrai */
+
 	      /* access sample sizes, mutational model for this taxon:locus */
 	      mutParameter taxonPairDat;
 	      taxonPairDat = gMutParam.data[mpIndex];
@@ -510,14 +516,46 @@ main (int argc, char *argv[])
 	         4 Ne mu with mu per site, not per gene.
 		 Assumes mu is constant.  This may be a problem with
 	         mitochondoria */
-	      locTheta = spTheta * taxonPairDat.seqLen * taxonPairDat.thetaScaler;
+	      locTheta = spTheta * taxonPairDat.seqLen * 
+		taxonPairDat.thetaScaler * mutScalerTbl[locus];
+
+	      /* Nanc become random deviate from a uniform distribution:
+		 [0.01 / locTheta, 
+		 gParam.upperAncPopSize * gParam.upperTheta/locTheta) 
+		 For example, if upperTheta = 40 & upperAncPopSize = 0.5,
+		 upperAncTheta become 40 * 0.5 = 20.
+		 msDQH specify the past population sizes in terms of the 
+		 ratio of N_anc / N_theta, so the following division
+		 by locTheta is required.
+	      */
+	      Nanc = Nanc / locTheta;
+
+	      tauequalizer = gParam.upperTheta / 2 / locTheta;
+	      /* Division by 2 is coming from N1 + N2 = 2.
+		 We are considering that N_0 in theta_0 (=4 N_0 mu) specified for 
+		 -t option (we use -t locTheta) of msDQH is equal to (N1+N2)/2 */
+
+	      gaussTime = gaussTime * tauequalizer;
 	      
+	      /* The following if is a little weird */
+	      if (gaussTime < 0.0001) {
+		gaussTime  = 0.0001;
+		BottleTime = 0.00005;
+	      } else {
+		BottleTime = BottleTime * 0.95 * gaussTime;
+	      }
+	      
+	      if (debug_level)
+		fprintf (stderr, "DEBUG: BottleTime:%lf\tgaussTime:%lf\n",
+			 BottleTime, gaussTime);
+
 	      /* We can send some extra info to msbayes.pl here */
 	      printf ("%u %u %u ", lociTaxonPairIDcntr, taxonID+1, locus+1);
 	      lociTaxonPairIDcntr ++; /* seriral id: 1 to # taxon:locus pairs */
 	      printf ("%lf %lf %lf %lf ",
-		      locTheta, gaussTime, mig, recTbl[locus]);
-	      printf ("%lf %lf %lf ", BottleTime, BottStr1, BottStr2);
+		      locTheta, gaussTime, mig, 
+		      recTbl[locus] * (taxonPairDat.seqLen - 1));
+	      printf ("%lf %lf %lf ", BottleTime, BottStr1 * N1, BottStr2 * N2);
 	      printf ("%u %u %u %lf %lf %lf ",
 		      taxonPairDat.numPerTaxa,
 		      taxonPairDat.sample[0], taxonPairDat.sample[1],

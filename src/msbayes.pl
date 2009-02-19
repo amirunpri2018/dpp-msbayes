@@ -78,7 +78,7 @@ if (defined($opt_i)) {
     die "ERROR: $opt_i is empty\n" if (-z $opt_i);
     die "ERROR: $opt_i is not a text file\n" unless (-T $opt_i);
     
-    `chmod a+x convertIM.pl`;
+    # `chmod a+x convertIM.pl`;
     my $convertIM = FindExec("convertIM.pl");
     
     $batchFile = `$convertIM $opt_i`;
@@ -99,7 +99,8 @@ if (defined($opt_c)) {
 }
 
 if (defined($opt_b)) {
-    my $callOSS = `perl obsSumStats.pl $batchFile > $opt_b`;
+    my $obsSS = FindExec("obsSumStats.pl");
+    system("$obsSS $batchFile > $opt_b");
 }
  
 if (defined ($opt_s)) {
@@ -197,7 +198,7 @@ my $totalNumSims = $mspriorConf{reps} * $mspriorConf{numTaxonLocusPairs};
 my $headerOpt = " -H ";
 while (<RAND>) {
     s/^\s+//; s/\s+$//; 
-    
+
     unless (/^# TAU_PSI_TBL/) {
         # When reached here, it is regular parameter lines, so need to run msDQH
 	my ($taxonLocusPairID, $taxonID, $locusID, $theta, $gaussTime, $mig, $rec, 
@@ -218,7 +219,7 @@ while (<RAND>) {
 	
 	# option for -r was fixed to 0, so changed to $rec, then forcing
 	# it to be 0 here
-	$rec = 0;
+	# $rec = 0;
 	
 	$SEED = int(rand(2**32));  # msDQH expect unsigned long, the max val (2**32-1) is chosen here
 	
@@ -232,6 +233,7 @@ while (<RAND>) {
 	next;
     }
     
+
     # When reached here, msprior printed a TAU_PSI_TBL line which looks like:
     # # TAU_PSI_TBL setting: 0 realizedNumTauClass: 3 tauTbl:,8.71,4.92,4.01 psiTbl:,1,1,1
     # Processing this line to prepare 'prior columns' for the final output

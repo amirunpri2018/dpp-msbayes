@@ -18,7 +18,7 @@ CCOPT = -O0 -g  -Wunused
 #-Wall -Werror
 LDFLAGS =  -g         # for debugging but not profiling
 # for performance
-CCOPT = -O3 -Wall -fomit-frame-pointer -funroll-loops
+#CCOPT = -O3 -Wall -fomit-frame-pointer -funroll-loops
 #LDFLAGS =
 INCLS = -I.
 DEFS =
