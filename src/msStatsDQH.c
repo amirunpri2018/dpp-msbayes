@@ -390,16 +390,6 @@ PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs)
     printf ("%lf\t", SumStat_list[a]->si4);
   
   printf ("\n");
-    
-  /*
-  if ((fp=fopen("likeout1_21", "a+b")) ==NULL){
-    fprintf(stderr,"Cannot open the file.\n");
-    exit(1);
-  }                                
-  
-  fprintf(fp, "%d\t%d\t%lf\t%lf\t%lf\t%lf\t%lf\n", numTauClassesHyper, VT, MeanTau, ObsvVARPi_Net, ObsvVARD, ObsvCV_pi_net_tW, ObsvEPi_Net );
-  fclose (fp); 
-  */
   
 }
 

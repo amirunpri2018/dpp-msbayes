@@ -82,13 +82,15 @@
  * BottStr1 & 2: [0.01, 1.0) * (N1 or N2)
  *   This assumes the pop size (during the bottleneck) was smaller than current
  * N1 and N2:   (0.01 to 1.99)  (constrained to be N1 + N2 = 2)
- * Nanc  [0.01/locTheta, gParam.upperAncPopSize * gParam.upperTheta/locTheta)
+ * Nanc  [0.01/spTheta, gParam.upperAncPopSize * gParam.upperTheta/spTheta)
+ *  When there is mut var among loci, 
+ * seqLen * [0.01/locTheta, gParam.upperAncPopSize * gParam.upperTheta/locTheta)
  *
  * spTheta:  [lowerTheta, upperTheta)       (theta per site)
  * locTheta: spTheta * seqLen * thetaScaler (theta per gene)
  *
  * -- time related
- * tauequalizer = upperTheta/ (2 * locTheta)
+ * tauequalizer = upperTheta * seqLen / (2 * locTheta)
  *
  * # close to 0 means that pop. hasn't started to expand until recently.
  * Bottletime [0.000001, 1.0) * 0.95 * tauequalizer
@@ -96,7 +98,7 @@
  *     Some weird lower bound is used.
  *
  * gaussTime: [0.0, upperTau * upperTheta / (2 * locTheta))
- *     from UnconstrainedTauArray
+ *     from taxonTauArray
  *    Then weird lower bound
  */
 
@@ -104,6 +106,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <float.h>  /* for DBL_EPSILON */
 
 #include <gsl/gsl_rng.h>	/* for base rand num gen's */
 #include <gsl/gsl_randist.h>	/* for gsl_ran_gamma */
@@ -140,14 +143,11 @@ comp_nums (const void *doubleNum1, const void *doubleNum2)
 int
 main (int argc, char *argv[])
 {
-  double N1, N2, Nanc, *tauArray = NULL, *UnconstrainedTauArray = NULL, spTheta, tauequalizer, gaussTime = 0.0,
+  double N1, N2, Nanc, *uniqTauArray = NULL, *taxonTauArray = NULL, spTheta, tauequalizer, gaussTime = 0.0,
     mig, rec, BottStr1, BottStr2, BottleTime;
   double *recTbl;
-#ifndef HOMOGENEOUS_MUT
-  double *mutScalerTbl;
-#endif
   int tauClass, *PSIarray = NULL;
-  unsigned int numTauClasses = -1, u, locus, taxonID, zzz, c;
+  unsigned int numTauClasses = -1, u, locus, taxonID, zzz;
   unsigned long randSeed;
   unsigned long long rep;
   extern const gsl_rng *gBaseRand;
@@ -155,6 +155,10 @@ main (int argc, char *argv[])
 
   int b_constrain = 0;
   int *subParamConstrainConfig = NULL;
+
+#ifndef HOMOGENEOUS_MUT
+  double *mutScalerTbl;
+#endif
 
   /* set up gParam and gMutParam, as well as gConParam if constrain */
   LoadConfiguration (argc, argv);
@@ -183,6 +187,11 @@ main (int argc, char *argv[])
 	    subParamConstrainConfig[i] = 1;
 	  else if (a == '0')
 	    subParamConstrainConfig[i] = 0;
+	  else {
+	    fprintf(stderr, "ERROR: subParamConstrain string in the config file"
+		    "should be either 0 or 1\n");
+	    exit (EXIT_FAILURE);
+	  }
 	}
     }
 
@@ -197,7 +206,35 @@ main (int argc, char *argv[])
 						   Mersenne Twister */
   gsl_rng_set (gBaseRand, randSeed);	/* seed the PRNG */
 
-  if (b_constrain == 0)  /* Naoki thinks this if condition is not needed */
+  /* print out all of the parameters */
+  if(gParam.printConf) {
+    PrintParam(stdout);
+    exit (0);
+  }
+
+  /* set up arrays */
+  /* Sizes are set to the number of taxon pairs (Max number of tau's) */
+  if ((b_constrain == 1) && (subParamConstrainConfig[0] == 1)) {
+    uniqTauArray = calloc (gParam.numTaxonLocusPairs, sizeof (double));
+    PSIarray = calloc (gParam.numTaxonLocusPairs, sizeof (int));
+    taxonTauArray = calloc(gParam.numTaxonLocusPairs, sizeof (double));
+  } else {
+    uniqTauArray = calloc (gParam.numTaxonPairs, sizeof (double));
+    PSIarray = calloc (gParam.numTaxonPairs, sizeof (int));
+    taxonTauArray = calloc(gParam.numTaxonPairs, sizeof (double));
+  }
+
+  recTbl = calloc (gParam.numLoci, sizeof (double));
+
+  if (uniqTauArray == NULL || PSIarray == NULL || recTbl == NULL || 
+      taxonTauArray == NULL)
+    {
+      fprintf (stderr, "ERROR: Not enough memory for uniqTauArray, PSIarray, or recTbl\n");
+      exit (EXIT_FAILURE);
+    }
+
+  /* deal with num tau classes */
+  if (b_constrain == 0 || subParamConstrainConfig[0] != 1)
     {
       /* fixed numTauClasses configuration */
       if (gParam.numTauClasses != 0)
@@ -212,37 +249,53 @@ main (int argc, char *argv[])
 	    }
 	  numTauClasses = gParam.numTauClasses;
 	}
-    }
-  else
-    {
-      numTauClasses = gParam.numTauClasses;
-    }
+    }  /* when tau is constrained numTauClasses are set later */
 
-  /* print out all of the parameters */
-  if(gParam.printConf) {
-    PrintParam(stdout);
-    exit (0);
-  }
-
-  /* Sizes are set to the number of taxon pairs (Max number of tau) */
-  tauArray = calloc (gParam.numTaxonPairs, sizeof (double));
-  PSIarray = calloc (gParam.numTaxonPairs, sizeof (int));
-  UnconstrainedTauArray = calloc(gParam.numTaxonPairs, sizeof (double));
-
-  recTbl = calloc (gParam.numLoci, sizeof (double));
-  if (tauArray == NULL || PSIarray == NULL || recTbl == NULL || 
-      UnconstrainedTauArray == NULL)
-    {
-      fprintf (stderr, "ERROR: Not enough memory for tauArray, PSIarray, or recTbl\n");
+  /* deal with the case when tau is constrained */
+  if ((b_constrain == 1) && (subParamConstrainConfig[0] == 1)) {
+    int jj, kk;
+    double *tempTauArray;
+    if ((tempTauArray = calloc(gParam.numTaxonLocusPairs, sizeof(double))) 
+	== NULL) {
+      fprintf (stderr, "ERROR: Not enough memory for tempTauArray\n");
       exit (EXIT_FAILURE);
     }
+    for (jj = 0; jj < gParam.numTaxonLocusPairs; jj++) {
+      tempTauArray[jj] = (gConParam.conData[jj]).conTau;
+    }
+    numTauClasses = UniqueDouble(tempTauArray, uniqTauArray, 
+			   gParam.numTaxonLocusPairs, DBL_EPSILON);
+    
+    if (gParam.numTauClasses != numTauClasses) {
+      fprintf (stderr, "WARN: tau's are constrained and found %u different "
+	       "classes in the constrain table. But numTauClasses = %u was set."
+	       " Using the value found in the constrain table.\n", numTauClasses,
+	       gParam.numTauClasses);
+      gParam.numTauClasses = numTauClasses;
+    } 
+    
+    /* count tau's to create PSIarray */
+    for (jj = 0; jj < gParam.numTaxonLocusPairs; jj++) {
+      PSIarray[jj] = 0;
+    }
+    for (jj = 0; jj < gParam.numTaxonLocusPairs; jj++) {
+      for (kk = 0; kk < numTauClasses; kk++) {
+	/* there shouldn't be fabs() below */
+	if (tempTauArray[jj] - uniqTauArray[kk] < DBL_EPSILON) {
+	  PSIarray[kk]++;
+	  break;
+	}
+      }
+    }
+    free (tempTauArray);
+  }
+
 #ifndef HOMOGENEOUS_MUT
   if ((mutScalerTbl = calloc(gParam.numLoci, sizeof(double))) == NULL) {
     fprintf (stderr, "ERROR: Not enough memory for mutScalerTbl\n");
     exit(EXIT_FAILURE);
   }
 #endif
-
 
   /* Beginning of the main loop */
   for (rep = 0; rep < gParam.reps; rep++)
@@ -263,9 +316,6 @@ main (int argc, char *argv[])
 	    1 + gsl_rng_uniform_int (gBaseRand, gParam.numTaxonPairs);
 	}
       
-      for (c = 0; c < numTauClasses; c++)
-	PSIarray[c] = 0;	/* Reset the PSIarray counters */
-
       /* create the recombination rate table for each gene */
       rec = gsl_ran_flat (gBaseRand, 0.0, gParam.upperRec);
       for (u=0; u < gParam.numLoci; u++)
@@ -297,20 +347,19 @@ main (int argc, char *argv[])
       }
 #endif
 
-      int psiIndex = 0;
       // Randomly generate TauArray only when NOT constrain
       if ((b_constrain == 0) || (subParamConstrainConfig[0] != 1))
 	{
 	  int counter;
 	  /* sample tau's from uniform prior dist'n */
 	  for (u = 0; u < numTauClasses; u++)
-	    tauArray[u] = gsl_ran_flat (gBaseRand, 0.0, gParam.upperTau);
+	    uniqTauArray[u] = gsl_ran_flat (gBaseRand, 0.0, gParam.upperTau);
 	  
-          qsort(tauArray, numTauClasses, sizeof(double),comp_nums);
+          qsort(uniqTauArray, numTauClasses, sizeof(double),comp_nums);
 
           for (counter = 0; counter < numTauClasses; counter++) 
 	    {
-	      UnconstrainedTauArray[counter] = tauArray[counter];
+	      taxonTauArray[counter] = uniqTauArray[counter];
 	      PSIarray[counter] = 1;
 	    }
 
@@ -318,56 +367,15 @@ main (int argc, char *argv[])
 	       counter < gParam.numTaxonPairs; counter++)
 	    {
 	      tauClass = gsl_rng_uniform_int(gBaseRand, numTauClasses);
-	      UnconstrainedTauArray[counter] = tauArray[tauClass];
+	      taxonTauArray[counter] = uniqTauArray[tauClass];
 	      PSIarray[tauClass] = PSIarray[tauClass] + 1;
 	    }
 
-	  /* randomly shuflling the order of UnconstrainedTauArray */
-	  gsl_ran_shuffle(gBaseRand, UnconstrainedTauArray, 
+	  /* randomly shuflling the order of taxonTauArray */
+	  gsl_ran_shuffle(gBaseRand, taxonTauArray, 
 			  gParam.numTaxonPairs, sizeof (double));
 	}
-      else if ((b_constrain == 1) && (subParamConstrainConfig[0] == 1))
-	{
-	  double *conTauArray;
-
-	  for (u = 0; u < numTauClasses; u++)
-	    tauArray[u] = (gConParam.conData[u]).conTau;
-
-	  conTauArray = calloc (gParam.numTaxonPairs, sizeof (double));
-	  if (conTauArray == NULL)
-	    {
-	      fprintf (stderr, "ERROR: Not enough memory for conTauArray\n");
-	      exit (EXIT_FAILURE);
-	    }
-
-	  for (u = 0; u < gParam.numTaxonPairs; u++)
-	    {
-	      conTauArray[u] = gConParam.conData[u].conTau;
-	    }
-
-	  qsort (conTauArray, (gParam.numTaxonPairs), sizeof (double),
-		 comp_nums);
-
-	  //initialize PSIarray
-	  double tempTau = conTauArray[0];
-
-	  PSIarray[psiIndex] = 1;
-	  for (u = 1; u < gParam.numTaxonPairs; u++)
-	    {
-	      if (conTauArray[u] == tempTau)
-		PSIarray[psiIndex]++;
-	      else
-		{
-		  tempTau = conTauArray[u];
-		  PSIarray[++psiIndex]++;
-		}
-	    }
-
-	  free (conTauArray);
-	}
-
-      int tauPsiIndex = 0;
-      int tauCounter = 1;
+      
       for (taxonID = 0; taxonID < gParam.numTaxonPairs; taxonID++)
 	{
 	  //Check upperAncPopSize before doing anything
@@ -421,47 +429,16 @@ main (int argc, char *argv[])
 	     from 1 to number of taxon-pairs */
 	  if ((b_constrain == 0) || (subParamConstrainConfig[0] != 1))
 	    {
-	      gaussTime = UnconstrainedTauArray[taxonID];
-	    }
-	  else if ((b_constrain == 1) && (subParamConstrainConfig[0] == 1))
-	    {
-	      if (taxonID < numTauClasses)
-		{
-		  tauClass = taxonID;
-		}
-	      else
-		{
-		  if (tauCounter <= ((PSIarray[tauPsiIndex]) - 1))
-		    {
-		      tauClass = tauPsiIndex;
-		      tauCounter++;
-		    }
-		  else
-		    {
-		      tauCounter = 1;
-		      int x = 1;
-		      for (x = 1; x < numTauClasses; x++)
-			if (gConParam.conData[taxonID].conTau == tauArray[x])
-			  tauPsiIndex = x;
-		      //tauPsiIndex ++;
-		      tauClass = tauPsiIndex;
-		      tauCounter++;
-		    }
-		}
-
-	      if (tauClass < numTauClasses)
-		gaussTime = tauArray[tauClass];
-	      else
-		fprintf (stderr, "what happened to tauClass?\n");
+	      gaussTime = taxonTauArray[taxonID];
 	    }
 
 	  /* use the following if simulating a particular fixed history */
-	  /* gaussTime = tauArray[taxonID]; */
+	  /* gaussTime = uniqTauArray[taxonID]; */
 	  
 	  /* print out the results by going through each locus */
 	  for (locus = 0; locus < gParam.numLoci; locus++)
 	    {
-	      double locTheta;
+	      double locTheta, thisNanc, scaledGaussTime, scaledBottleTime;
 	      /* check if this locus exist for this taxon pair */
 	      /* this table contains 0-offset index for corresponding 
 		 taxon:locus mutPara */
@@ -476,7 +453,13 @@ main (int argc, char *argv[])
 		  /* This part is not debugged well 2/14/2008, Naoki */
 		  int mpIndex = gMutParam.locTbl->tbl[taxonID][locus];
 		  conTaxonPairDat = gConParam.conData[mpIndex];
-		  
+
+		  /* tau */
+		  /* This allow that tau could differ between loci
+		     within a single taxon pair */
+		  if (subParamConstrainConfig[0] == 1)
+		    gaussTime = conTaxonPairDat.conTau;
+
 		  /** bottleneck priors **/
 		  /* severity of bottle neck (how small the pop become) */
 		  /* these should be [0,1] */
@@ -500,7 +483,7 @@ main (int argc, char *argv[])
 		  
 		  /* population sizes immediately after the separation, and 
 		     what it grows to after the bottleneck (today) */
-		  /* [0.01, 1.99)
+		  /* (0.01, 1.99) */
 		  if (subParamConstrainConfig[6] == 1) {
 		    N1 = conTaxonPairDat.conN1;
 		    N2 = 2.0 - N1;
@@ -508,7 +491,8 @@ main (int argc, char *argv[])
 		  
 		  /* The upper limit of ancestral theta is defined by the 
 		     product of upper Theta (e.g. 40) and upper 
-		     AncPopSize (e.g. 0.5) */
+		     AncPopSize (e.g. 0.5), then converted to relative size 
+		     to spTheta */
 		  if (subParamConstrainConfig[7] == 1)
 		    Nanc = conTaxonPairDat.conNanc * gParam.upperTheta;
 		  
@@ -529,56 +513,66 @@ main (int argc, char *argv[])
 	      locTheta = spTheta * taxonPairDat.seqLen * 
 		taxonPairDat.thetaScaler;
 #ifndef HOMOGENEOUS_MUT
-	      locTheta *=  mutScalerTbl[locus]
+	      locTheta *=  mutScalerTbl[locus];
 #endif
-	      /* Nanc become random deviate from a uniform distribution:
-		 [0.01 / locTheta, 
-		 gParam.upperAncPopSize * gParam.upperTheta/locTheta) 
-		 For example, if upperTheta = 40 & upperAncPopSize = 0.5,
-		 upperAncTheta become 40 * 0.5 = 20.
+	      /* thisNanc is basically a random deviate from a uniform dist'n:
+		 [0.01 / spTheta, 
+		   gParam.upperAncPopSize * gParam.upperTheta/spTheta) 
+		 For example, if upperTheta = 10 & upperAncPopSize = 0.5,
+		 upperAncTheta become 10 * 0.5 = 5.
 		 msDQH specify the past population sizes in terms of the 
 		 ratio of N_anc / N_theta, so the following division
 		 by locTheta is required.
 	      */
-	      Nanc = Nanc / locTheta;
+	      thisNanc = Nanc * taxonPairDat.seqLen / locTheta;
+	      /* seqLen is required because the unit of Nanc = theta PER SITE */
+	      /* this scaling is done inside of locus loop to accomodate 
+		 the gamma dist'n of mut rate for each locus */
 
-	      tauequalizer = gParam.upperTheta / 2 / locTheta;
+	      tauequalizer = gParam.upperTheta * taxonPairDat.seqLen / 
+		2 / locTheta;
 	      /* Division by 2 is coming from N1 + N2 = 2.
-		 We are considering that N_0 in theta_0 (=4 N_0 mu) specified for 
-		 -t option (we use -t locTheta) of msDQH is equal to (N1+N2)/2 */
+		 We are considering that N_0 in theta_0 (=4 N_0 mu) specified 
+		 for -t option (we use -t locTheta) of msDQH is equal to 
+		 (N1+N2)/2 */
 
-	      gaussTime = gaussTime * tauequalizer;
-	      
+	      scaledGaussTime = gaussTime * tauequalizer;
+	      /* 1 unit of tau (gaussTime) = 2 N_max (N_max is the 
+		 N assumed in upperTheta) */
+	      /* I think we should get rid of /2 from tauequalizer */
+
 	      /* The following if is a little weird */
-	      if (gaussTime < 0.0001) {
-		gaussTime  = 0.0001;
-		BottleTime = 0.00005;
+	      if (scaledGaussTime < 0.0001) {
+		scaledGaussTime  = 0.0001;
+		scaledBottleTime = 0.00005;
 	      } else {
-		BottleTime = BottleTime * 0.95 * gaussTime;
+		scaledBottleTime = BottleTime * 0.95 * scaledGaussTime;
 	      }
 	      
 	      if (debug_level)
-		fprintf (stderr, "DEBUG: BottleTime:%lf\tgaussTime:%lf\n",
-			 BottleTime, gaussTime);
+		fprintf (stderr, 
+			 "DEBUG: scaled BottleTime:%lf\tgaussTime:%lf\n",
+			 scaledBottleTime, scaledGaussTime);
 
 	      /* We can send some extra info to msbayes.pl here */
 	      printf ("%u %u %u ", lociTaxonPairIDcntr, taxonID+1, locus+1);
 	      lociTaxonPairIDcntr ++; /* seriral id: 1 to # taxon:locus pairs */
 	      printf ("%lf %lf %lf %lf ",
-		      locTheta, gaussTime, mig, 
+		      locTheta, scaledGaussTime, mig, 
 		      recTbl[locus] * (taxonPairDat.seqLen - 1));
-	      printf ("%lf %lf %lf ", BottleTime, BottStr1 * N1, BottStr2 * N2);
+	      printf ("%lf %lf %lf ", scaledBottleTime, 
+		      BottStr1 * N1, BottStr2 * N2);
 	      printf ("%u %u %u %lf %lf %lf ",
 		      taxonPairDat.numPerTaxa,
 		      taxonPairDat.sample[0], taxonPairDat.sample[1],
 		      taxonPairDat.tstv[0], taxonPairDat.tstv[1],
 		      taxonPairDat.gamma);
 	      printf ("%u %lf %lf %lf ",
-		      taxonPairDat.seqLen, N1, N2, Nanc);
-	      printf ("%lf %lf %lf %lf ",
+		      taxonPairDat.seqLen, N1, N2, thisNanc);
+	      printf ("%lf %lf %lf %lf\n",
 		      taxonPairDat.freqA, taxonPairDat.freqC,
 		      taxonPairDat.freqG, taxonPairDat.freqT);
-	      printf ("%u\n", numTauClasses);
+
 	      /* These feed into the system command line (msDQH) within
 	         the perl shell msbayes.  Some of these are used directly
 	         by msDQH, but some are also passed on to the sumstats
@@ -591,7 +585,7 @@ main (int argc, char *argv[])
       printf ("# TAU_PSI_TBL setting: %d realizedNumTauClasses: %u tauTbl:", 
 	      gParam.numTauClasses, numTauClasses);
       for (zzz = 0; zzz < numTauClasses; zzz++)
-	printf (",%lf", tauArray[zzz]);
+	printf (",%lf", uniqTauArray[zzz]);
       printf(" psiTbl:");
       for (zzz = 0; zzz < numTauClasses; zzz++)
 	printf (",%d", PSIarray[zzz]);
@@ -599,10 +593,68 @@ main (int argc, char *argv[])
 
     }
 
-  free (tauArray);
-  free (UnconstrainedTauArray);
+  free (uniqTauArray);
+  free (taxonTauArray);
   free (PSIarray);
   free (recTbl);
   free (subParamConstrainConfig);
   exit (0);
+}
+
+
+/* 
+ * Arguments:
+ *   input: array with inputSize elements (will not be modified)
+ *   output: result will be returned in this array.
+ *           the memory for inputSize elements should be allocated
+ *   inputSize: number of elements in input array
+ *   smallVal: used to decide whether two double number differs or not.
+ *      DBL_EPSILON defined in float.h may be appropriate.
+ * 
+ * Extract the unique elements and the unique array will be returned.
+ * The result array is sorted from the smallest to largest.
+ *
+ * If the difference between two numbers is < smallVal, the two numbers 
+ * are considered as identical.
+ *
+ * Example: input = (0.1, 0.4, 0.2, 0.3, 0.51) and smallVal = 0.1.
+ * It will return (0.1, 0.3, 0.51).
+ *
+ * Explanation:
+ * It sorts the array at first, and then works from the smallest number.
+ * 0.2 is removed (=0.1).  Since 0.2 is removed, 0.3 is
+ * not equal to 0.1 (so it will be retained).
+ *
+ * The number of elements in the unique array is returned.  Elements after
+ * the unique values aren't initialized (contains some numbers from input).
+ */
+
+int
+UniqueDouble (double *input, double *output, int inputSize, double smallVal) {
+  int checkI;
+  int lastIndex = 0;
+
+  if (input == NULL) {
+    fprintf (stderr, "ERROR, input array is empty in UniqueDouble\n");
+    return -1;
+  }
+
+  if (inputSize == 0) {
+    return;
+  }
+
+  if (input != output) {
+    memcpy (output, input, inputSize * sizeof (double));
+  }
+  qsort(output, inputSize, sizeof(double), comp_nums);
+
+  for (checkI = 1; checkI < inputSize; checkI++) {
+    if (output[checkI] - output[lastIndex] >= smallVal) {
+      /* sufficiently different */
+      output[lastIndex+1] = output[checkI];
+      lastIndex++;
+    }
+  }
+
+  return (lastIndex + 1);
 }

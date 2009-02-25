@@ -28,6 +28,7 @@
   - tauequalizer of msprior and this program has to be synchronized.  So
     now this program takes upper bound of theta as an option (-T).
     This value enables us to calculate the tauequalizer.
+    All of this calc is not needed any more.
   - msbayes.pl gets this value correctly from msprior, and pass it with -T.
   - nadv used to be a commandline argument.  But I moved it to be an option.
     To pass nadv, we use -a N option now.
@@ -56,12 +57,6 @@ int gNadv = 0;
 int gPrintHeader = 0;
 
 /* function prototypes of external functions */
-/*
-void printstats (int n, int S, char **, int subn, int npops, int *config,
-		 double THETA, int isNumSegSitesConst, int Qbool,
-		 int Fst_bool, double TAU, int count, int numTaxonLocusPairs,
-		 int BasePairs, int numTauClasses, int taxonLocusID);
-*/
 int multiplepopssampledfrom (int nsam, int npops, int *config);
 double thetaW (int, int), mu, N;
 void PrintSumStatNames (void);
@@ -76,7 +71,6 @@ static void ReadInPositionOfSegSites (const char *line,
 				      int numSegSites);
 
 static void ParseCommandLine (int argc, char *argv[]);
-static int SetScratchFile (char *fName);
 static msOutputArray *ReadInMSoutput (FILE * pfin);
 
 int
@@ -84,36 +78,24 @@ main (int argc, char *argv[])
 {
   int i,j;
   msOutputArray *msOutArr;
-  double *tauArr;
   struct SumStat **sumStatArr;
 
   /* check the command line argument */
-#if 0
-  /* if -T is given, the value from the option will override the default */
-  gParam.upperTheta = DEFAULT_UPPER_THETA;
-  strncpy (gParam.scratchFile, "PARarray-E", MAX_FILENAME_LEN);	/* set default scratch file */
-#endif /* not used any more */
-  /* set gParam.upperTheta, gNadv (default 0) gParam.scratchFile */
   ParseCommandLine (argc, argv);
 
   /* read the data from STDIN */
   msOutArr = ReadInMSoutput(stdin); 
   
   /* go through the array of each msDQH run and get sum stats  */
-  sumStatArr = calloc(msOutArr->numTaxonLocusPairs, 
-		      sizeof(struct SumStat *));
-  tauArr = calloc(msOutArr->numTaxonPairs, sizeof(double));
-  
-  if (sumStatArr == NULL || tauArr == NULL) {
+  if ((sumStatArr = calloc(msOutArr->numTaxonLocusPairs, 
+			    sizeof(struct SumStat *))) == NULL) {
     perror("ERROR: No mem in main ");
     exit(EXIT_FAILURE);
   }
   
-  /* need loop here*/
   for (i = 0; i < msOutArr->numElements; i++) {
     j = i % msOutArr->numTaxonLocusPairs;
     sumStatArr[j] = CalcSumStats (& (msOutArr->dat[i]));
-    /* make tau */
     
     if (j == msOutArr->numTaxonLocusPairs - 1) {
       /* we got sumStats for 1 set */
@@ -135,16 +117,14 @@ ReadInMSoutput (FILE * pfin){
   char **list, line[MAX_LNSZ], longline[32000], *mutscanline;
   char dum[100];
   tPositionOfSegSites *posit;
-  double theta, TAU, Tau1, Tau2;
+  double theta;
   int segsites, count, numTaxonLocusPairs, BasePairs, taxonLocusID;
-  int numTauClasses;
   int Fst_bool = 0, Qbool = 0;
   int isNumSegSitesConst = 0;	/* 1 with -s, the number of segregating sites 
 				 *    will be constant in each sample 
 				 * 0 with -t, varies between samples
 				 */
-  char dum1[100], dum2[100], dum3[100], dum4[100], dum5[100];
-
+  
   /* read in first line of output (command line options of msDQH) */
   fgets (line, MAX_LNSZ, pfin);
 
@@ -205,23 +185,19 @@ ReadInMSoutput (FILE * pfin){
      * howmany:   how many simulations were run
      * THETA:     4 Ne mu used for the simulation
      *            This is removed, and getting this in more prper way
-     * Tau1:      time of end of bottleneck event (going back in time)
-     * Tau2:      length of bottleneck: between the time when 2 pops 
-     *            diverge and the time population start to expand.
-     * numTauClasses: number of tau classes drawn from prior dist'n
      * BasePairs: sequence length
      * taxonLocusID: sequential ID for each taxon:locus pair 
                      (1 to # of taxon:locus pairs)
      * numTaxonLocusPairs: total number of taxon:locus pairs per 1 set of sims.
      */
     sscanf (line,
-	    " %s %s %d %d %s %lf %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %lf %s %s %s %s %s %s %s %s %s %s %s %lf %s %s %s %u %s %s %s %u %s %s %s %d %s %s %s %u ",
+	    " %s %s %d %d %s %lf %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %u %s %s %s %d %s %s %s %u ",
 	    dum, dum, &nsam, &howmany, dum, dum, dum, dum, dum, dum, dum,
 	    dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum,
-	    dum, dum, dum, dum, dum, &Tau1, dum, dum, dum, dum, dum, dum, dum,
-	    dum, dum, dum, dum, &Tau2, dum, dum5, dum, &numTauClasses, dum4, dum, dum1,
-	    &BasePairs, dum2, dum3, dum, &taxonLocusID, dum, dum, dum, &numTaxonLocusPairs);
-    
+	    dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum,
+	    dum, dum, dum, dum, dum, dum, dum, dum, &BasePairs, dum, dum, 
+	    dum, &taxonLocusID, dum, dum, dum, &numTaxonLocusPairs);
+
     if(!msbayesFormat) {
       msOutArr->numTaxonPairs=msOutArr->numTaxonLocusPairs = numTaxonLocusPairs;
     }
@@ -255,11 +231,6 @@ ReadInMSoutput (FILE * pfin){
 	if ((mutscanline = strstr (mutscanline, "-Q")) != NULL)
 	  Qbool = 1;
       }
-
-#if 0    
-    TAU = Tau1 + Tau2;		/* time of separation */
-    TAU = TAU * (theta * 2 / gParam.upperTheta);
-#endif    
 
     /* 
      * config become an array with npops elements, 
@@ -367,7 +338,6 @@ ReadInMSoutput (FILE * pfin){
 	outPtr->taxonLocusID = taxonLocusID;
 	outPtr->NumTaxonLocusPairs = numTaxonLocusPairs;
 	outPtr->BasePairs = BasePairs;
-	outPtr->numTauClasses = numTauClasses;
 
       }
   } while (fgets(line, MAX_LNSZ,pfin));
@@ -600,7 +570,7 @@ ParseCommandLine (int argc, char *argv[])
 {
   while (1)
     {
-      int opt, rc;
+      int opt;
       int opt_index;
 
       opt = getopt_long (argc, argv, "hHna:", sim_opts, &opt_index);

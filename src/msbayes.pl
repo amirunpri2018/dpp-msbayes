@@ -34,7 +34,7 @@ my $usage="Usage: $0 [-hd] [-b observedSummaryStatistics] [-s seed] [-r numSims]
     "      By default (without -s), unique seed is automaically set from time\n".
     "  -d: debug (msprior and msDQH uses the same initial seed = 1)\n";
 
-my $defaultOutFile = "Prior_SumStat_Outfile";
+# my $defaultOutFile = "Prior_SumStat_Outfile";
 
 use File::Copy;
 use IO::File;
@@ -43,7 +43,7 @@ use IPC::Open2;
 
 use Getopt::Std;
 
-getopts('hdo:b:c:i:r:s:') || die "$udage\n";
+getopts('hdo:b:c:i:r:s:') || die "$usage\n";
 die "$usage\n" if (defined($opt_h));
 
 my $batchFile;
@@ -100,6 +100,7 @@ if (defined($opt_c)) {
 
 if (defined($opt_b)) {
     my $obsSS = FindExec("obsSumStats.pl");
+    CheckNBackupFile($opt_b);
     system("$obsSS $batchFile > $opt_b");
 }
  
@@ -121,12 +122,12 @@ my $msDQH = FindExec("msDQH");
 my $sumstatsvector = FindExec("sumstatsvector");
 
 #### setting up final output filename
+#### This will contain summary stats from simulations
 my $outFile = '-';  # by default, print out to STDOUT
 if(defined($opt_o)) {
     $outFile = $opt_o;
     CheckNBackupFile($outFile);
 } 
-
 open FINAL_OUT, ">$outFile" || die "Can't open $outFile";
 
 # obtain configuration from msprior, which read in the config file
@@ -137,8 +138,9 @@ my $mspriorConfOut = (defined ($opt_c)) ?
     `$msprior $options --info` ;  # getting the config info
 my %mspriorConf = ExtractMspriorConf($mspriorConfOut);
 
-# If interactively parameters are inputed by the user, we need to incorporate
+# If parameters are interactively set by the user, we need to incorporate
 # this info to make an updated config file to do the real msprior run.
+# This is a work-around, so users don't have to type in parameters twice.
 # Create a new temp file with this updated parameter info here.
 my $newMspriorConf = MkNewMspriorBatchConf($mspriorConf{configFile}, 
 					   \%mspriorConf);
@@ -180,6 +182,8 @@ my $counter  = 0;
 my $totalNumSims = $mspriorConf{reps} * $mspriorConf{numTaxonLocusPairs};
 # This is used to print out the last simulations.
 
+my $headerOpt = " -H ";
+
 #### Overview of what's going on in the following while loop
 # - msprior spits out a line of the prior parameters drawn from the prior distn.
 # - Each line contains all of the required parameter for 1 msDQH run (= 1 gene 
@@ -195,7 +199,6 @@ my $totalNumSims = $mspriorConf{reps} * $mspriorConf{numTaxonLocusPairs};
 #   will be run to process the accumulated outputs of msDQH
 # - Then the results of sumStats (and prior informations) will be 
 #   outputed to the final file
-my $headerOpt = " -H ";
 while (<RAND>) {
     s/^\s+//; s/\s+$//; 
 
@@ -205,8 +208,8 @@ while (<RAND>) {
 	    $BottleTime, $BottStr1, $BottStr2, 
 	    $totSampleNum, $sampleNum1, $sampleNum2, $tstv1, $tstv2, $gamma,
 	    $seqLen, $N1, $N2, $Nanc, 
-	    $freqA, $freqC, $freqG, $freqT, $numTauClasses) = split /\s+/;
-	# $numTauClasses can be removed later
+	    $freqA, $freqC, $freqG, $freqT) = split /\s+/;
+
 ## the output line of msprior contains following parameters in this order	
 #  0 $taxonLocusPairID, $taxonID, $locusID, $theta, $gaussTime, 
 #  6 $mig, $rec, $BottleTime, $BottStr1, $BottStr2,
@@ -222,9 +225,9 @@ while (<RAND>) {
 	# $rec = 0;
 	
 	$SEED = int(rand(2**32));  # msDQH expect unsigned long, the max val (2**32-1) is chosen here
-	
+
 	# At the bottom of this script, msDQH options are explained.
-	my $ms1run = `$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 6 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $durationOfBottleneck 1 Nc $Nanc $numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonLocusPairID 1 Nc $Nanc $mspriorConf{numTaxonLocusPairs}`;
+	my $ms1run = `$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 5 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $durationOfBottleneck 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonLocusPairID 1 Nc $Nanc $mspriorConf{numTaxonLocusPairs}`;
 
 	$ms1run = "# taxonID $taxonID locusID $locusID\n" . $ms1run;
 	push @msOutCache, $ms1run;
@@ -233,14 +236,14 @@ while (<RAND>) {
 	next;
     }
     
-
     # When reached here, msprior printed a TAU_PSI_TBL line which looks like:
     # # TAU_PSI_TBL setting: 0 realizedNumTauClass: 3 tauTbl:,8.71,4.92,4.01 psiTbl:,1,1,1
+    # This means one set of simulations are done.
     # Processing this line to prepare 'prior columns' for the final output
-    my ($tauClassSetting, $numTauCla);
+    my ($tauClassSetting, $realizedNumTauClass);
     if (/setting:\s+(\d+)\s+realizedNumTauClasses:\s+(\d+)\s+tauTbl:,([\d\.,]+)\s+psiTbl:,([\d\.,]+)/) {
 	$tauClassSetting = $1;
-	$numTauCla = $2;
+	$realizedNumTauClass = $2; # this is not actually used
 	my @tauTbl = split /\s*,\s*/, $3;
 	my @psiTbl = split /\s*,\s*/, $4;
 	
@@ -319,21 +322,6 @@ while (<RAND>) {
 close RAND;
 close FINAL_OUT;
 
-if (0) {  # NOT NEEDED ANYMORE
-# combine the two outputfile to create the final output file
-my $rc = ColCatFiles($tmpPriorOut, $tmpMainOut, $outFile);
-if ($rc != 1) {
-    if ($rc == 2) {
-	warn "WARN: the number of lines in the prior output different from the main".
-	    " output.  This should not have happened.  Something went wrong, so ".
-	    "DO NOT TRUST THE RESULTS!!!"
-    }
-    if ($debug && $rc == -1) {    # debug, remove this later
-	warn "In Concatenating at the end, one file was empty.  This means that the simulation was the UNCONSTRAINED\n";
-    }
-}
-}
-
 exit(0);
 
 # interactively setting up. Not used anymore.
@@ -396,6 +384,8 @@ sub FindExec {
     print STDERR "INFO: using $bin\n";
     return $bin;
 }
+
+# This is not used any more
 
 # Take filenames of two files, and concatenate them side by side to
 # produce the outputfile given as the 3rd argument.  The tab will be

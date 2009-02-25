@@ -17,7 +17,6 @@ typedef struct
 			         by -t (msbayes) */
   int Qbool;        /* 1: -Q used to specify ts/tv and base freq, 0: no -Q */
   int Fst_bool;     /* 1: multiple population sampled (npops > 0) */
-  double tau;  /* derived from Tau1,2 and upperTheta (command line option -T), was TAU */
   int replicateID;        /* simulation number (1 to howmany), was count */
   int numReplicates;       /* total number of repetitionreplication, (was howmany) */
   int taxonID;  /* serial number to identify taxon pair */
@@ -25,7 +24,6 @@ typedef struct
   int taxonLocusID; /* sequential ID for each taxon:locus (1-NumPairs), was TAXAcount, from msDQH line */
   int NumTaxonLocusPairs; /* Total # of taxon:locus pairs, was NumTaxa, from msDQH line */
   int BasePairs;    /* Sequence length, from msDQH line */
-  int numTauClasses; /* from msDQH line, was TauHyp */
 } msOutput;
 
 typedef struct

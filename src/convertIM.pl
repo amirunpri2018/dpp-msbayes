@@ -67,7 +67,7 @@ foreach my $currentFile (@fileList)
 	}   
 
 	# print mutation table at the begining of batch file
-        printf BATCH "upperTheta = 30.0\nupperTau = 10.0\nnumTauClasses = 0\nupperMig = 0.0\nupperRec = 0.0\nupperAncPopSize = 0.5\nnumLoci = 1\nconstrain = 0\nsubParamConstrain = 111111111\n\n";
+        printf BATCH "upperTheta = 0.05\nupperTau = 10.0\nnumTauClasses = 0\nupperMig = 0.0\nupperRec = 0.0\nupperAncPopSize = 0.5\nconstrain = 0\nsubParamConstrain = 111111111\n\n";
         printf BATCH ("BEGIN SAMPLE_TBL\n");
         $startToReadIM = 0;
    } # $startToReadIM == 1    
