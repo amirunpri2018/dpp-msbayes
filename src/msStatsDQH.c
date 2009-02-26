@@ -41,6 +41,8 @@
 #define MAX_LEN_COLUMN_NAME 128	/* Used for header. This is the maximum char length
 				   of names for each column */
 
+extern int gSortPattern;
+
 double nucdiv (int, int, char **);
 double nucdiv_w (int, int, char **, int, int *, int);
 double nucdiv_bw (int, int, char **, int, int *);
@@ -289,10 +291,10 @@ compare_doubles (const void *a, const void *b)
 static int
 SS_comp (const void *p1, const void *p2)
 {
-  const struct SumStat *sp1 = (struct SumStat *) p1;
-  const struct SumStat *sp2 = (struct SumStat *) p2;
-
-  return ((sp1->PI_b) > (sp2->PI_b)) - ((sp1->PI_b) < (sp2->PI_b));
+  struct SumStat **sp1 = (struct SumStat **) p1;
+  struct SumStat **sp2 = (struct SumStat **) p2;
+  
+  return (((*sp1)->PI_b) > ((*sp2)->PI_b)) - (((*sp1)->PI_b) < ((*sp2)->PI_b));
 }
 
 /*
@@ -316,15 +318,18 @@ PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs)
    *  
    * ORDER of names is important!
    */
-
-  /* WORK HERE: Is this sorting appropriate? */
   
-  /* Simple sorting of summary statistics without paying attention to
-   * taxonPairs:genes.
-   * The taxonPairs:gene with the largerest pi.b (divergence between the
-   * pair) becomes the 1st column (left most).
-   */
-  qsort (SumStat_list, numTaxonLocusPairs, sizeof (SumStat_list[0]), SS_comp);
+  /* WORK HERE: Is this sorting appropriate? */
+  if (gSortPattern == 0) {
+    ; /* no sorting */
+  } else {  /* default (gSortPattern == 1) */
+    /* Simple sorting of summary statistics without paying attention to
+     * taxonPairs:genes.
+     * The taxonPairs:gene with the largerest pi.b (divergence between the
+     * pair) becomes the 1st column (left most).
+     */
+    qsort (SumStat_list, numTaxonLocusPairs, sizeof (SumStat_list[0]), SS_comp);
+  }
   
   if (gPrintHeader)
     {
@@ -338,9 +343,10 @@ PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs)
     }
 
   /* start to print sum stats */
-  for (a = 0; a < numTaxonLocusPairs; a++)
+  for (a = 0; a < numTaxonLocusPairs; a++) {
     printf ("%lf\t", SumStat_list[a]->PI_b);
-  
+  }
+
   for (a = 0; a < numTaxonLocusPairs; a++)
     printf ("%lf\t", SumStat_list[a]->PI_w);
   
@@ -421,11 +427,12 @@ PrintHeader (char priorNames[][MAX_LEN_COLUMN_NAME], int numPriors,
  *   npops:    number of subpopulations
  *   n[npops]: sub-population sample sizes
  *
- * Returns: 1 if  all subpop sample sizes are bet. 0 and nsam (ends exclusive)
+ * Returns: 1 if all subpop sample sizes are bet. 0 and nsam (ends exclusive)
+ *            and elements of n[] add up to nsam
  *          0 otherwise
  */
 int
-multiplepopssampledfrom (int nsam, int npops, int *n)	/*zzz i think this just tells the program to do Fst and that there is substructure zzz */
+multiplepopssampledfrom (int nsam, int npops, int *n)
 {
   int i, sum = 0;
   for (i = 0; i < npops; i++)
@@ -440,10 +447,10 @@ multiplepopssampledfrom (int nsam, int npops, int *n)	/*zzz i think this just te
      I don't think this is the intention, so I corrected it. Naoki
    */
 
-  /* I have a feeling the additional check below may be good, too.  Naoki
-     if (sum != nsam)
-     return 0;
-   */
+  /* the additional check is added by Naoki */
+  if (sum != nsam)
+    return 0;
+
   return (1);
 }
 

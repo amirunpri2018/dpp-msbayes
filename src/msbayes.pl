@@ -295,7 +295,7 @@ while (<RAND>) {
 	    "# numTaxonLocusPairs $mspriorConf{numTaxonLocusPairs} ".
 	    "numTaxonPairs $mspriorConf{numTaxonPairs} ".
 	    "numLoci $mspriorConf{numLoci}\n";
-	
+
 	for my $index (0..$#msOutCache) {
 	    print WRITE_SS "$msOutCache[$index]";
 	}

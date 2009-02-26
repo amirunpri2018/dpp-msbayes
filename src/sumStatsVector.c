@@ -73,6 +73,12 @@ static void ReadInPositionOfSegSites (const char *line,
 static void ParseCommandLine (int argc, char *argv[]);
 static msOutputArray *ReadInMSoutput (FILE * pfin);
 
+int gSortPattern = 1;
+/* 
+ * 0: no sort
+ * 1 (default) is simple sort
+ */
+
 int
 main (int argc, char *argv[])
 {
@@ -546,10 +552,13 @@ PrintUsage (char *progname)
     p = progname;
 
   fprintf (stderr,
-	   "\nUsage: %s [--help] [--header] [--name] [--nadv N] [< output_line_of_msDQH]\n\n"
+	   "\nUsage: %s [--help] [--header] [--name] [--sort N] [--nadv N] [< output_line_of_msDQH]\n\n"
 	   "        help: Print this usage function (-h)\n"
 	   "      header: Print column header (-H)\n"
 	   "        name: Print names of available summary statistics (-n)\n"
+	   "        sort: specify the sorting pattern (-s), the choices of N are:\n"
+	   "               0: no sort\n"
+	   "               1: simple sort (default)\n"
 	   "        nadv: Specify nadv (-a)\n"
 	   "stdin is used to read in a single line of msDQH output "
 	   "(output_line_of_msDQH)" "\n\n", p);
@@ -561,6 +570,7 @@ static struct option sim_opts[] = {
   {"help", 0, NULL, 'h'},	/* list options */
   {"header", 0, NULL, 'H'},
   {"name", 0, NULL, 'n'},
+  {"sort", 1, NULL, 's'},
   {"nadv", 1, NULL, 'a'},
   {NULL, 0, NULL, 0}
 };
@@ -573,7 +583,7 @@ ParseCommandLine (int argc, char *argv[])
       int opt;
       int opt_index;
 
-      opt = getopt_long (argc, argv, "hHna:", sim_opts, &opt_index);
+      opt = getopt_long (argc, argv, "hHns:a:", sim_opts, &opt_index);
       if (opt < 0)
 	break;
 
@@ -587,6 +597,19 @@ ParseCommandLine (int argc, char *argv[])
 	  break;
 	case 'H':		/* Print header */
 	  gPrintHeader = 1;
+	  break;
+	case 's':
+	  if (!optarg)
+	    {
+	      fprintf (stderr, "Must select sort Pattern with --sort option\n");
+	      PrintUsage (argv[0]);
+	    }
+	  gSortPattern = strtol(optarg, NULL, 10);
+	  if (errno || (gSortPattern < 0) || (gSortPattern > 1))
+	    {
+	      fprintf (stderr, "Invalid sort: %s\n", optarg);
+	      PrintUsage (argv[0]);
+	    }
 	  break;
 	case 'a':		/* specify nadv */
 	  if (!optarg)

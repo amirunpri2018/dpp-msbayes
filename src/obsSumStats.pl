@@ -44,12 +44,23 @@ positions:DUM_positions
 HEADER_TEMPLATE
 ###### END of HERE doc ######
 
-my $usage = "Usage: $0 [-h] [-t headerTmplFile] SampleSize_MuModel_Vector\n".
+my $usage = "Usage: $0 [-h] [-T] [-t headerTmplFile] [-s sortPattern] SampleSize_MuModel_Vector\n".
     "  -h: help, print this message\n" .
 #    "  -g: Do not remove the sites with any gaps. This probably cause problems.\n".
 #    "      So do not use this option." .
+    "  -s: Specify the sorting pattern.  By default, the columns are sorted\n".
+    "      by PI_B (pi between the pairs).  So the column 1 corresponds to the\n".
+    "      pair with the lowest PI_B, column 2 is the pair with the 2nd lowest\n" .
+    "      PI_B etc, and all other summary statistics are ordered accordingly\n" .
+    "      Integer value can be used to specify different sorting.".
+    "       Arguments:\n".
+    "        0: do not sort the column at all\n".
+    "        1: default simple sorting\n".
+    "      To create the input file for acceptRej.pl, this option\n" .
+    "      SHOULD BE LEFT AS THE DEFAULT\n".
+    "  -T: Create a human readable table of summary statistics\n" .
     "  -t: an example output file of msDQH (which is used in msbayes.pl)\n" .
-    "      You probably do not need to use this option\n";
+    "      You probably do not need to use this option\n" ;
 
 # Note that the aligned sequence data are represented by a simple 1 dimensional
 # array.  Each element is a tab-separated (or a character specified by $sep)
@@ -76,12 +87,11 @@ my $sumStatsBinName  = "sumstatsvector";
 my $sep = "\t";  # used as the internal separater between seq and seq name
 my $filename = "SampleSize_MuModel_Vector";  # default filename
 
-our($opt_h, $opt_t, $opt_g);
+our($opt_h, $opt_t, $opt_g, $opt_T, $opt_s);
 my ($verbose);  # assign 1 for verbose (for debug).
 
-getopts('hgt:') || die "$usage\n";
+getopts('hgTt:s:') || die "$usage\n";
 die "$usage\n" if (defined($opt_h));
-
 
 my $sumStatsBin = FindFile($sumStatsBinName);  # locate the binary
 if ($sumStatsBin eq '-1') {
@@ -94,6 +104,17 @@ if (@ARGV > 0) {
     } else {
 	die "Please give only 1 argument\n";
     }
+}
+
+my $sumstatsOptions = "";
+if (defined($opt_s)) {
+    if ($opt_s != 1) {
+	warn "INFO: Using the sorting pattern of $opt_s, DO NOT USE THIS as the input to acceptRej.pl\n";
+    }
+    if ($opt_s < 0 || $opt_S > 1) {
+	die "ERROR: argument of -s has to be between 0 and 1\n$usage\n";
+    }
+    $sumstatsOptions = "-s $opt_s";
 }
 
 my @obsSumStats = CreateObsSumStats($filename, $headerTmpl);
@@ -220,7 +241,7 @@ sub CreateObsSumStats {
     }  # done with processing all fasta, and making fake msDQH output
 
     ### run sumstat.
-    open2(\*READ_SS, \*WRITE_SS, "$sumStatsBin -H ");
+    open2(\*READ_SS, \*WRITE_SS, "$sumStatsBin $sumstatsOptions -H ");
     print WRITE_SS "$sumStatInput";;
     close(WRITE_SS);  # need to close this to prevent dead-lock
     my @sumStatsResultArr = <READ_SS>;
