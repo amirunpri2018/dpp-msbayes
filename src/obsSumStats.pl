@@ -111,7 +111,7 @@ if (defined($opt_s)) {
     if ($opt_s != 1) {
 	warn "INFO: Using the sorting pattern of $opt_s, DO NOT USE THIS as the input to acceptRej.pl\n";
     }
-    if ($opt_s < 0 || $opt_S > 1) {
+    if ($opt_s < 0 || $opt_s > 1) {
 	die "ERROR: argument of -s has to be between 0 and 1\n$usage\n";
     }
     $sumstatsOptions = "-s $opt_s";
@@ -177,7 +177,14 @@ sub CreateObsSumStats {
 	
 	### read in the aligned sequence file, and process it.
 	# column 12 (index 11) contains a file name for a taxon-pair
-	my $fileName = FindSeqFile($fastaFile, \@directory_files);
+	my $fileName = "";
+	if ( -e $fastaFile) {
+	    die "ERROR: $fastaFile has 0 size\n" if ( -z $fastaFile);
+	    die "ERROR: $fastaFile is not readable\n" if ( ! (-r $fastaFile));
+	    $fileName = $fastaFile;
+	} else {
+	    $fileName = FindSeqFile($fastaFile, \@directory_files);
+	}
 	if ($fileName eq "") {
 	    die "ERROR: Couldn't open a file for taxon, $fastaFile\n";
 	}

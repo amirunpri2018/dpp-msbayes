@@ -2,7 +2,7 @@
 
 # msbayes.pl
 #
-# Copyright (C) 2006   Naoki Takebayashi and Michael Hickerson
+# Copyright (C) 2009  Wen Huang, Naoki Takebayashi and Michael Hickerson
 #
 # This program is distributed with msBayes.
 #

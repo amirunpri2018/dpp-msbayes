@@ -1168,12 +1168,12 @@ PrintParam (FILE *fp)
   int i;
 
   fprintf (fp, "## gParam ##\n");
-  fprintf (fp, "lowerTheta =\t%lf\n", gParam.lowerTheta);
-  fprintf (fp, "upperTheta =\t%lf\n", gParam.upperTheta);
-  fprintf (fp, "upperTau =\t%lf\n", gParam.upperTau);
-  fprintf (fp, "upperMig =\t%lf\n", gParam.upperMig);
-  fprintf (fp, "upperRec =\t%lf\n", gParam.upperRec);
-  fprintf (fp, "upperAncPopSize =\t%lf\n", gParam.upperAncPopSize);
+  fprintf (fp, "lowerTheta =\t%.17lf\n", gParam.lowerTheta);
+  fprintf (fp, "upperTheta =\t%.17lf\n", gParam.upperTheta);
+  fprintf (fp, "upperTau =\t%.17lf\n", gParam.upperTau);
+  fprintf (fp, "upperMig =\t%.17lf\n", gParam.upperMig);
+  fprintf (fp, "upperRec =\t%.17lf\n", gParam.upperRec);
+  fprintf (fp, "upperAncPopSize =\t%.17lf\n", gParam.upperAncPopSize);
   fprintf (fp, "reps =\t%llu\n", gParam.reps);
   fprintf (fp, "numTaxonLocusPairs =\t%u\n", gParam.numTaxonLocusPairs);
   fprintf (fp, "numTaxonPairs =\t%u\n", gParam.numTaxonPairs);
