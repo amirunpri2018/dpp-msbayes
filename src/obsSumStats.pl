@@ -70,6 +70,7 @@ my $usage = "Usage: $0 [-h] [-T] [-t headerTmplFile] [-s sortPattern] SampleSize
 
 use strict;
 use IO::File;
+use File::Copy;
 use Getopt::Std;
 use IPC::Open2;
 
@@ -165,6 +166,8 @@ sub CreateObsSumStats {
     my $sumStatInput = "# BEGIN MSBAYES\n" .
 	"# numTaxonLocusPairs $numTaxonLocusPairs ".
 	"numTaxonPairs $numTaxonPairs numLoci $numLoci\n";
+    my $updateSeqLen = 0;
+    my @newSeqLen = (); # stores seqLens after removing gaps
     for (my $i = 0; $i < @master_matrix; ++ $i) {
 	## Extracting relevant columns
 	my ($taxonName, $locusName, $type) =  @{$master_matrix[$i]}[0..2];
@@ -195,9 +198,20 @@ sub CreateObsSumStats {
 	# '?' attached to shorter seqs
 	@alignedSeq = AdjustSeqLength(@alignedSeq);
 	
+	# converting all degenerate characters to '?'
+	@alignedSeq = SubstDegenerateCode(\@alignedSeq, '?');
+
 	unless  (defined($opt_g)) {  # sites with any gaps are removed
 	    @alignedSeq = RemoveSitesWithGaps(\@alignedSeq);
 	}
+
+	# check the seqLen after removal of ambiguous (degenerate) and gaps
+	push (@newSeqLen, MaxSeqLen(@alignedSeq));
+	if ($seqLen != $newSeqLen[$i]) {
+	    $updateSeqLen = 1; # master.batchIn need to be updated
+	    $seqLen = $newSeqLen[$i];
+	}
+
 	@alignedSeq = ExtractVarSites(\@alignedSeq);
 	@alignedSeq = GetSeqDat(@alignedSeq); # get rid of the sequence names
 	
@@ -239,8 +253,8 @@ sub CreateObsSumStats {
 		"Check the sampleSize/mutModel File\n";
 	}
 	if ($seqLen < $numSeqSites) {
-	    die "ERROR: For taxon, $fastaFile, lengths of sequences ($seqLen) " .
-		"should be\n       longer than number of variable sites " .
+	    die "ERROR: For taxon, $fastaFile, lengths of sequences ($seqLen)".
+		" should be\n       longer than number of variable sites " .
 		"($numSeqSites)\n";
 	}
 	
@@ -268,8 +282,84 @@ sub CreateObsSumStats {
 	join("\t", ('1', '0', '1', '0')) . "\t$sumStatsResultArr[1]";
     
     warn "INFO: Total number of (taxon pairs):locus in the data set = $numTaxonLocusPairs\n";
-    
+
+    ### updating the file
+    if($updateSeqLen) {
+	UpdateSeqLen($fileName, \@master_matrix, \@newSeqLen);
+    }
     return @sumStatsResultArr;
+}
+
+## this will update the config file $fileName with the corrected sequence length
+sub UpdateSeqLen {
+    my ($fileName, $master_matrixRef, $newSeqLenRef) = @_;
+    my @master_matrix = @$master_matrixRef;
+    my @newSeqLen = @$newSeqLenRef;
+    my $newSampleTbl = "";
+    print STDERR 
+	"INFO: seqLen of $fileName is adjusted (to the length after\n".
+	"INFO: removals of sites with any gaps or ambiguous/degenerate\n".
+	"INFO: characters). The original file is saved as $fileName.orig\n".
+	"INFO: The fasta files are NOT modified at all.\n";
+    
+    for my $i (0..$#master_matrix) {
+	my @thisRow = @{$master_matrix[$i]};
+	if ($thisRow[7] != $newSeqLen[$i]) {
+	    # update 8-th column (seqLen).
+	    my $nRmChar = $thisRow[7] - $newSeqLen[$i];
+	    my $action = "removed";
+	    if ($nRmChar < 0) {
+		$action = "added";
+		$nRmChar *= -1; # convert to positive number
+	    }
+	    print STDERR "INFO: $thisRow[0]:$thisRow[1], $nRmChar sites ".
+		"$action\n";
+	    $thisRow[7] = $newSeqLen[$i];
+	}
+	
+	# remove 4-th column totalSampleSize
+	splice(@thisRow, 3, 1);
+	$newSampleTbl .= join("\t", @thisRow) . "\n";
+    }
+    
+    CheckNBackupFile("$fileName.orig", 'file');	
+    move($fileName, "$fileName.orig") || 
+	die "Can't move $fileName to $fileName.orig";
+    open NEWCONF, ">$fileName" || die "Can't reopen $fileName\n";
+    open OLDCONF, "<$fileName.orig" || die "Can't open $fileName.orig\n";
+    my $state = 0;
+    while(<OLDCONF>) {
+	my $saveLine = $_;
+	s/#.*$//;
+	chomp;
+	if (/BEGIN\s+SAMPLE_TBL/) {
+	    if ($state == 0) {
+		print NEWCONF "BEGIN SAMPLE_TBL\n$newSampleTbl\n".
+		    "END SAMPLE_TBL\n";
+		$state++;
+		next;
+	    } else {
+		warn "WARN: there are more than 1 SAMPLE_TBL section.\n" .
+		    "WARN: Check $fileName to make sure it is correct.\n";
+	    }
+	}
+	
+	if ($state == 1) { # inside of SAMPLE_TBL
+	    if (/END\s+SAMPLE_TBL/) {
+		$state++;
+		next;
+	    } else {
+		next;
+	    }
+	}
+	# when reached here, it is outside of SAMPLE_TBL
+	print NEWCONF "$saveLine";
+    }
+    
+    close OLDCONF;
+    close NEWCONF;
+
+    return;
 }
 
 # subroutine to get header template in a file and put it into a scalar
@@ -577,6 +667,21 @@ sub AdjustSeqLength {
     return (@data);
 }
 
+# convert any degenerate code to the character specified by $substChar
+sub SubstDegenerateCode {
+    my ($datArrRef, $substChar) = @_;
+    my @seqDat = GetSeqDat(@$datArrRef);
+    my @seqName = GetSeqName(@$datArrRef);
+    my $maxLen = MaxSeqLen(@$datArrRef);
+
+    my @result = ();
+    foreach my $i (0..$#seqDat) {
+	$seqDat[$i] =~ s/[RYKMSWBDHVN]/$substChar/gi;
+	push @result, "$seqName[$i]\t$seqDat[$i]";
+    }
+    return @result;
+}
+
 # '-' or '?' are considered as gaps
 sub RemoveSitesWithGaps {
     my $datArrRef = shift;
@@ -745,4 +850,28 @@ sub FindFile {
         }
     }
     return -1;
+}
+
+# This fucntion check if the argument (fileName) exists. If it exists,
+# it get renamed to fileName.oldN, where N is a digit.
+# In this way, no files will be overwritten.
+# 2nd argument $type is either 'file' or 'dir'.
+# It will create file or directory with the name $fileName.
+sub CheckNBackupFile {
+    my ($fileName, $type) = @_;
+    if (-e $fileName) {
+	my $i = 1;
+	while (-e "$fileName.old$i") {  # checking if the file exists
+	    $i++;
+	}
+	move("$fileName", "$fileName.old$i") ||
+	    die "Can't rename $fileName to $fileName.old$i";
+    }
+    if ($type eq 'file') {
+	# create the empty outfile, so other processes don't use the name.
+	open(OUT,">$fileName");
+	close(OUT);
+    } elsif ($type eq 'dir') {
+	mkdir $fileName
+    }
 }
