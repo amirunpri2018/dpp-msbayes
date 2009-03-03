@@ -100,7 +100,7 @@ if (defined($opt_c)) {
 
 if (defined($opt_b)) {
     my $obsSS = FindExec("obsSumStats.pl");
-    CheckNBackupFile($opt_b);
+    CheckNBackupFile($opt_b, 'file');
     system("$obsSS $batchFile > $opt_b");
 }
  
@@ -126,7 +126,7 @@ my $sumstatsvector = FindExec("sumstatsvector");
 my $outFile = '-';  # by default, print out to STDOUT
 if(defined($opt_o)) {
     $outFile = $opt_o;
-    CheckNBackupFile($outFile);
+    CheckNBackupFile($outFile, 'file');
 } 
 open FINAL_OUT, ">$outFile" || die "Can't open $outFile";
 
@@ -335,7 +335,7 @@ sub InteractiveSetup {
     if($outFileName eq "") {
 	$outFileName = $defaultOutFile;
     }
-    CheckNBackupFile($outFileName);
+    CheckNBackupFile($outFileName, 'file');
 
     return ($outFileName)
 }
@@ -343,23 +343,43 @@ sub InteractiveSetup {
 # This fucntion check if the argument (fileName) exists. If it exists,
 # it get renamed to fileName.oldN, where N is a digit.
 # In this way, no files will be overwritten.
+# 2nd argument $type is either 'file' or 'dir'.
+# It will create file or directory with the name $fileName.
+# rmtree() requires File::Path
+use File::Path;
 sub CheckNBackupFile {
-    my $fileName = shift;
-    if ($fileName eq "") {
-	$fileName="Prior_SumStat_Outfile";
-    }
+    my ($fileName, $type) = @_;
+    my $maxSave = 3;
 
     if (-e $fileName) {
 	my $i = 1;
 	while (-e "$fileName.old$i") {  # checking if the file exists
 	    $i++;
 	}
+	
+	if ($i > $maxSave) {
+	    $i = $maxSave;
+	    rmtree("$fileName.old$i") || die "Can't delete $fileName.old$i";
+	}
+	
+	# oldest file has .old5, newest file has .old1
+	while ($i > 1) {
+	    move("$fileName.old" . ($i - 1), "$fileName.old$i") ||
+		die "Can't rename $fileName.old" . ($i-1) . 
+		" to $fileName.old$i";
+	    $i--;
+	}
+	
 	move("$fileName", "$fileName.old$i") ||
 	    die "Can't rename $fileName to $fileName.old$i";
     }
-    # create the empty outfile, so other processes don't use the name.
-    open(OUT,">$fileName");
-    close(OUT);
+    if ($type eq 'file') {
+	# create the empty outfile, so other processes don't use the name.
+	open(OUT,">$fileName");
+	close(OUT);
+    } elsif ($type eq 'dir') {
+	mkdir $fileName;
+    }
 }
 
 ### Supply the name of program, and it will try to find the executable.

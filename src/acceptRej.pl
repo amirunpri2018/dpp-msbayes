@@ -186,7 +186,7 @@ if (! (-r $obsDat && -T $obsDat )) {
 if(defined($opt_p)) {
     $pdfOut=$opt_p;
 }
-CheckNBackupFile($pdfOut);
+CheckNBackupFile($pdfOut, 'file');
 
 MkStdAnalysisRScript($tmpRfh);
 close($tmpRfh);  # the tmp R script is ready to use
@@ -550,20 +550,43 @@ sub Unique {
 # This fucntion check if the argument (fileName) exists. If it exists,
 # it get renamed to fileName.oldN, where N is a digit.
 # In this way, no files will be overwritten.
+# 2nd argument $type is either 'file' or 'dir'.
+# It will create file or directory with the name $fileName.
+# rmtree() requires File::Path
+use File::Path;
 sub CheckNBackupFile {
-    my $fileName = shift;
+    my ($fileName, $type) = @_;
+    my $maxSave = 3;
 
     if (-e $fileName) {
-        my $i = 1;
-        while (-e "$fileName.old$i") {  # checking if the file exists
-            $i++;
-        }
-        move("$fileName", "$fileName.old$i") ||
-            die "Can't rename $fileName to $fileName.old$i";
+	my $i = 1;
+	while (-e "$fileName.old$i") {  # checking if the file exists
+	    $i++;
+	}
+	
+	if ($i > $maxSave) {
+	    $i = $maxSave;
+	    rmtree("$fileName.old$i") || die "Can't delete $fileName.old$i";
+	}
+	
+	# oldest file has .old5, newest file has .old1
+	while ($i > 1) {
+	    move("$fileName.old" . ($i - 1), "$fileName.old$i") ||
+		die "Can't rename $fileName.old" . ($i-1) . 
+		" to $fileName.old$i";
+	    $i--;
+	}
+	
+	move("$fileName", "$fileName.old$i") ||
+	    die "Can't rename $fileName to $fileName.old$i";
     }
-    # create the empty outfile, so other processes don't use the name.
-    open(OUT,">$fileName");
-    close(OUT);
+    if ($type eq 'file') {
+	# create the empty outfile, so other processes don't use the name.
+	open(OUT,">$fileName");
+	close(OUT);
+    } elsif ($type eq 'dir') {
+	mkdir $fileName;
+    }
 }
 
 

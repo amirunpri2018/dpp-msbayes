@@ -857,13 +857,31 @@ sub FindFile {
 # In this way, no files will be overwritten.
 # 2nd argument $type is either 'file' or 'dir'.
 # It will create file or directory with the name $fileName.
+# rmtree() requires File::Path
+use File::Path;
 sub CheckNBackupFile {
     my ($fileName, $type) = @_;
+    my $maxSave = 3;
+
     if (-e $fileName) {
 	my $i = 1;
 	while (-e "$fileName.old$i") {  # checking if the file exists
 	    $i++;
 	}
+	
+	if ($i > $maxSave) {
+	    $i = $maxSave;
+	    rmtree("$fileName.old$i") || die "Can't delete $fileName.old$i";
+	}
+	
+	# oldest file has .old5, newest file has .old1
+	while ($i > 1) {
+	    move("$fileName.old" . ($i - 1), "$fileName.old$i") ||
+		die "Can't rename $fileName.old" . ($i-1) . 
+		" to $fileName.old$i";
+	    $i--;
+	}
+	
 	move("$fileName", "$fileName.old$i") ||
 	    die "Can't rename $fileName to $fileName.old$i";
     }
@@ -872,6 +890,6 @@ sub CheckNBackupFile {
 	open(OUT,">$fileName");
 	close(OUT);
     } elsif ($type eq 'dir') {
-	mkdir $fileName
+	mkdir $fileName;
     }
 }
