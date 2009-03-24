@@ -91,7 +91,7 @@ my $filename = "SampleSize_MuModel_Vector";  # default filename
 our($opt_h, $opt_t, $opt_g, $opt_T, $opt_s);
 my ($verbose);  # assign 1 for verbose (for debug).
 
-getopts('hgTt:s:') || die "$usage\n";
+getopts('hgt:s:T:') || die "$usage\n";
 die "$usage\n" if (defined($opt_h));
 
 my $sumStatsBin = FindFile($sumStatsBinName);  # locate the binary
@@ -121,6 +121,14 @@ if (defined($opt_s)) {
 my @obsSumStats = CreateObsSumStats($filename, $headerTmpl);
 
 print join "", @obsSumStats;
+
+if (defined($opt_T))
+{
+    my $dataSummary = "dataSummary.pl";
+    `chmod a+x $dataSummary`;
+    my $dsObj = FindExec($dataSummary);
+    `$dataSummary $filename >$opt_T`;
+}
 
 exit;
 
@@ -893,3 +901,27 @@ sub CheckNBackupFile {
 	mkdir $fileName;
     }
 }
+
+### Supply the name of program, and it will try to find the executable.
+### In addition to regular path, it search for several other places
+sub FindExec {
+    my $prog = shift;
+    # I'm making it to find the binary in the current directory (.) at first.
+    # I do not personally like this.  But since Mike doesn't like to
+    # install the binaries in the appropriate directories, we need to
+    # force this behavior to reduce confusion. 
+    # When this program become more matured, we should reevaluate this.
+    # Similar behavior in acceptRej.pl introduced  Naoki Feb 8, 2008
+    $ENV{'PATH'} = ".:" . $ENV{'PATH'} . 
+	":/bin:/usr/bin:/usr/local/bin:$ENV{'HOME'}/bin";
+    my $bin = `which $prog 2>/dev/null`;
+    chomp $bin;
+
+    if ($bin eq "") {
+	die "ERROR: $prog not found in PATH $ENV{'PATH'}\n";
+    }
+
+    print STDERR "INFO: using $bin\n";
+    return $bin;
+}
+
