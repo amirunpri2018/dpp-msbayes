@@ -10,7 +10,7 @@ my @ssNameVect=
   "ShannonsIndex.Net", "ShannonsIndex.Pop1", "ShannonsIndex.Pop2");
 
 my $obsSS = "obsSumStats.pl";
-`chmod a+x $obsSS`;
+# `chmod a+x $obsSS`;
 
 if (@ARGV != 1) {
     die "ERROR: This script requires only one argument";

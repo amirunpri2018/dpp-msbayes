@@ -50,8 +50,7 @@ CFLAGS = $(DEFS) $(INCLS) $(CCOPT)
 .c.o:; $(CC) -c -o $@ $(CFLAGS) $<
 
 TARGET = sumstatsvector msDQH msprior msReject
-PERL_SCRIPTS = acceptRej.pl msbayes.pl obsSumStats.pl convertIM.pl
-# header.pl is not needed anymore, superceded by acceptRej.pl
+PERL_SCRIPTS = acceptRej.pl convertIM.pl dataSummary.pl msbayes.pl obsSumStats.pl
 
 LIB_EXEC_FILES = acceptRej.r make_pd2005.r loc2plot.r
 # LIBEXEC files are used by acceptRej.r, these has to be installed

@@ -63,7 +63,7 @@ if($debug) {  # force msprior to use the same seed
 
 if (defined($opt_r)) {
     if ($opt_r < 0) {
-	die "The number of repetitions should be positive integer\n$udage\n";
+	die "The number of repetitions should be positive integer\n$usage\n";
     }
     $options = $options . " --reps $opt_r ";
 }

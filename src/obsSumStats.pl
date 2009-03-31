@@ -125,9 +125,9 @@ print join "", @obsSumStats;
 if (defined($opt_T))
 {
     my $dataSummary = "dataSummary.pl";
-    `chmod a+x $dataSummary`;
     my $dsObj = FindExec($dataSummary);
-    `$dataSummary $filename >$opt_T`;
+    # `chmod a+x $dsObj`;
+    system("$dataSummary $filename > $opt_T");
 }
 
 exit;
