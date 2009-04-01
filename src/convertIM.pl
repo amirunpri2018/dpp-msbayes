@@ -26,7 +26,7 @@ my $batchFileName = "batch.masterIn.fromIM";
 # to avoid mess, all fasta created from IM will be stored in this directory
 my $fastaDir = "fastaFromIM";  
 
-my $defaultMutScaler = 10;
+my $defaultMutScaler = 24;  # with shrimp it is about 5.9/0.25
 
 my $usage="Usage: $0 [-h] [-o batchFileName] [-m mutationRateMultiplier] imfileListFile\n".
     "  -h: help\n".
@@ -398,26 +398,15 @@ sub EstimateRangeOfThetaPerSite {
     
     my $sumStatNameForTheta = 'pi.w';
     my $numCol = @{${$smplTblRef}[0]};
-    
-    my $seqLenColIndex;
-    if ($numCol == 12) {
-	$seqLenColIndex = 7;
-    } elsif ($numCol == 13) {
-	$seqLenColIndex = 8;
-    } else {
-	die "ERROR: the config file doesn't have the correct number of ".
-	    "columns (12 or 13)\n";
-    }
-    
+        
     my $numTaxonLocus = @$smplTblRef;
 
     my @thetaPerSite = ();
     for my $i (1..($numTaxonLocus)) {
 	my $piPerGene = ${$sumStatHashRef}{$sumStatNameForTheta . "." . $i};
-	my $seqLen = ${${$smplTblRef}[$i-1]}[$seqLenColIndex];
 	my $thetaScaler = ${${$smplTblRef}[$i-1]}[$NScalerColumnIndex] *
 	    ${${$smplTblRef}[$i-1]}[$mutScalerColumnIndex];
-	push @thetaPerSite, $piPerGene/ $seqLen/$thetaScaler;
+	push @thetaPerSite, $piPerGene / $thetaScaler;
     }
 
     # These padding for the lower and upper bound is pretty arbitrary
