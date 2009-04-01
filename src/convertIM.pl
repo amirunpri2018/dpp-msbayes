@@ -33,7 +33,7 @@ my $usage="Usage: $0 [-h] [-o batchFileName] [-m mutationRateMultiplier] imfileL
     "  -o: specify the output file (configFile for msbayes.pl\n".
     "      default filename: $batchFileName\n" .
     "  -m: If the theta scaler of IM file is set to 0.25, it assumes animal\n".
-    "      mtDNA.  The mutation rate is higher, and the value given to this\n"
+    "      mtDNA.  The mutation rate is higher, and the value given to this\n".
     "      option is used as the mutation rate scaler (4-th column of\n".
     "      SAMPLE_TBL). default value is $defaultMutScaler.\n";
 
@@ -45,13 +45,14 @@ use Getopt::Std;
 
 our ($opt_h, $opt_o);
 
-getopts('ho:') || die "$usage\n";
+getopts('ho:m:') || die "$usage\n";
 die "$usage\n" if (defined($opt_h));
 
 if(defined($opt_o)) {
     $batchFileName = $opt_o;
 }
 
+$defaultMutScaler = $opt_m if (defined($opt_m));
 
 $readingHeader = 1;
 $readingData = 0;
@@ -292,11 +293,12 @@ foreach my $currentFile (@fileList)
        # note the sequence length is after sites with any gaps are removed
        if ($NScaler == 0.25) {
 	   $mutScaler = $defaultMutScaler;
+	   
 	   warn "WARN: in convertIM.pl, For $currentFileBasename:$locus_name,".
 	       " theta scaler is 0.25, so assuming mutation rate ".
 	       "is $mutScaler times higher than nuclear loci.  ".
 	       "If this is not the case, correct the 4-th column ".
-	       "of $batchFileName.\n";
+	       "of $batchFileName.\n" unless (defined ($opt_m));
        } else {
 	   if ($NScaler != 1) {
 	       warn "WARN: in convertIM.pl, For ".
