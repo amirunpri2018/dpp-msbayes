@@ -494,13 +494,13 @@ sub ExtractMspriorConf {
 
     my $mutPara;
     if ($mspriorConfOut =~ /## gMutParam ##\s*\n(.+)## gConParam/s) {
-	# note s in the regex will let . to match \n
+	# note s at the end of /regex/ will let . to match \n
 	$mutPara = $1;
     } else {
 	warn "Couldn't find mutation parameter table";
     }    
     # I'm not using this, but following info can be extrcted
-# ### taxon:locus pair ID 1 taxonID 1 (lamarckii) locusID 1 (mt) thetaScaler 1 ###
+# ### taxon:locus pair ID 1 taxonID 1 (lamarckii) locusID 1 (mt) NScaler 1 mutScaler 1 ###
 # numPerTaxa =    15
 # sample =        10 5
 # tstv =  11.600000  0.000000
@@ -508,7 +508,7 @@ sub ExtractMspriorConf {
 # seqLen =        614
 # freq:A, C, G, T = 0.323000, 0.268000 0.212000 0.197000
 # fileName =      lamarckii.fasta
-# ### taxon:locus pair ID 2 taxonID 2 (erosa) locusID 1 (mt) thetaScaler 1 ###
+# ### taxon:locus pair ID 2 taxonID 2 (erosa) locusID 1 (mt) NScaler 0.25 mutScaler 10 ###
 # numPerTaxa =    16
 # sample =        10 6
 # tstv =  13.030000  0.000000
@@ -516,7 +516,7 @@ sub ExtractMspriorConf {
 # seqLen =        614
 # freq:A, C, G, T = 0.266000, 0.215000 0.265000 0.254000
 # fileName =      erosa.fasta
-# ### taxon:locus pair ID 3 taxonID 3 (clandestina) locusID 2 (adh) thetaScaler 2 ###
+# ### taxon:locus pair ID 3 taxonID 3 (clandestina) locusID 2 (adh) NScaler 1 mutScaler 1 ###
 
     return %result;
 }

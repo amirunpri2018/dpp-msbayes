@@ -672,9 +672,9 @@ InitMutPara (FILE * fp, mutParameterArray * mpaPtr)
 
       /* make sure the number of columns are correct */
 #ifdef W_GAMMA
-      if (tmpCol != 12)		/* should be 12 columns */
+      if (tmpCol != 13)		/* should be 13 columns */
 #else
-      if (tmpCol != 11)		/* should be 11 columns */
+      if (tmpCol != 12)		/* should be 12 columns */
 #endif
 	{
 	  fprintf (stderr,
@@ -1100,10 +1100,11 @@ ReadMutLine (mutParameter * mpp, char *line, int ncol)
 
 #ifdef W_GAMMA
 
-  if (ncol == 12)
-    {				/* 12 column */
-      rc = sscanf (line, "%s %s %lf %u %u %lf %lf %u %lf %lf %lf %s",
-		   mpp->taxonName, mpp->locusName, &mpp->thetaScaler,
+  if (ncol == 13)
+    {				/* 13 column */
+      rc = sscanf (line, "%s %s %lf %lf %u %u %lf %lf %u %lf %lf %lf %s",
+		   mpp->taxonName, mpp->locusName, &mpp->NScaler, 
+		   &mpp->mutScaler,
 		   &mpp->sample[0], &mpp->sample[1],
 		   &mpp->tstv[0], &mpp->gamma, &mpp->seqLen,
 		   &mpp->freqA, &mpp->freqC, &mpp->freqG, mpp->filename);
@@ -1116,10 +1117,11 @@ ReadMutLine (mutParameter * mpp, char *line, int ncol)
 
 #else /* basically sscanf and ncol == are different */
 
-  if (ncol == 11)
+  if (ncol == 12)
     {
-      rc = sscanf (line, "%s %s %lf %u %u %lf %u %lf %lf %lf %s",
-		   mpp->taxonName, mpp->locusName, &mpp->thetaScaler,
+      rc = sscanf (line, "%s %s %lf %lf %u %u %lf %u %lf %lf %lf %s",
+		   mpp->taxonName, mpp->locusName, &mpp->NScaler,
+		   &mpp->mutScaler,
 		   &mpp->sample[0], &mpp->sample[1],
 		   &mpp->tstv[0], &mpp->seqLen,
 		   &mpp->freqA, &mpp->freqC, &mpp->freqG, mpp->filename);
@@ -1189,10 +1191,10 @@ PrintParam (FILE *fp)
   fprintf (fp, "## gMutParam ##\n");
   for (i = 0; i < gMutParam.numElements; i++)
     {
-      fprintf (fp, "### taxon:locus pair ID %d taxonID %u (%s) locusID %u (%s) thetaScaler %lf ###\n",
+      fprintf (fp, "### taxon:locus pair ID %d taxonID %u (%s) locusID %u (%s) NScaler %lf mutScaler %lf ###\n",
 	       i + 1, gMutParam.data[i].taxonID+1, gMutParam.data[i].taxonName,
 	       gMutParam.data[i].locusID+1, gMutParam.data[i].locusName,
-	       gMutParam.data[i].thetaScaler);
+	       gMutParam.data[i].NScaler, gMutParam.data[i].mutScaler);
       fprintf (fp, "numPerTaxa =\t%u\n", gMutParam.data[i].numPerTaxa);
       fprintf (fp, "sample =\t%u %u\n",
 	       gMutParam.data[i].sample[0], gMutParam.data[i].sample[1]);

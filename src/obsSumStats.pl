@@ -44,7 +44,7 @@ positions:DUM_positions
 HEADER_TEMPLATE
 ###### END of HERE doc ######
 
-my $usage = "Usage: $0 [-h] [-T] [-t headerTmplFile] [-s sortPattern] SampleSize_MuModel_Vector\n".
+my $usage = "Usage: $0 [-h] [-T tblOutFileName] [-t headerTmplFile] [-s sortPattern] SampleSize_MuModel_Vector\n".
     "  -h: help, print this message\n" .
 #    "  -g: Do not remove the sites with any gaps. This probably cause problems.\n".
 #    "      So do not use this option." .
@@ -58,7 +58,7 @@ my $usage = "Usage: $0 [-h] [-T] [-t headerTmplFile] [-s sortPattern] SampleSize
     "        1: default simple sorting\n".
     "      To create the input file for acceptRej.pl, this option\n" .
     "      SHOULD BE LEFT AS THE DEFAULT\n".
-    "  -T: Create a human readable table of summary statistics\n" .
+    "  -T: Print out an additional human readable table of summary statistics\n" .
     "  -t: an example output file of msDQH (which is used in msbayes.pl)\n" .
     "      You probably do not need to use this option\n" ;
 
@@ -178,16 +178,16 @@ sub CreateObsSumStats {
     my @newSeqLen = (); # stores seqLens after removing gaps
     for (my $i = 0; $i < @master_matrix; ++ $i) {
 	## Extracting relevant columns
-	my ($taxonName, $locusName, $type) =  @{$master_matrix[$i]}[0..2];
+	my ($taxonName, $locusName, $NScaler, $mutScaler) =  @{$master_matrix[$i]}[0..3];
 	my ($totSampleSize, $sampleSize1, $sampleSize2) = 
-	    @{$master_matrix[$i]}[3..5];
-	my ($seqLen, $fastaFile) = @{$master_matrix[$i]}[7,11];
+	    @{$master_matrix[$i]}[4..6];
+	my ($seqLen, $fastaFile) = @{$master_matrix[$i]}[8,12];
 	
 	$sumStatInput .= "# taxonID $taxonID{$taxonName} locusID " .
 	    "$locusID{$locusName}\n";
-	
+
 	### read in the aligned sequence file, and process it.
-	# column 12 (index 11) contains a file name for a taxon-pair
+	# column 13 (index 12) contains a file name for a taxon-pair
 	my $fileName = "";
 	if ( -e $fastaFile) {
 	    die "ERROR: $fastaFile has 0 size\n" if ( -z $fastaFile);
@@ -312,9 +312,9 @@ sub UpdateSeqLen {
     
     for my $i (0..$#master_matrix) {
 	my @thisRow = @{$master_matrix[$i]};
-	if ($thisRow[7] != $newSeqLen[$i]) {
-	    # update 8-th column (seqLen).
-	    my $nRmChar = $thisRow[7] - $newSeqLen[$i];
+	if ($thisRow[8] != $newSeqLen[$i]) {
+	    # update 9-th column (seqLen).
+	    my $nRmChar = $thisRow[8] - $newSeqLen[$i];
 	    my $action = "removed";
 	    if ($nRmChar < 0) {
 		$action = "added";
@@ -322,11 +322,11 @@ sub UpdateSeqLen {
 	    }
 	    print STDERR "INFO: $thisRow[0]:$thisRow[1], $nRmChar sites ".
 		"$action\n";
-	    $thisRow[7] = $newSeqLen[$i];
+	    $thisRow[8] = $newSeqLen[$i];
 	}
 	
-	# remove 4-th column totalSampleSize
-	splice(@thisRow, 3, 1);
+	# remove 5-th column totalSampleSize
+	splice(@thisRow, 4, 1);
 	$newSampleTbl .= join("\t", @thisRow) . "\n";
     }
     
@@ -412,16 +412,17 @@ sub TaxonLocusInfo {
 # It should be tab delimited text file with following columns.
 #   1: TaxonPairName
 #   2: locusName
-#   3: thetaScaler (0.25 for chloroploast in dioecy, 1 for nuclear genes, etc.)
-#   4: TotalSampleSize
-#   5: SampleSize1 
-#   6: SampleSize2
-#   7: transition/transversion Ratio
-#   8: baseTotalpairs (length of sequences)
-#   9: Afreq 
-#  10: Cfreq
-#  11: Gfreq
-#  12: Filename
+#   3: NScaler (0.25 for chloroploast in dioecy, 1 for nuclear genes, etc.)
+#   4: mutScaler (e.g. 10.0, mtDNA has a higher mutation rate)
+#   5: TotalSampleSize
+#   6: SampleSize1 
+#   7: SampleSize2
+#   8: transition/transversion Ratio
+#   9: baseTotalpairs (length of sequences)
+#  10: Afreq 
+#  11: Cfreq
+#  12: Gfreq
+#  13: Filename
 # Each line contains a data for 1 taxon pair (sp.1 and sp.2).
 # The returned 2-dim matrix contain these information, each line = each row.
 # '#' is used to indicate comments, and ignored.
@@ -474,9 +475,9 @@ sub ReadInMaster {
 	# check all rows have good column numbers
 	if ($numCol < 0) {
 	    $numCol = @master;
-	    if ($numCol >12 || $numCol < 11) {
+	    if ($numCol >13 || $numCol < 12) {
 		die "ERROR: reading $filename, the 1st line of sample " .
-		    "sizes/mutation parameter lines should have 11 or 12 " .
+		    "sizes/mutation parameter lines should have 12 or 13 " .
 		    "columns.  But, it has $numCol:  $_\n";
 	    }
 	} elsif ($numCol != @master) {
@@ -486,8 +487,8 @@ sub ReadInMaster {
 	
 	# total sample numbers should be calculated from the sample sizes of
         # taxon pairs.
-	if ($numCol == 11) {
-	    splice @master, 3, 0, $master[3] + $master[4];
+	if ($numCol == 12) {
+	    splice @master, 4, 0, $master[4] + $master[5];
 	}
 	push @master_matrix, [ @master ];
     }

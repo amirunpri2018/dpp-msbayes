@@ -26,10 +26,16 @@ my $batchFileName = "batch.masterIn.fromIM";
 # to avoid mess, all fasta created from IM will be stored in this directory
 my $fastaDir = "fastaFromIM";  
 
-my $usage="Usage: $0 [-h] [-o batchFileName] imfileListFile\n".
+my $defaultMutScaler = 10;
+
+my $usage="Usage: $0 [-h] [-o batchFileName] [-m mutationRateMultiplier] imfileListFile\n".
     "  -h: help\n".
     "  -o: specify the output file (configFile for msbayes.pl\n".
-    "      default filename: $batchFileName\n";
+    "      default filename: $batchFileName\n" .
+    "  -m: If the theta scaler of IM file is set to 0.25, it assumes animal\n".
+    "      mtDNA.  The mutation rate is higher, and the value given to this\n"
+    "      option is used as the mutation rate scaler (4-th column of\n".
+    "      SAMPLE_TBL). default value is $defaultMutScaler.\n";
 
 #use strict;  # need to check the exact syntax
 use File::Copy;
@@ -56,10 +62,9 @@ my $tstv = 1;
 my $verbose = 1;  # prints extra info in stderr
 my $sep = "\t";
 
-unless (open LISTFILE, "< $ARGV[0]")
-{
+open LISTFILE, "< $ARGV[0]" ||
    die "Can't open file $ARGV[0] : $! \n";    
-}   
+
 my @fileList = <LISTFILE>;
 close LISTFILE;
 
@@ -109,7 +114,7 @@ foreach my $currentFile (@fileList)
    
    my ($pop1Name,$pop2Name,$numLoci,$locus_name, 
        $number_pop1,$number_pop2, $sample_length, 
-       $mutation_model,$thetaScaler, $total);
+       $mutation_model,$NScaler, $mutScaler, $total);
    my $lineRead = 0;
    
    # open a .im file, grab the data, then close it (to save resource)
@@ -168,7 +173,7 @@ foreach my $currentFile (@fileList)
 		       " should conatin at least 6 elements: $line\n";
 	       }
 	       ($locus_name, $number_pop1, $number_pop2, 
-		$sample_length, $mutation_model, $thetaScaler) = @tmpLine;
+		$sample_length, $mutation_model, $NScaler) = @tmpLine;
 	       
 	       $total = $number_pop1 + $number_pop2;
 	       $readingHeader = 0;
@@ -285,8 +290,27 @@ foreach my $currentFile (@fileList)
        my $fastaFileName = $currentFileBasename ."_${locus_name}.fasta";
 
        # note the sequence length is after sites with any gaps are removed
+       if ($NScaler == 0.25) {
+	   $mutScaler = $defaultMutScaler;
+	   warn "WARN: in convertIM.pl, For $currentFileBasename:$locus_name,".
+	       " theta scaler is 0.25, so assuming mutation rate ".
+	       "is $mutScaler times higher than nuclear loci.  ".
+	       "If this is not the case, correct the 4-th column ".
+	       "of $batchFileName.\n";
+       } else {
+	   if ($NScaler != 1) {
+	       warn "WARN: in convertIM.pl, For ".
+		   "$currentFileBasename:$locus_name, theta scaler is ".
+		   "$NScaler, but assuming mutation rate ".
+		   "is same as nuclear loci.  ".
+		   "If this is not the case, correct the 4-th column ".
+		   "of $batchFileName.\n";
+
+	   }
+	   $mutScaler = 1;
+       }
        print BATCH
-	   join("\t",($currentFileBasename, $locus_name, $thetaScaler, 
+	   join("\t",($currentFileBasename, $locus_name, $NScaler, $mutScaler, 
 		      $number_pop1, $number_pop2, $tstv, $newSeqLen)) .
 		      sprintf ("\t%.3f\t%.3f\t%.3f\t", $baseCnter{A}, 
 			       $baseCnter{C}, $baseCnter{G}). 
@@ -367,18 +391,20 @@ exit(0);
 sub EstimateRangeOfThetaPerSite {
     my ($sumStatHashRef, $smplTblRef) = @_;
 
-    my $thetaScalerColumnIndex = 2;
+    my $NScalerColumnIndex = 2;
+    my $mutScalerColumnIndex = 3;
+    
     my $sumStatNameForTheta = 'pi.w';
     my $numCol = @{${$smplTblRef}[0]};
     
     my $seqLenColIndex;
-    if ($numCol == 11) {
-	$seqLenColIndex = 6;
-    } elsif ($numCol == 12) {
+    if ($numCol == 12) {
 	$seqLenColIndex = 7;
+    } elsif ($numCol == 13) {
+	$seqLenColIndex = 8;
     } else {
 	die "ERROR: the config file doesn't have the correct number of ".
-	    "columns (11 or 12)\n";
+	    "columns (12 or 13)\n";
     }
     
     my $numTaxonLocus = @$smplTblRef;
@@ -387,7 +413,8 @@ sub EstimateRangeOfThetaPerSite {
     for my $i (1..($numTaxonLocus)) {
 	my $piPerGene = ${$sumStatHashRef}{$sumStatNameForTheta . "." . $i};
 	my $seqLen = ${${$smplTblRef}[$i-1]}[$seqLenColIndex];
-	my $thetaScaler = ${${$smplTblRef}[$i-1]}[$thetaScalerColumnIndex];
+	my $thetaScaler = ${${$smplTblRef}[$i-1]}[$NScalerColumnIndex] *
+	    ${${$smplTblRef}[$i-1]}[$mutScalerColumnIndex];
 	push @thetaPerSite, $piPerGene/ $seqLen/$thetaScaler;
     }
 
@@ -396,7 +423,7 @@ sub EstimateRangeOfThetaPerSite {
     $minT = Max($minT * 0.0001, 0.00000004);
     # larger of the two values are taken. 4*10^-8 is from mu = 10^(-9), Ne=10
 
-    return ($minT, Max(@thetaPerSite) * 2 * 10);
+    return ($minT, Max(@thetaPerSite) * 2);
 }
 
 # The argument of this function is the filename of msbayes
@@ -404,7 +431,7 @@ sub EstimateRangeOfThetaPerSite {
 # It reads in SAMPLE_TBL section, and create two dimensional array (matrix)
 # and return this array.
 # So $result[0][0] is the taxon-pair name of the 1st pair, $result[0][1]
-# is the gene name, $result[0][2] is the thetaScaler.
+# is the gene name, $result[0][2] is the NScaler.
 # $result[1][] is the taxon-pair name of the 2nd pair.
 sub GetSampleTable {
     my $confFile = shift;

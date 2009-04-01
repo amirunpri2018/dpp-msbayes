@@ -47,7 +47,9 @@ typedef struct
   char locusName[MAX_NAME_CHAR_LEN];
   unsigned int taxonID;  /* integer (0-) representation of taxon pair name */
   unsigned int locusID;  /* integer (0-) representation of locus name */
-  double thetaScaler;
+  /* double thetaScaler; */
+  double NScaler;     /* scaler of pop size, e.g. 0.25 for mtDNA of dioecy */
+  double mutScaler;   /* mutation rate multiplier, relative to nuclear */
   unsigned int numPerTaxa;
   unsigned int sample[2];
   double tstv[2];

@@ -83,21 +83,21 @@
  *   This assumes the pop size (during the bottleneck) was smaller than current
  * N1 and N2:   (0.01 to 1.99)  (constrained to be N1 + N2 = 2)
  * Nanc  [0.01/spTheta, gParam.upperAncPopSize * gParam.upperTheta/spTheta)
- *  When there is mut var among loci, 
+ *  When there is mut var among loci (THIS IS NOT RIGHT:), 
  * seqLen * [0.01/locTheta, gParam.upperAncPopSize * gParam.upperTheta/locTheta)
  *
  * spTheta:  [lowerTheta, upperTheta)       (theta per site)
- * locTheta: spTheta * seqLen * thetaScaler (theta per gene)
+ * locTheta: spTheta * seqLen * NScaler * mutScaler * mutVar (theta per gene)
  *
  * -- time related
- * tauequalizer = upperTheta * seqLen / (2 * locTheta)
+ * tauequalizer = upperTheta / (2 * spTheta * NScaler)
  *
  * # close to 0 means that pop. hasn't started to expand until recently.
- * Bottletime [0.000001, 1.0) * 0.95 * tauequalizer
- *      = [9.5e-7, 0.95 * upperTheta / (2 * locTheta))
+ * Bottletime [0.000001, 1.0) * 0.95 * tauequalizer * gaussTime
+ *      = scaledGaussTime * [9.5e-7, 0.95) * upperTheta / (2 * spTheta * NScaler)
  *     Some weird lower bound is used.
  *
- * gaussTime: [0.0, upperTau * upperTheta / (2 * locTheta))
+ * scaledGaussTime: [0.0, upperTau * upperTheta / (2 * spTheta * NScaler))
  *     from taxonTauArray
  *    Then weird lower bound
  */
@@ -511,7 +511,7 @@ main (int argc, char *argv[])
 		 Assumes mu is constant.  This may be a problem with
 	         mitochondoria */
 	      locTheta = spTheta * taxonPairDat.seqLen * 
-		taxonPairDat.thetaScaler;
+		taxonPairDat.NScaler * taxonPairDat.mutScaler;
 #ifndef HOMOGENEOUS_MUT
 	      locTheta *=  mutScalerTbl[locus];
 #endif
@@ -524,13 +524,19 @@ main (int argc, char *argv[])
 		 ratio of N_anc / N_theta, so the following division
 		 by locTheta is required.
 	      */
-	      thisNanc = Nanc * taxonPairDat.seqLen / locTheta;
+	      /* thisNanc = Nanc * taxonPairDat.seqLen / locTheta; */
+	      thisNanc = Nanc / spTheta; /* this can be done outside of locus loog */
+	      /* NAOKI, discuss this with Mike */
 	      /* seqLen is required because the unit of Nanc = theta PER SITE */
 	      /* this scaling is done inside of locus loop to accomodate 
 		 the gamma dist'n of mut rate for each locus */
 
 	      tauequalizer = gParam.upperTheta * taxonPairDat.seqLen / 
 		2 / locTheta;
+	      tauequalizer = gParam.upperTheta / 
+		2 / (spTheta * taxonPairDat.NScaler);
+	      /* WORK, CONFIRM THIS */
+
 	      /* Division by 2 is coming from N1 + N2 = 2.
 		 We are considering that N_0 in theta_0 (=4 N_0 mu) specified 
 		 for -t option (we use -t locTheta) of msDQH is equal to 
