@@ -26,7 +26,7 @@ my $batchFileName = "batch.masterIn.fromIM";
 # to avoid mess, all fasta created from IM will be stored in this directory
 my $fastaDir = "fastaFromIM";  
 
-my $defaultMutScaler = 24;  # with shrimp it is about 5.9/0.25
+my $defaultMutScaler = 80;  # with shrimp pi_b it is about 19.71.
 
 my $usage="Usage: $0 [-h] [-o batchFileName] [-m mutationRateMultiplier] imfileListFile\n".
     "  -h: help\n".
@@ -396,17 +396,20 @@ sub EstimateRangeOfThetaPerSite {
     my $NScalerColumnIndex = 2;
     my $mutScalerColumnIndex = 3;
     
-    my $sumStatNameForTheta = 'pi.w';
+    my $sumStatNameForTheta1 = 'pi.wPop1';
+    my $sumStatNameForTheta2 = 'pi.wPop2';
     my $numCol = @{${$smplTblRef}[0]};
         
     my $numTaxonLocus = @$smplTblRef;
 
     my @thetaPerSite = ();
     for my $i (1..($numTaxonLocus)) {
-	my $piPerGene = ${$sumStatHashRef}{$sumStatNameForTheta . "." . $i};
+	my $piw1 = ${$sumStatHashRef}{$sumStatNameForTheta1 . "." . $i};
+	my $piw2 = ${$sumStatHashRef}{$sumStatNameForTheta2 . "." . $i};
+
 	my $thetaScaler = ${${$smplTblRef}[$i-1]}[$NScalerColumnIndex] *
 	    ${${$smplTblRef}[$i-1]}[$mutScalerColumnIndex];
-	push @thetaPerSite, $piPerGene / $thetaScaler;
+	push @thetaPerSite, ($piw1 / $thetaScaler, $piw2 / $thetaScaler);
     }
 
     # These padding for the lower and upper bound is pretty arbitrary

@@ -229,6 +229,11 @@ while (<RAND>) {
 	# At the bottom of this script, msDQH options are explained.
 	my $ms1run = `$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 5 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $durationOfBottleneck 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonLocusPairID 1 Nc $Nanc $mspriorConf{numTaxonLocusPairs}`;
 
+	if ($? != 0) { # Returned weird exit status.
+	    warn "WARN: following command returned exit status of $?. Contact the developpers\n";
+	    warn "$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 5 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $durationOfBottleneck 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonLocusPairID 1 Nc $Nanc $mspriorConf{numTaxonLocusPairs}\n";
+	    next;
+	}
 	$ms1run = "# taxonID $taxonID locusID $locusID\n" . $ms1run;
 	push @msOutCache, $ms1run;
 	
