@@ -26,7 +26,7 @@ my $batchFileName = "batch.masterIn.fromIM";
 # to avoid mess, all fasta created from IM will be stored in this directory
 my $fastaDir = "fastaFromIM";  
 
-my $defaultMutScaler = 80;  # with shrimp pi_b it is about 19.71.
+my $defaultMutScaler = 20;  # with shrimp pi_b it is about 19.71.
 
 my $usage="Usage: $0 [-h] [-o batchFileName] [-m mutationRateMultiplier] imfileListFile\n".
     "  -h: help\n".
