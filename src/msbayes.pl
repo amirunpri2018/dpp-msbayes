@@ -277,7 +277,7 @@ while (<RAND>) {
 	if ($mspriorConf{numTauClasses} > 0) {
 	    #PRI.Tau.1 PRi.Tau.2 ... PRI.Tau.numTauClasses
 	    #PRI.Psi.1 PRi.Psi.2 ... PRI.Psi.numTauClasses
-	    @tmpPrior = push @tmpPrior, @tauTbl, @psiTbl;
+	    push @tmpPrior, @tauTbl, @psiTbl;
 	}
 	
 	# PRI.Psi PRI.var.t PRI.E.t PRI.omega 
