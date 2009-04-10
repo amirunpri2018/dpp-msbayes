@@ -151,7 +151,7 @@ ReadInMSoutput (FILE * pfin){
     msbayesFormat = 1;
     initialArrSize = 500;    
   } else {
-    msOutArr->numTaxonPairs=msOutArr->numTaxonLocusPairs = 0;
+    msOutArr->numTaxonPairs=msOutArr->numTaxonLocusPairs = 1;
     msOutArr->numLoci = 1;
     msbayesFormat = 0;
     initialArrSize = 1;
@@ -161,7 +161,7 @@ ReadInMSoutput (FILE * pfin){
   if (! (msOutArr->dat = (msOutput *)calloc(initialArrSize, sizeof(msOutput)))) {
     perror ("ERROR: not enough memory 2 in ReadInMSoutput\n");
     exit(EXIT_FAILURE);
-  }
+   }
   msOutArr->numElements = 0;
   msOutArr->allocatedSize = initialArrSize;
 
@@ -180,6 +180,15 @@ ReadInMSoutput (FILE * pfin){
       sscanf(line, "# taxonID %d locusID %d\n", &taxonID, &locusID);
       fgets(line, MAX_LNSZ,pfin);
     } else {
+      /* CHECK THIS WELL, NAOKI, SWRS */
+      while (BlankCharStringQ(line)) {
+	if (! fgets(line,MAX_LNSZ,pfin)) {
+	  endOfFile=1;
+	  break;
+	}
+      }
+      if (endOfFile)
+	break;
       taxonID = locusID = 1;
     }
     
@@ -196,6 +205,7 @@ ReadInMSoutput (FILE * pfin){
                      (1 to # of taxon:locus pairs)
      * numTaxonLocusPairs: total number of taxon:locus pairs per 1 set of sims.
      */
+    numTaxonLocusPairs = taxonLocusID = BasePairs = -1;
     sscanf (line,
 	    " %s %s %d %d %s %lf %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %u %s %s %s %d %s %s %s %u ",
 	    dum, dum, &nsam, &howmany, dum, dum, dum, dum, dum, dum, dum,
@@ -205,7 +215,8 @@ ReadInMSoutput (FILE * pfin){
 	    dum, &taxonLocusID, dum, dum, dum, &numTaxonLocusPairs);
 
     if(!msbayesFormat) {
-      msOutArr->numTaxonPairs=msOutArr->numTaxonLocusPairs = numTaxonLocusPairs;
+      msOutArr->numTaxonPairs=msOutArr->numTaxonLocusPairs = 1;
+      taxonLocusID=numTaxonLocusPairs=1;
     }
     /* 
      * of course, I have to put a prior generator in the actual sample
@@ -234,15 +245,26 @@ ReadInMSoutput (FILE * pfin){
 	theta = atof (dum);
 	
 	/* -Q will tell transition transversion rate ratio and base freqs */
-	if ((mutscanline = strstr (mutscanline, "-Q")) != NULL)
+	if ((mutscanline = strstr (line, "-Q")) != NULL) {
 	  Qbool = 1;
+	}
       }
+
+    mutscanline = strstr(line, "-r");
+    if(mutscanline != NULL) {
+      sscanf(mutscanline, "-r %s %d", dum, &BasePairs);
+      // dum contains recomb rate
+    }
 
     /* 
      * config become an array with npops elements, 
      * it contains subpop sample sizes
      */
     npops = FindNumPopsAndSubpopSampleSizes (line, &config);
+    
+    if (npops == 1) {
+      config[0] = nsam;
+    }
     
     /* Checking if 0 < config[i] < nsam for all i */
     if ((npops > 1) && (multiplepopssampledfrom (nsam, npops, config)))
@@ -344,7 +366,6 @@ ReadInMSoutput (FILE * pfin){
 	outPtr->taxonLocusID = taxonLocusID;
 	outPtr->NumTaxonLocusPairs = numTaxonLocusPairs;
 	outPtr->BasePairs = BasePairs;
-
       }
   } while (fgets(line, MAX_LNSZ,pfin));
 
@@ -389,13 +410,17 @@ FindNumPopsAndSubpopSampleSizes (const char line[], int **subPopSampleSize)
 		   "No memory in FindNumPopsAndSubpopSampleSizes()\n");
 	  exit (EXIT_FAILURE);
 	}
+
+      arrayPtr = (int *) calloc (1, sizeof (int));
+      arrayPtr[0] = -1;
+      *subPopSampleSize = arrayPtr;
       return 1;			/* no -D nor -m, so only 1 population */
     }
 
   /* set the char pointer to the beginning of arguments for the option */
   if (mscanline != NULL)
     {
-      if (Dscanline != NULL)	/* Both -m & -D specified, can be a problem, Naoki */
+      if (Dscanline != NULL)  /* Both -m & -D specified, can be a problem, Naoki */
 	fprintf (stderr, "WARN: both -m and -D are specified, ignoring -D\n");
 
       charPtr = mscanline;

@@ -105,3 +105,31 @@ FindFirstSpace (char *str)
 
   return NULL;
 }
+
+/* 
+ *  Check if blank char string
+ *    Return value:
+ *      1 blank or empty string.
+ *      0 Otherwise
+ */
+int
+BlankCharStringQ (char *str)
+{
+  char *cPtr;
+  if (str)
+    {
+      int junk;
+      if (str[0] == '\0')
+	return 0;
+
+      for (cPtr = str; *cPtr != '\0' && isspace(*cPtr); cPtr++)
+	{
+	  ;
+	}
+
+      if (cPtr != str + strlen (str))
+	  return 0;
+    }
+
+  return 1;
+}

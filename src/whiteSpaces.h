@@ -22,4 +22,9 @@ char *RmTrailingSpaces (char *str);
  */
 char *FindFirstSpace (char *str);
 
+
+/* 
+ *  Check if it is blank string, Retuns 1 for empty or blank string.
+ */
+int BlankCharStringQ (char *str);
 #endif /* WHITE_SPACEH_H */

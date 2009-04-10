@@ -204,14 +204,18 @@ CalcSumStats (msOutput *msOut)
 
   /* Tajima's D denominator */
   resultSS->TDD = tajddenominator (nsam, segsites, resultSS->PI);
-  resultSS->TDD1 = tajddenominator2 (n[0], segwithin[0], resultSS->PI_w1);
-  resultSS->TDD2 = tajddenominator2 (n[1], segwithin[1], resultSS->PI_w2);
+
+  if (msOut->Fst_bool) {  // CHECK THIS BETTER
+    resultSS->TDD1 = tajddenominator2 (n[0], segwithin[0], resultSS->PI_w1);
+    resultSS->TDD2 = tajddenominator2 (n[1], segwithin[1], resultSS->PI_w2);
+  }
 
   /* Tajima's D */
   resultSS->TD = (resultSS->PI - resultSS->TW) / resultSS->TDD;
-  resultSS->TD1 = (resultSS->PI_w1 - resultSS->TW1) / resultSS->TDD1;
-  resultSS->TD2 = (resultSS->PI_w2 - resultSS->TW2) / resultSS->TDD2;
-  
+  if (msOut->Fst_bool) {  // CHECK THIS BETTER
+    resultSS->TD1 = (resultSS->PI_w1 - resultSS->TW1) / resultSS->TDD1;
+    resultSS->TD2 = (resultSS->PI_w2 - resultSS->TW2) / resultSS->TDD2;
+  }
 /*  FuLi(&FuLiD,&FuLiF,nsam,segsites,list,resultSS->PI);*/
 /*   h = resultSS->PI-th ; */
 #if 0

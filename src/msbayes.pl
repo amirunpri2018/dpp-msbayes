@@ -586,8 +586,8 @@ sub SummarizeTau {
     }
     
     my $mean = $sum / $n;
-    my $var = ($ss -  $n * ($mean ** 2)) / ($n-1); # estimated, or sample var
-    my $weirdCV = $var/$mean;
+    my $var = ($n==1) ? 'NA': ($ss -  $n * ($mean ** 2)) / ($n-1); # estimated, or sample var
+    my $weirdCV = ($n==1) ? 'NA': $var/$mean;
     
     return ($numTauClasses, $var, $mean, $weirdCV);
 }
