@@ -7,7 +7,8 @@ my @ssNameVect=
   ( "pi.b", "pi.w", "pi", "wattTheta", "pi.net", "tajD", "tajD.denom",
   "pi.wPop2", "pi.wPop1", "wattTheta.Pop2", "wattTheta.Pop1",
   "tajD.denomPop2", "tajD.denomPop1", "ShannonsIndex.Between",
-  "ShannonsIndex.Net", "ShannonsIndex.Pop1", "ShannonsIndex.Pop2");
+  "ShannonsIndex.Net", "ShannonsIndex.Pop1", "ShannonsIndex.Pop2",
+  "S_x", "S_y","S_xy","JWakeley_Psi");
 
 my $obsSS = "obsSumStats.pl";
 # `chmod a+x $obsSS`;

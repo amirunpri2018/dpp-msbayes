@@ -57,6 +57,10 @@ struct SumStat
   double si2;
   double si3;
   double si4;
+  double Sx;
+  double Sy;
+  double Sxy;
+  double JW_Psi;  
 };
 
 

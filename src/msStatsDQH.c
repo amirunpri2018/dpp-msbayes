@@ -66,6 +66,10 @@ int frequency (char, int, int, char **);
 
 void shannonIndex (char **list, int *config, double **shannonIndexArray);
 int charCount (char *arr);
+double S_w (int ss, int nsam, char **list, int np, int *n, int pop, double D_w);
+double S_xy (int ss, int nsam, char **list, int np, int *n, int pop1,int pop2, double D_xy);
+double JWakely_Psi(int* n, double Sx, double Sy, double Sxy, double dx, double dy, double k);
+
 extern int gPrintHeader;	/* boolean 1 means print header (column names), 0 = no header
 				   -H option invoke printing of the header */
 static void PrintHeader (char priorNames[][MAX_LEN_COLUMN_NAME],
@@ -74,12 +78,13 @@ static void PrintHeader (char priorNames[][MAX_LEN_COLUMN_NAME],
 			 int numSumStats, int numTaxonPairs);
 
 /***** MAKE SURE the following two lines are up-to-date *****/
-int numSumStats = 17;
+int numSumStats = 21;
 char ssNameVect[][MAX_LEN_COLUMN_NAME] =
   { "pi.b", "pi.w", "pi", "wattTheta", "pi.net", "tajD", "tajD.denom",
   "pi.wPop2", "pi.wPop1", "wattTheta.Pop2", "wattTheta.Pop1",
   "tajD.denomPop2", "tajD.denomPop1", "ShannonsIndex.Between",
-  "ShannonsIndex.Net", "ShannonsIndex.Pop1", "ShannonsIndex.Pop2"
+  "ShannonsIndex.Net", "ShannonsIndex.Pop1", "ShannonsIndex.Pop2",
+  "S_x", "S_y", "S_xy","JWakeley_Psi"
 };
 
 
@@ -108,8 +113,8 @@ PrintSumStatNames (void)
   nsub: gNadv, default 0, but can be specified by --nadv option
   npops: number of sub-populations
   n: a vector of sub-population sizes, there are npops elements
-  theta: 4 Ne mu used for the simulations, it comes from the command line 
-         option (-t) to msDQH 
+  theta: 4 Ne mu used for the simulations, it comes from the command line
+         option (-t) to msDQH
 */
 struct SumStat *
 CalcSumStats (msOutput *msOut)
@@ -117,6 +122,10 @@ CalcSumStats (msOutput *msOut)
   int i, nsam, npops, *n, BasePairs, segsites;
   int *freqdist, *segwithin, tW_w_npops;
   double  FuLiD, FuLiF, Fst, Nm, tW_w;
+
+  double  Dx,Dy, Dxy, K;
+  double sx, sy, sxy, jw_psi;
+
   /* double h, th, ObsvVARD, ObsvVARPi_Net, ObsvEPi_Net, ObsvCV_pi_net_tW; */
   char **list;
 
@@ -136,14 +145,20 @@ CalcSumStats (msOutput *msOut)
     perror("ERROR: No Mem in CalcSumStats\n");
     exit(EXIT_FAILURE);
   }
-  
+
   /* initalize with -1 */
   resultSS->PI_b = resultSS->PI_Net = resultSS->PI_w2 = resultSS->PI_w1 =
     resultSS->PI_w = -1;
 
+
+  resultSS->Sx = -1;
+  resultSS->Sy = -1;
+  resultSS->Sxy = -1;
+  resultSS->JW_Psi = -1;
+
   if (! (freqdist = (int *) malloc (nsam * sizeof (int)))) {
 	perror("ERROR: No Mem 2 in CalcSumStats\n");
-	exit(EXIT_FAILURE);    
+	exit(EXIT_FAILURE);
   }
   if (msOut->Qbool)
     FrequencyDistrQ (freqdist, nsam, segsites, list);
@@ -164,7 +179,7 @@ CalcSumStats (msOutput *msOut)
 	perror("ERROR: No Mem 3 in CalcSumStats\n");
 	exit(EXIT_FAILURE);
       }
-      
+
       segsubs (segwithin, segsites, list, npops, n);
 
       tW_w = 0.;
@@ -186,36 +201,49 @@ CalcSumStats (msOutput *msOut)
 	nucdiv_w (nsam, segsites, list, npops, n, -1) / BasePairs;
       resultSS->PI_w1 = nucdiv_w (nsam, segsites, list, npops, n, 0);
       resultSS->PI_w2 = nucdiv_w (nsam, segsites, list, npops, n, 1);
-
       resultSS->PI_b = nucdiv_bw (nsam, segsites, list, npops, n) / BasePairs;
+
+
+      //expected values of pairwise differences
+	  Dx = resultSS->PI_w1;  //dx (Pop1)
+	  Dy = resultSS->PI_w2;  //dy (Pop2)
+	  Dxy = resultSS->PI_b;    //dxy (between)
+      K = resultSS->PI; //k   (overall)
+
+      sx = S_w(segsites, nsam, list, npops, n, 0, Dx);
+      sy = S_w(segsites, nsam, list, npops, n, 1, Dy);
+      sxy = S_xy(segsites, nsam, list, npops, n, 0,1,Dxy);
+      jw_psi = JWakely_Psi(n, sx, sy, sxy, Dx, Dy, K);
+
+      resultSS->Sx = sx;
+	  resultSS->Sy = sy;
+	  resultSS->Sxy = sxy;
+      resultSS->JW_Psi = jw_psi;
+
       Fst = 1. - resultSS->PI_w / resultSS->PI_b;
       resultSS->PI_Net = resultSS->PI_b - resultSS->PI_w;
       if (Fst < 0)
-	{
-	  Fst = 0.;
-	  Nm = -1.;
-	}
+	  {
+	    Fst = 0.;
+	    Nm = -1.;
+	  }
       else
-	{
-	  Nm = (1. / Fst - 1.) / 4.;
-	}
+	  {
+	    Nm = (1. / Fst - 1.) / 4.;
+	  }
     }
   /*   th = thetah(nsam, segsites, list) ; */
 
   /* Tajima's D denominator */
   resultSS->TDD = tajddenominator (nsam, segsites, resultSS->PI);
-
-  if (msOut->Fst_bool) {  // CHECK THIS BETTER
-    resultSS->TDD1 = tajddenominator2 (n[0], segwithin[0], resultSS->PI_w1);
-    resultSS->TDD2 = tajddenominator2 (n[1], segwithin[1], resultSS->PI_w2);
-  }
+  resultSS->TDD1 = tajddenominator2 (n[0], segwithin[0], resultSS->PI_w1);
+  resultSS->TDD2 = tajddenominator2 (n[1], segwithin[1], resultSS->PI_w2);
 
   /* Tajima's D */
   resultSS->TD = (resultSS->PI - resultSS->TW) / resultSS->TDD;
-  if (msOut->Fst_bool) {  // CHECK THIS BETTER
-    resultSS->TD1 = (resultSS->PI_w1 - resultSS->TW1) / resultSS->TDD1;
-    resultSS->TD2 = (resultSS->PI_w2 - resultSS->TW2) / resultSS->TDD2;
-  }
+  resultSS->TD1 = (resultSS->PI_w1 - resultSS->TW1) / resultSS->TDD1;
+  resultSS->TD2 = (resultSS->PI_w2 - resultSS->TW2) / resultSS->TDD2;
+
 /*  FuLi(&FuLiD,&FuLiF,nsam,segsites,list,resultSS->PI);*/
 /*   h = resultSS->PI-th ; */
 #if 0
@@ -232,13 +260,13 @@ CalcSumStats (msOutput *msOut)
   resultSS->PI_w2 = resultSS->PI_w2 / BasePairs;
 
   if (segsites < 1)
-    resultSS->PI_b = resultSS->PI_Net = 
-      resultSS->TD = resultSS->TD1 = resultSS->TD2 = 
-      resultSS->PI_w = resultSS->PI_w1 = resultSS->PI_w2 = resultSS->PI = 
+    resultSS->PI_b = resultSS->PI_Net =
+      resultSS->TD = resultSS->TD1 = resultSS->TD2 =
+      resultSS->PI_w = resultSS->PI_w1 = resultSS->PI_w2 = resultSS->PI =
       resultSS->TW = resultSS->TW1 = resultSS->TW2 =
-      resultSS->TDD = resultSS->TDD1 = resultSS->TDD2 = 
+      resultSS->TDD = resultSS->TDD1 = resultSS->TDD2 =
       FuLiD = FuLiF = Fst = 0;
-  
+
   if (segwithin[1] < 1)
     resultSS->TD2 = 0;
   if (segwithin[0] < 1)
@@ -285,7 +313,7 @@ compare_doubles (const void *a, const void *b)
 }
 #endif
 
-/* 
+/*
  * Used for qsort to sort the array of SumStat
  *   Uses PI_b as the criteria of sorting
  * Returns: 1  if p1 > p2
@@ -297,7 +325,7 @@ SS_comp (const void *p1, const void *p2)
 {
   struct SumStat **sp1 = (struct SumStat **) p1;
   struct SumStat **sp2 = (struct SumStat **) p2;
-  
+
   return (((*sp1)->PI_b) > ((*sp2)->PI_b)) - (((*sp1)->PI_b) < ((*sp2)->PI_b));
 }
 
@@ -307,7 +335,7 @@ void
 PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs)
 {
   int a;
-  
+
   /****** NOTE ******
    *
    * (A) If new summary stat is added or the print order is
@@ -319,10 +347,10 @@ PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs)
    * (B) If new prior is added or the print order is changed,
    *     please modify numPriorColumns and priorNameVect.  For
    *     prior names, start with "PRI."
-   *  
+   *
    * ORDER of names is important!
    */
-  
+
   /* WORK HERE: Is this sorting appropriate? */
   if (gSortPattern == 0) {
     ; /* no sorting */
@@ -334,7 +362,7 @@ PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs)
      */
     qsort (SumStat_list, numTaxonLocusPairs, sizeof (SumStat_list[0]), SS_comp);
   }
-  
+
   if (gPrintHeader)
     {
       int numPriorColumns = 0; /* Prior is not printed anymore */
@@ -342,7 +370,7 @@ PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs)
 	{ "PRI.Psi", "PRI.var.t", "PRI.E.t", "PRI.omega" };
       PrintHeader (priorNameVect, numPriorColumns, ssNameVect,
 		   numSumStats, numTaxonLocusPairs);
-      
+
       gPrintHeader = 0; /* lower the flag to print only once */
     }
 
@@ -353,54 +381,66 @@ PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs)
 
   for (a = 0; a < numTaxonLocusPairs; a++)
     printf ("%lf\t", SumStat_list[a]->PI_w);
-  
+
   for (a = 0; a < numTaxonLocusPairs; a++)
     printf ("%lf\t", SumStat_list[a]->PI);
-  
+
   for (a = 0; a < numTaxonLocusPairs; a++)
     printf ("%lf\t", SumStat_list[a]->TW);
-  
+
   for (a = 0; a < numTaxonLocusPairs; a++)
     printf ("%lf\t", SumStat_list[a]->PI_Net);
-  
+
   for (a = 0; a < numTaxonLocusPairs; a++)
     printf ("%lf\t", SumStat_list[a]->TD);
-  
+
   for (a = 0; a < numTaxonLocusPairs; a++)
     printf ("%lf\t", SumStat_list[a]->TDD);
-  
+
   for (a = 0; a < numTaxonLocusPairs; a++)
     printf ("%lf\t", SumStat_list[a]->PI_w2);
-  
+
   for (a = 0; a < numTaxonLocusPairs; a++)
     printf ("%lf\t", SumStat_list[a]->PI_w1);
-  
+
   for (a = 0; a < numTaxonLocusPairs; a++)
     printf ("%lf\t", SumStat_list[a]->TW2);
-  
+
   for (a = 0; a < numTaxonLocusPairs; a++)
     printf ("%lf\t", SumStat_list[a]->TW1);
-  
+
   for (a = 0; a < numTaxonLocusPairs; a++)
     printf ("%lf\t", SumStat_list[a]->TDD2);
-  
+
   for (a = 0; a < numTaxonLocusPairs; a++)
     printf ("%lf\t", SumStat_list[a]->TDD1);
-  
+
   for (a = 0; a < numTaxonLocusPairs; a++)
     printf ("%lf\t", SumStat_list[a]->si1);
-  
+
   for (a = 0; a < numTaxonLocusPairs; a++)
     printf ("%lf\t", SumStat_list[a]->si2);
-  
+
   for (a = 0; a < numTaxonLocusPairs; a++)
     printf ("%lf\t", SumStat_list[a]->si3);
-  
+
   for (a = 0; a < numTaxonLocusPairs; a++)
     printf ("%lf\t", SumStat_list[a]->si4);
-  
+
+  for (a = 0; a < numTaxonLocusPairs; a++)
+    printf ("%lf\t", SumStat_list[a]->Sx);
+
+  for (a = 0; a < numTaxonLocusPairs; a++)
+    printf ("%lf\t", SumStat_list[a]->Sy);
+
+  for (a = 0; a < numTaxonLocusPairs; a++)
+    printf ("%lf\t", SumStat_list[a]->Sxy);
+
+  for (a = 0; a < numTaxonLocusPairs; a++)
+    printf ("%lf\t", SumStat_list[a]->JW_Psi);
+
   printf ("\n");
-  
+
 }
 
 static void
@@ -509,6 +549,118 @@ pairwisediffc_b (int ss, int nsam, char **list, int np, int *n, int pop1,
 
 }
 
+//Square root of variance of pairwise differences for one population
+double
+S_w (int ss, int nsam, char **list, int np, int *n, int pop, double D_w)
+{
+  int n1, n2, diffc = 0;
+  int popi, startn = 0;
+  int s;
+  int comparisons = 0;
+  double diff_square = 0.0;
+  double var_D_w = 0.0, Sw = 0.0;
+
+  if (n[pop] > 1)
+    {
+      for (popi = 0; popi < pop; popi++)
+      {
+	    startn += n[popi];
+	  }
+
+      for (n1 = startn; n1 < (startn + n[pop] - 1); n1++)
+        for (n2 = n1 + 1; n2 < (startn + n[pop]); n2++)
+    	  {
+    	    for (s = 0; s < ss; s++)
+    	      if (list[n1][s] != list[n2][s])
+    	         diffc++;
+
+    		comparisons ++;
+    	    diff_square = (diffc - D_w) * (diffc - D_w);
+    	    var_D_w += diff_square;
+    	    diffc = 0;
+
+    	  }//for n2
+
+    }// if
+    else
+      return -1.0;
+
+  var_D_w = var_D_w/comparisons;
+  Sw = sqrt(var_D_w);
+  //fprintf(stderr, "Sw, ss = %d, nsam = %d, np = %d, pop = %d, Sw = %lf\n", ss, nsam, np, pop, Sw);
+
+  return (Sw);
+}
+
+
+
+//variance of pairwise difference between
+double
+S_xy (int ss, int nsam, char **list, int np, int *n, int pop1,
+		 int pop2, double D_xy)
+{
+  int n1, n2, diffc = 0;
+  int popi, startn1, startn2;
+  int s;
+  int comparisons = 0;
+  double diff_square = 0.0;
+  double var_D_b = 0.0, Sxy = 0.0;
+  if ((n[pop1] > 0) && (n[pop2] > 0))
+    {
+      startn1 = startn2 = 0;
+      for (popi = 0; popi < pop1; popi++)
+	     startn1 += n[popi];
+      for (popi = 0; popi < pop2; popi++)
+	     startn2 += n[popi];
+
+      for (n1 = startn1; n1 < (startn1 + n[pop1]); n1++)
+	   for (n2 = startn2; n2 < (startn2 + n[pop2]); n2++)
+	    {
+	    for (s = 0; s < ss; s++)
+	      if (list[n1][s] != list[n2][s])
+		    diffc++;
+
+        comparisons ++;
+		diff_square = (diffc - D_xy)*(diffc - D_xy);
+		var_D_b += diff_square;
+		diffc = 0;
+
+	  }
+    }
+
+  var_D_b = var_D_b / comparisons;
+  Sxy = sqrt(var_D_b);
+  //fprintf(stderr, "S_xy: ss = %d, nsam = %d, np = %d, pop1 = %d, pop2 = %d, Sxy = %lf\n", ss, nsam, np, pop1, pop2, Sxy);
+
+  return (Sxy);
+
+}
+
+//John Wakely's Psi
+double JWakely_Psi(int* n, double S_x, double S_y, double S_xy, double d_x, double d_y, double d_k)
+{
+       //fprintf(stderr, "S_x = %lf, S_y = %lf, S_xy = %lf,d_x = %lf, d_y = %lf, d_k = %lf\n", S_x, S_y, S_xy, d_x, d_y, d_k);
+	double JW_Psi = 0.0;
+	double item0, item1, item2, item3, item4;
+	item0 = item1 = item2 = item3 = item4 = 0.0;
+	int nx, ny, nTotal;
+	nx = ny = nTotal = 0;
+        nx = n[0], ny = n[1];
+        nTotal = nx + ny;
+
+        item0 = nTotal * (nTotal - 1);
+	item1 = 1 / item0;
+      	item2 = (d_x > 0)? nx*(nx - 1)*S_x/d_x : 0;
+	item3 = (d_y > 0)? ny*(ny - 1)*S_y/d_y : 0;
+	item4 = (d_k > 0)? 2*nx*ny*S_xy/d_k : 0;
+
+	JW_Psi = item1 * (item2 + item3 + item4);
+
+    //fprintf(stderr, "nx = %d, ny = %d, item1 = %lf, item2 = %lf, item3 = %lf, item4 = %lf, JW_Psi = %lf\n", nx, ny, item1, item2, item3, item4, JW_Psi);
+	return JW_Psi;
+}
+
+
 /*yyy BELOW  Eli 05/15/06 yyy*/
 /*
  * Arguments:
@@ -517,7 +669,7 @@ pairwisediffc_b (int ss, int nsam, char **list, int np, int *n, int pop1,
  *   list: sequence data array
  *   numSubpops: number of sub populations
  *   n: array with numSubpops elements.  i-th element is # seqs in i-th subpops
- *  
+ *
  * Assumes that memory is allocated to segwReturnArr (numSubpops * sizeof(int)).
  *
  * Side effect: segReturnArr get filled up by # seg sites within each subpops.
@@ -568,7 +720,7 @@ segsubs (int *segwReturnArr, int segsites, char **list, int numSubpops, int *n)
  * for each sub population and average is taken:  Let's say two subpops with
  * n0 and n1 samples, and pi's within each subpops are pi0 and pi1.
  * Weighted average is (C(n0,2) * n0 + C(n1,2) * n1) /(C(n0,2)+C(n1,2)),
- * where C(x,y) denote combinatorial: Choose y from x. 
+ * where C(x,y) denote combinatorial: Choose y from x.
  */
 double
 nucdiv_w (int nsam, int segsites, char **list, int np, int *n, int targetPop)
@@ -685,7 +837,7 @@ FuLi (D, F, n, S, list, pi)
   *D /= sqrt (uD * S1 + vD * S1 * S1);
   vF = cn + 2. * (n1 * n1 + n1 + 3) / (9. * n1 * (n1 - 1)) - 2. / (n1 - 1);
   vF /= an * an + bn;
-  uF = 1. + (n1 + 1) / (3. * (n1 - 1)) - 4. * (n1 + 1) / 
+  uF = 1. + (n1 + 1) / (3. * (n1 - 1)) - 4. * (n1 + 1) /
     ((n1 - 1) * (n1 - 1)) * (an + 1. / n1 - 2. * n1 / (n1 + 1));
   uF /= an;
   uF -= vF;
@@ -764,7 +916,7 @@ nucdiv (int nsam, int segsites, char **list)
   for (s = 0; s < segsites; s++)
     {
       pi += frequency (dummy, s, nsam, list);
-      /* frequency() returns the number of pair wise differences at site s 
+      /* frequency() returns the number of pair wise differences at site s
        * from all pairwise comparison */
     }
 
@@ -785,7 +937,7 @@ oldfrequency (char allele, int site, int nsam, char **list)
 
 
 
-/* 
+/*
  * Count the number of pairwise differences at the site.
  * nsam * (nsam - 1) / 2 pairs are compared.
  *
@@ -949,9 +1101,9 @@ shannonIndex (char **list, int *config, double **shannonIndexArray)
     {
       int *thisCnt = (int*) ht_search (subPop2, list[sizeOfSp1 + i],
 				       charCount (list[sizeOfSp1 + i]));
-      
+
       if (thisCnt == NULL)
-	ht_insert (subPop2, list[sizeOfSp1 + i], charCount(list[sizeOfSp1 + i]), 
+	ht_insert (subPop2, list[sizeOfSp1 + i], charCount(list[sizeOfSp1 + i]),
 		   &unit, sizeof (int));
       else
 	(*thisCnt)++;
@@ -959,16 +1111,16 @@ shannonIndex (char **list, int *config, double **shannonIndexArray)
       /* deal with the pooled hashTbl */
       thisCnt = (int*) ht_search (pool, list[sizeOfSp1 + i],
 				  charCount (list[sizeOfSp1 + i]));
-      
+
       if (thisCnt == NULL)
-	ht_insert (pool, list[sizeOfSp1 + i], charCount(list[sizeOfSp1 + i]), 
+	ht_insert (pool, list[sizeOfSp1 + i], charCount(list[sizeOfSp1 + i]),
 		   &unit, sizeof (int));
       else
 	(*thisCnt)++;
-      
+
     }
 
-  // initialize hash table iterator, and calculate sHua1 
+  // initialize hash table iterator, and calculate sHua1
   for (ht_iter_init (subPop1, &iHash); iHash.key != NULL; ht_iter_inc (&iHash))
     {
       temp = (double) (*((int *) (iHash.value)));
@@ -1004,7 +1156,7 @@ shannonIndex (char **list, int *config, double **shannonIndexArray)
   ht_destroy (subPop2);
 }
 
-/* 
+/*
  * Count the number of characters in a cstring (size of the char*)
  *
  * Argument:
