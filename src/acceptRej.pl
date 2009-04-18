@@ -23,30 +23,32 @@
 
 
 my $pdfOut = "figs.pdf";  # default pdf output file name
-my $defaultTolerance = 0.002;  # default tolerance
+my $defaultAcceptCnt = 500;  # used to set default tolerance
 my $statString = "'pi','wattTheta','pi.net','tajD.denom'";  # default stat strings
 
-my $usage="Usage: $0 [-hnacr] [-p outPDF] [-s summary_stats] \n" .
+my $usage="Usage: $0 [-hncr] [-p outPDF] [-a acceptedOutFileName] [-s summary_stats]\n" .
           "                       [-t tolerance] obsData simData \n".
     "  -h: help\n".
     "  -n: print out the names of all available summary stats\n".
-    "  -p: output pdf filename (default: $pdfOut)\n".
     "  -r: Simple rejection method without regression will be used\n".
+    "  -p: output pdf filename (default: $pdfOut)\n".
+    "  -a: create a file with accepted parameter values and summary stats\n".
     "  -s: statString (e.g. -s '$statString', <=default)\n".
     "      The summary statistics listed here will be used\n".
-    "  -a: old analysis with all R processing (nobody needs it)\n" .
-    "  -t: tolerance (a value between 0 an 1, default: $defaultTolerance)\n"  .
+    "  -t: tolerance (a value between 0 an 1, default: set the tolerance so that\n".
+    "      $defaultAcceptCnt simulations will be accepted)\n".
     "  -i: Leave intermediate data files used for R and print out the\n".
     "      filenames of these temporary files.  By default, these files get\n".
     "      erased after the analysis.  These files can be useful for\n".
     "      debugging.  Or these files can be used to conduct more detailed\n".
     "      analysis or to create custom figures in R.  With the manual R\n".
     "      analysis, you can source() the file pointed by \$tmpR to set up\n".
-    "      the environment.  A list object \"res\" contains relevant data.\n"
+    "      the environment.  A list object \"res\" contains relevant data.\n" 
+#    "  -a: old analysis with all R processing (nobody needs it)\n"
     ;
 
 use Getopt::Std;
-getopts('ahindp:rt:s:') || die "$usage\n";
+getopts('a:hindp:rt:s:') || die "$usage\n";
 die "$usage\n" if (defined($opt_h));
 
 our($opt_a, $opt_h, $opt_i, $opt_n, $opt_d, $opt_p, $opt_r, $opt_t, $opt_s);
@@ -54,6 +56,11 @@ our($opt_a, $opt_h, $opt_i, $opt_n, $opt_d, $opt_p, $opt_r, $opt_t, $opt_s);
 use File::Copy;
 use IO::File;
 use POSIX qw(tmpnam);
+
+# if you set this to 1, it will not use msReject, and use old way of
+# doing analysis with just R.  But R only analysis is a memory hog,
+# and this option is not needed any more.
+my $ROnlyAnalysis = 0;
 
 # The names (not paths) of 3 R scripts and a C prog required for this program.
 my $mainRscript = "acceptRej.r";
@@ -164,13 +171,12 @@ if (defined($opt_s)) {
     $statString = MkStatString($opt_s);
 }
 
-my ($simDat, $obsDat);
 if (@ARGV != 2) {
     warn "ERROR: This script requires two arguments";
     die $usage;
 }
 
-($obsDat, $simDat) = @ARGV;
+my ($obsDat, $simDat) = @ARGV;
 
 if (! (-r $simDat && -T $simDat )) {
     warn "ERROR: Problem with $simDat. Please give a readable, non-empty ".
@@ -286,17 +292,36 @@ $obsDataArray[1] = join "\t", @tmpObsVectLine;
 $obsDataArray[0] = join "\t", (@priorNames, @sumStatNames);
 $obsDataArray[0] .= "\n";
 
+## finding the length of SIMDAT
+my $numSimCount = `grep -v PRI.Psi $simDat | wc -l`;
+die "ERROR: grep -v PRI.Psi $simDat | wc -l failed: $?" if $?;
+chomp $numSimCount;
 
-if (! defined($opt_a)) {  # use the external acceptRejection C program
-    my $tol = (defined($opt_t)) ?  $opt_t :  $defaultTolerance;
+## Set tolerance
+my $tol;
+if (defined($opt_t)) {
+    $tol = $opt_t;
+} else {
+    my $defaultTolerance = $defaultAcceptCnt / $numSimCount;
+    $tol = (defined($opt_t)) ?  $opt_t :  $defaultTolerance;
+
+    if ($defaultTolerance > 1) {
+	$defaultTolerance = 1;
+	print STDERR 
+	    "WARN: Hmmm, you ran only $numSimCount simulations.  You'll need about".
+	    "500 accepted simulations for reasonable estimation. Tolerance is set".
+	    "to 1, but this analysis is probably not meaningfull.\n";
+    }
+    print STDERR "INFO: tolerance set to $defaultTolerance.\n" ;
+}
+
+if (! $ROnlyAnalysis) {  # use the external acceptRejection C program
     
     ## create the prior columns only file, and a file without header
     open SIMDAT, "<$simDat" || die "Can't open $simDat\n";
-    ## finding the length of SIMDAT, and setting up thinning of prior
-    ## for Bayes Factor.  Sampling approximately 100k prior to make its distn
-    my $numSimCount = `grep -v PRI.Psi $simDat | wc -l`;
-    die "ERROR: grep -v PRI.Psi $simDat | wc -l failed: $?" if $?;
-    chomp $numSimCount;
+
+    ## Setting up thinning of prior for Bayes Factor.  Sampling
+    ## approximately 100k prior to make its distn
     my $priorSampleIntvl = ($numSimCount>100000) ? int($numSimCount/100000) : 1;
     my $savedHeader = "";
     while (<SIMDAT>) {
@@ -379,6 +404,12 @@ if (! defined($opt_a)) {  # use the external acceptRejection C program
 	warn "WARN: With tolerance of $tol, there are only $rc sampling " .
 	    "points.\nWARN: If you encouter a problem, you may need to run ".
 	    "more simulations\nWARN: or use a higher tolerance (-t option).\n";
+    }
+    # save the accepted sims to a file
+    if(defined ($opt_a)) {
+	CheckNBackupFile($opt_a, 'file');
+	copy($tmpSimDat, $opt_a) || 
+	    warn "WARN: copying $tmpSimDat to $opt_a failed: $!";
     }
 } else {  # Not using preprocessing by rejection
     open SIMDAT, "<$simDat" || die "Can't open $simDat\n";
@@ -489,16 +520,11 @@ sub MkStdAnalysisRScript {
     my $mainRScript = ProperMainRScript();
     print $fh "$mainRScript\n";
     
-    if(defined($opt_a)) {
+    if($ROnlyAnalysis) {
       print $fh "res <- stdAnalysis(\"$tmpObs\", \"$tmpSimDat\", pdf.outfile=\"$pdfOut\",pre.rejected=F";
-
-    } else {
-      print $fh "res <- stdAnalysis(\"$tmpObs\", \"$tmpSimDat\", \"$tmpPrior\",pdf.outfile=\"$pdfOut\",pre.rejected=T";
-    }
-    if (defined($opt_a)) {
-      my $tol = (defined($opt_t)) ? $opt_t : $defaultTolerance;
       print $fh ", tol=$tol";
     } else {
+      print $fh "res <- stdAnalysis(\"$tmpObs\", \"$tmpSimDat\", \"$tmpPrior\",pdf.outfile=\"$pdfOut\",pre.rejected=T";
       print $fh ", tol=1";
     }
     

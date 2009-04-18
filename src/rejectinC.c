@@ -42,10 +42,10 @@ sd's from the mean, or "kinda far") is arbitrarily substituted.
 int
 main (int argc, char *argv[])
 {
-  int i, c, ncolumns, *columns;
+  int i, c, ncolumns, *columns, enoughMem;
   FILE *pfin, *fopen (), *freopen ();
   char *inputstring, *definstr, *cptr = NULL, dum[30], **bestline, *strcpy ();
-  double tolerance, *obs, *vec, *x, *s, *normobs, normalizedvec, euclid,
+  double tolerance, oldTol, *obs, *vec, *x, *s, *normobs, normalizedvec, euclid,
     *besteuclid, **bestvec;
   long linecount, *count, li, lii, tolerated;
   double sqrt ();
@@ -56,6 +56,12 @@ main (int argc, char *argv[])
   tolerance = atof (argv[3]);
   ncolumns = argc - 4;
   columns = (int *) malloc ((unsigned) ncolumns * sizeof (int));
+  if (columns == NULL)
+    {
+      fprintf (stderr, "No memory in msReject\n");
+      exit (EXIT_FAILURE);
+    }
+
   for (i = 4; i < argc; i++)
     {
       columns[i - 4] = atoi (argv[i]) - 1;
@@ -161,15 +167,66 @@ main (int argc, char *argv[])
       normobs[c] /= s[c];
     }
 
-  tolerated = (long) (tolerance * (double) linecount + DBL_EPSILON);
-  besteuclid = (double *) malloc ((unsigned) tolerated * sizeof (double));
-  bestvec = (double **) malloc ((unsigned) tolerated * sizeof (double *));
-  bestline = (char **) malloc ((unsigned) tolerated * sizeof (char *));
-  for (li = 0; li < tolerated; ++li)
-    {
-      bestvec[li] = (double *) malloc ((unsigned) ncolumns * sizeof (double));
-      bestline[li] = (char *) malloc ((unsigned) 100000 * sizeof (char));
+
+  /* Not enough memory, so finding a new tolerance value which will work */
+  oldTol = tolerance;
+  do {
+    enoughMem = 1;
+
+    tolerated = (long) (tolerance * (double) linecount + DBL_EPSILON);
+    besteuclid = (double *) malloc ((unsigned) tolerated * sizeof (double));
+    bestvec = (double **) malloc ((unsigned) tolerated * sizeof (double *));
+    bestline = (char **) malloc ((unsigned) tolerated * sizeof (char *));
+
+    if (besteuclid == NULL || bestvec == NULL || bestline == NULL) {
+      free(besteuclid); free(bestvec); free(bestline);
+      enoughMem = 0;
+      tolerance /= 2;
+      continue;
     }
+	
+    for (li = 0; li < tolerated; ++li)
+      {
+	bestvec[li] = (double *) malloc ((unsigned) ncolumns * sizeof (double));
+	bestline[li] = (char *) malloc ((unsigned) 100000 * sizeof (char));
+	if (bestvec[li] == NULL || bestline[li] == NULL) {
+	  /* clean up the allocated memory */
+	  long freeLine;
+	  for(freeLine = 0; freeLine <= li; freeLine++) {
+	    free(bestvec[freeLine]);
+	    free(bestline[freeLine]);
+	  }
+	  free(besteuclid); free(bestvec); free(bestline);
+
+	  enoughMem = 0;
+	  tolerance /= 2;
+	  break;
+	}
+      }
+  } while (enoughMem == 0);
+
+  if (oldTol != tolerance) {
+    
+    double betterTol = 500.0 / (double) linecount;
+    fprintf(stderr, "ERROR: No memory in msReject.\n");
+    fprintf(stderr, 
+	    "ERROR: PLEASE USE A LOWER TOLERANCE. Instead of %f you "
+	    "specified,\n", oldTol);
+    fprintf (stderr, 
+	     "ERROR: tolerance values between %g to %f should work.\n", 
+	     betterTol, tolerance);
+    fprintf (stderr,     
+	     "ERROR: The lowest tolerance (%g) results in acceptance of "
+	     "500 simulations.\n",
+	     betterTol);
+    fprintf(stderr,
+	    "ERROR: A low tolerance value, accepting 500-1000 simulations, is\n"
+	    "ERROR: recommended to improve the estimation.\n");
+    exit (EXIT_FAILURE);
+    /* it could continue with the new tolerance value, but I'm
+       quiting to be safer */
+  }
+
 
   linecount = 0;
 
