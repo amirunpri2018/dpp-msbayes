@@ -66,8 +66,8 @@ int frequency (char, int, int, char **);
 
 void shannonIndex (char **list, int *config, double **shannonIndexArray);
 int charCount (char *arr);
-double S_w (int ss, int nsam, char **list, int np, int *n, int pop, double D_w);
-double S_xy (int ss, int nsam, char **list, int np, int *n, int pop1,int pop2, double D_xy);
+double S_w (int ss, int nsam, char **list, int np, int *n, int pop, double D_w, int basePairs);
+double S_xy (int ss, int nsam, char **list, int np, int *n, int pop1,int pop2, double D_xy, int basePairs);
 double JWakely_Psi(int* n, double Sx, double Sy, double Sxy, double dx, double dy, double k);
 
 extern int gPrintHeader;	/* boolean 1 means print header (column names), 0 = no header
@@ -125,7 +125,7 @@ CalcSumStats (msOutput *msOut)
 
   double  Dx,Dy, Dxy, K;
   double sx, sy, sxy, jw_psi;
-
+  
   /* double h, th, ObsvVARD, ObsvVARPi_Net, ObsvEPi_Net, ObsvCV_pi_net_tW; */
   char **list;
 
@@ -198,11 +198,15 @@ CalcSumStats (msOutput *msOut)
       /* -1 signals Average of pi's within subpop */
 
       resultSS->PI_w =
-	nucdiv_w (nsam, segsites, list, npops, n, -1) / BasePairs;
+	nucdiv_w (nsam, segsites, list, npops, n, -1) ;
       resultSS->PI_w1 = nucdiv_w (nsam, segsites, list, npops, n, 0);
       resultSS->PI_w2 = nucdiv_w (nsam, segsites, list, npops, n, 1);
-      resultSS->PI_b = nucdiv_bw (nsam, segsites, list, npops, n) / BasePairs;
-
+      resultSS->PI_b = nucdiv_bw (nsam, segsites, list, npops, n);
+ 
+      resultSS->PI = resultSS->PI / BasePairs;
+      resultSS->PI_w = resultSS->PI_w/BasePairs;
+      resultSS->PI_w1 = resultSS->PI_w1 / BasePairs;
+      resultSS->PI_w2 = resultSS->PI_w2 / BasePairs;
 
       //expected values of pairwise differences
 	  Dx = resultSS->PI_w1;  //dx (Pop1)
@@ -210,9 +214,9 @@ CalcSumStats (msOutput *msOut)
 	  Dxy = resultSS->PI_b;    //dxy (between)
       K = resultSS->PI; //k   (overall)
 
-      sx = S_w(segsites, nsam, list, npops, n, 0, Dx);
-      sy = S_w(segsites, nsam, list, npops, n, 1, Dy);
-      sxy = S_xy(segsites, nsam, list, npops, n, 0,1,Dxy);
+      sx = S_w(segsites, nsam, list, npops, n, 0, Dx, BasePairs);
+      sy = S_w(segsites, nsam, list, npops, n, 1, Dy, BasePairs);
+      sxy = S_xy(segsites, nsam, list, npops, n, 0,1,Dxy, BasePairs);
       jw_psi = JWakely_Psi(n, sx, sy, sxy, Dx, Dy, K);
 
       resultSS->Sx = sx;
@@ -254,10 +258,6 @@ CalcSumStats (msOutput *msOut)
   resultSS->TW = resultSS->TW / BasePairs;
   resultSS->TW1 = resultSS->TW1 / BasePairs;
   resultSS->TW2 = resultSS->TW2 / BasePairs;
-
-  resultSS->PI = resultSS->PI / BasePairs;
-  resultSS->PI_w1 = resultSS->PI_w1 / BasePairs;
-  resultSS->PI_w2 = resultSS->PI_w2 / BasePairs;
 
   if (segsites < 1)
     resultSS->PI_b = resultSS->PI_Net =
@@ -551,7 +551,7 @@ pairwisediffc_b (int ss, int nsam, char **list, int np, int *n, int pop1,
 
 //Square root of variance of pairwise differences for one population
 double
-S_w (int ss, int nsam, char **list, int np, int *n, int pop, double D_w)
+S_w (int ss, int nsam, char **list, int np, int *n, int pop, double D_w, int basePairs)
 {
   int n1, n2, diffc = 0;
   int popi, startn = 0;
@@ -575,6 +575,7 @@ S_w (int ss, int nsam, char **list, int np, int *n, int pop, double D_w)
     	         diffc++;
 
     		comparisons ++;
+	    diffc = diffc / basePairs;
     	    diff_square = (diffc - D_w) * (diffc - D_w);
     	    var_D_w += diff_square;
     	    diffc = 0;
@@ -597,7 +598,7 @@ S_w (int ss, int nsam, char **list, int np, int *n, int pop, double D_w)
 //variance of pairwise difference between
 double
 S_xy (int ss, int nsam, char **list, int np, int *n, int pop1,
-		 int pop2, double D_xy)
+      int pop2, double D_xy, int basePairs)
 {
   int n1, n2, diffc = 0;
   int popi, startn1, startn2;
@@ -621,6 +622,7 @@ S_xy (int ss, int nsam, char **list, int np, int *n, int pop1,
 		    diffc++;
 
         comparisons ++;
+	diffc = diffc / basePairs;
 		diff_square = (diffc - D_xy)*(diffc - D_xy);
 		var_D_b += diff_square;
 		diffc = 0;
