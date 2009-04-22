@@ -21,7 +21,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA
 
-my $usage="Usage: $0 [-hd] [-b observedSummaryStatistics] [-s seed] [-r numSims] [-c config] [-i IMconfig] [-o outputFileName]\n".
+my $usage="Usage: $0 [-hd] [-b observedSummaryStatistics] [-r numSims] [-c config] [-i IMconfig] [-o outputFileName] [-s sumStatsSortPattern] [-S seed]\n".
     "  -h: help\n".
     "  -r: number of repetitions\n".
     "  -c: configuration file for msprior.  Parameters setup interactively,\n".
@@ -30,7 +30,10 @@ my $usage="Usage: $0 [-hd] [-b observedSummaryStatistics] [-s seed] [-r numSims]
     "      it will be converted so that msprior can read \n" .      
     "  -o: output file name.  If not specified, output is STDOUT\n" .
     "  -b: observed summary statistics file name. If not specified, it won't calculate summary statisctics \n".
-    "  -s: set the initial seed (but not verbose like -d)\n" .
+    "  -s: Specify how to sort the summary statistics.\n".
+    "       0: no sort\n".
+    "       1: simple sort (default)\n" .
+    "  -S: set the initial seed (but not verbose like -d)\n" .
     "      By default (without -s), unique seed is automaically set from time\n".
     "  -d: debug (msprior and msDQH uses the same initial seed = 1)\n";
 
@@ -43,7 +46,7 @@ use IPC::Open2;
 
 use Getopt::Std;
 
-getopts('hdo:b:c:i:r:s:') || die "$usage\n";
+getopts('hdo:b:c:i:r:S:s:') || die "$usage\n";
 die "$usage\n" if (defined($opt_h));
 
 my $batchFile;
@@ -104,13 +107,20 @@ if (defined($opt_b)) {
     system("$obsSS $batchFile > $opt_b");
 }
  
-if (defined ($opt_s)) {
+if (defined ($opt_S)) {
     $options = $options . " --seed $opt_s ";
 }
 
-if (defined($opt_s) || defined($opt_d)) {  # set the msDQH use the same seeds
-    if (defined($opt_s)) {
-	srand($opt_s);
+my $ssvSortOpt = "-s 1";
+if (defined($opt_s)) {
+    die "$usage\nERROR: sorting pattern (-s) should be 0 or 1" 
+	if ($opt_s != 0 && $opt_s != 1);
+    $ssvSortOpt = "-s $opt_s";
+}
+
+if (defined($opt_S) || defined($opt_d)) {  # set the msDQH use the same seeds
+    if (defined($opt_S)) {
+	srand($opt_S);
     } else {
 	srand(1);
     }
@@ -292,7 +302,7 @@ while (<RAND>) {
     # Check if it is time to run sumstats
     if (@msOutCache % $msCacheSize == 0 || $counter == $totalNumSims) {
 	# getting read write access to sumstatsvector
-	open2(\*READ_SS, \*WRITE_SS, "$sumstatsvector $headerOpt"); 
+	open2(\*READ_SS, \*WRITE_SS, "$sumstatsvector $headerOpt $ssvSortOpt"); 
 	
 	$headerOpt = "";  # remove -H, so header is printed only once
 
