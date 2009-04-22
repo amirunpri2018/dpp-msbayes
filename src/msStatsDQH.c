@@ -207,6 +207,8 @@ CalcSumStats (msOutput *msOut)
       resultSS->PI_w = resultSS->PI_w/BasePairs;
       resultSS->PI_w1 = resultSS->PI_w1 / BasePairs;
       resultSS->PI_w2 = resultSS->PI_w2 / BasePairs;
+      resultSS->PI_b = resultSS->PI_b / BasePairs;
+
 
       //expected values of pairwise differences
 	  Dx = resultSS->PI_w1;  //dx (Pop1)
