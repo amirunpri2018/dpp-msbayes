@@ -13,41 +13,21 @@ library(locfit)  # this need to be installed from CRAN
 # For more details, see <http://cran.r-project.org/doc/manuals/R-admin.html>
 # There is a setion "Add-on packages" describing how to install packages.
 
+# The first several columns of simDat contain the parameter values
+# used for the simulations.  These values are sampled from the prior
+# distributions.
+# Example:
+# When Psi constrainted to be 3
+# PRI.numTauClass PRI.Tau.1       PRI.Tau.2       PRI.Tau.3       PRI.Psi.1       
+# PRI.Psi.2       PRI.Psi.3       PRI.Psi PRI.var.t       PRI.E.t PRI.omega
 
-#### UPDATE HERE, the following info is obsolete
-#### Note that the following two vector variables are used in getData()
-#    If the outputs of sumstatsvector (including ordering) is changed,
-#    you can modify these two vectors accordingly, and everything should work.
+# If there are 9 taxon pairs (or 3 taxon pairs with 3 genes per taxon
+# pair), there are 9 columns of "pi.b" stats for each taxon pairs,
+# then 9 columns of "pi.w", ... etc.
 #
-# The first several columns contain the parameter values used for the
-# simulations.  These values are sampled from the prior distributions.
-# If you change the name here, you need to change a few statements
-# in stdAnalysis()
-# for unconstrained
-#params.from.priorDistn.orig <- c("Psi", "var.t", "E.t", "omega")
-# constrained with 2 psi
-#params.from.priorDistn2 <- c("Tau1", "Tau2", "Psi1", "Psi2", "Psi", "var.t", "E.t", "omega")
+# Examples of summary stats (may not be up to date)
+# c("pi.b", "pi.w", "pi", "wattTheta", "pi.net", "tajD", "tajD.denom", "pi.wPop2", "pi.wPop1", "wattTheta.Pop2", "wattTheta.Pop1", "tajD.denomPop2", "tajD.denomPop1", "ShannonsIndex.Between", "ShannonsIndex.Net", "ShannonsIndex.Pop1", "ShannonsIndex.Pop2"  )
 
-# If there are 9 taxon pairs, there are 9 columns of "pi.b" stats for
-# each taxon pairs, then 9 columns of "pi.w", ... etc.
-# If you change the names here, don't forget to update the default value
-# of used.stats in stdAnalysis
-#summary.stat.names <- c("pi.b", "pi.w", "pi", "wattTheta", "pi.net", "tajD", "tajD.denom", "pi.wPop2", "pi.wPop1", "wattTheta.Pop2", "wattTheta.Pop1", "tajD.denomPop2", "tajD.denomPop1", "ShannonsIndex.Between", "ShannonsIndex.Net", "ShannonsIndex.Pop1", "ShannonsIndex.Pop2"  )
-
-#summary.stat.names <- c("pi.b", "pi.w", "pi", "wattTheta", "pi.net",
-#                            "tajD", "tajD.denom", "pi.wPop2", "pi.wPop1", "wattTheta.Pop2", "wattTheta.Pop1", "tajD.denomPop2", "tajD.denomPop1")
-
-# Just print out the stat names
-printStatNames <- function(constrained=F) {
-  cat("## params.from.priorDistn\n")
-  if(! constrained) {
-    cat(params.from.priorDistn.orig)
-  } else {
-    cat(params.from.priorDistn2)
-  }
-  cat("\n\n## summary.stat.names\n")
-  cat(summary.stat.names, "\n")
-}
 
 ##### The main function to do the standard analysis
 # sim.infile and obs.infile are the file names of the input files
@@ -64,12 +44,6 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
                         rejmethod=T, pre.rejected=F,
                         return.res=F
                         ) {
-#  if(constrained) {
-#    params.from.priorDistn <- params.from.priorDistn2
-#  } else {
-#    params.from.priorDistn <- params.from.priorDistn.orig  
-#  }
-  
   simDat <- getData(sim.infile)
   if(pre.rejected) {
     priorHeader <- scan(prior.infile,what="character", nlines=1, quiet=T)
@@ -112,6 +86,20 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
     constrained <- T
     # get rid of PRI.Psi, which is always constant in constrained Psi
     result$prior.names <- result$prior.names[result$prior.names != "PRI.Psi"]
+
+    numTaxonPairs <- sum(simDat[1,paste("PRI.Psi.",
+                                        1:simDat[1,"PRI.numTauClass"],
+                                        sep="")])
+    # This means there are 3 taxon pairs, and constrained to have 3 tau's.
+    # No need to analyze Psi.1 etc because they are always set to 1.
+    # If we don't remove these, the analysis chokes
+    if(numTaxonPairs == simDat[1,"PRI.numTauClass"]) {
+      noPsiAnalysis <- T
+      result$prior.names <-
+        result$prior.names[- grep("^PRI[.]Psi[.]", result$prior.names)]
+    } else {
+      noPsiAnalysis <- F
+    }
   } else {
     constrained <- F
   }
@@ -187,20 +175,26 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
     # So, simply printing the posterior mean, and mode from
     # accepted values
     if (length(grep("^PRI\\.Psi\\.[0-9]+$", thisPriorName)) == 1) {
-      cat ("### With local-linear regression (by default)\n")
+      if (! rejmethod) 
+        cat ("### With local-linear regression (by default)\n")
+      else
+        cat ("### With simple rejection method, NO LOCAL LINEAR REGRESSION\n")
       mean.median.vect <- c(mean((result[[thisPriorName]])$x),
                                  median((result[[thisPriorName]])$x))
       names(mean.median.vect) <- c("mean", "median")
-      print(mean.median.vect)
+      
       cat ("## Mean/Median\n")
       print(mean.median.vect)
       
       cat ("## 95 % quantile\n")
       print(quantile((result[[thisPriorName]])$x,prob=c(0.025,0.975)))
-      
-      cat("### With simple rejection method, CAUTION: not using local-linear regression\n");
+      if (! rejmethod)
+        cat("\n### With simple rejection method, CAUTION: not using local-linear regression\n");
       cat ("## posterior distribution\n")
-      post.distn.accRej <- table(result[[thisPriorName]]$vals)
+      if (! rejmethod) 
+        post.distn.accRej <- table(result[[thisPriorName]]$vals)
+      else
+        post.distn.accRej <- table(result[[thisPriorName]]$x)
       temp.pd.ar <- c("frequencies", post.distn.accRej)
       names(temp.pd.ar)[1] <- name.rm.PRI
       print(temp.pd.ar)
