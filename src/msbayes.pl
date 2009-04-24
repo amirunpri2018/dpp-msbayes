@@ -302,7 +302,7 @@ while (<RAND>) {
     # Check if it is time to run sumstats
     if (@msOutCache % $msCacheSize == 0 || $counter == $totalNumSims) {
 	# getting read write access to sumstatsvector
-	open2(\*READ_SS, \*WRITE_SS, "$sumstatsvector $headerOpt $ssvSortOpt"); 
+	my $pid = open2(\*READ_SS, \*WRITE_SS, "$sumstatsvector $headerOpt $ssvSortOpt"); 
 	
 	$headerOpt = "";  # remove -H, so header is printed only once
 
@@ -318,7 +318,8 @@ while (<RAND>) {
 	
 	my @ssOut = <READ_SS>;
 	close(READ_SS);
-	
+	waitpid($pid,0);
+
 	if (@priorCache != @ssOut) {
 	    die "ERROR: size of priorCache (". scalar(@priorCache).
 		") differ from sumStatsCache(" .scalar(@ssOut)."\n";
