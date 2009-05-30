@@ -105,7 +105,7 @@ main (int argc, char *argv[])
     
     if (j == msOutArr->numTaxonLocusPairs - 1) {
       /* we got sumStats for 1 set */
-      PrintSumStatsArray(sumStatArr, msOutArr->numTaxonLocusPairs);
+      PrintSumStatsArray(sumStatArr, msOutArr->numTaxonLocusPairs, msOutArr->numLoci);
     }
   }
   return (0);
@@ -630,7 +630,7 @@ ParseCommandLine (int argc, char *argv[])
 	      PrintUsage (argv[0]);
 	    }
 	  gSortPattern = strtol(optarg, NULL, 10);
-	  if (errno || (gSortPattern < 0) || (gSortPattern > 1))
+	  if (errno || (gSortPattern < 0) || (gSortPattern > 3))
 	    {
 	      fprintf (stderr, "Invalid sort: %s\n", optarg);
 	      PrintUsage (argv[0]);

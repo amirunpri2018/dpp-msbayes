@@ -13,7 +13,7 @@ typedef struct
 		       mu is per locus, not per site, with -s it is
 		       calculated by watterson's estimater from seg sites */
   int isNumSegSitesFixed;  /* 1: fixed numSegSites set by -s
-		              O: theta is specified in the simulation 
+		              O: theta is specified in the simulation
 			         by -t (msbayes) */
   int Qbool;        /* 1: -Q used to specify ts/tv and base freq, 0: no -Q */
   int Fst_bool;     /* 1: multiple population sampled (npops > 0) */
@@ -38,6 +38,8 @@ typedef struct
 
 struct SumStat
 {
+  int taxonID;
+  int locusID;
   double PI_b;
   double PI_Net;
   double TD;
@@ -60,13 +62,15 @@ struct SumStat
   double Sx;
   double Sy;
   double Sxy;
-  double JW_Psi;  
+  double JW_Psi;
 };
 
 
 /* in msStatsDQH.c */
 struct SumStat * CalcSumStats (msOutput *msOut);
-void PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs);
+void PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs, int numLoci);
+
+
 
 /*
 void printstats (struct SumStat **SumStat_list, int numTauClassesHyper, double *tau, int NumTaxa);

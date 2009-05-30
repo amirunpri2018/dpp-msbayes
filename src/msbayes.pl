@@ -114,7 +114,7 @@ if (defined ($opt_S)) {
 my $ssvSortOpt = "-s 1";
 if (defined($opt_s)) {
     die "$usage\nERROR: sorting pattern (-s) should be 0 or 1" 
-	if ($opt_s != 0 && $opt_s != 1);
+	if ($opt_s != 0 && $opt_s != 1 && $opt_s != 2 && $opt_s != 3);
     $ssvSortOpt = "-s $opt_s";
 }
 
@@ -295,6 +295,7 @@ while (<RAND>) {
 	push @tmpPrior, SummarizeTau(\@tauTbl, \@psiTbl);
 
 	push @priorCache, join("\t", @tmpPrior);
+
     } else {
 	die "ERROR: TAU_PSI_TBL line is weird.\n$_\n";
     }
