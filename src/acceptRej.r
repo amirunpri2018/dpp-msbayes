@@ -154,9 +154,23 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
     result <- c(result, temp)
   }
 
+  real.mode.mean.median <- NULL
+  modeToPrint <- NULL
+  fileToPrint <- paste("acceptedPriorSummary_")
+  for(i in 1:length(used.stats))
+    {
+      fileToPrint <- paste(fileToPrint, used.stats[i], sep = "")
+    }
+
+  tempMatrix <- scan(file = obs.infile, what = double(0), skip = 1, nmax = 5)
+  TempMatrix <- matrix(tempMatrix, ncol = 1, byrow = T)
+  truePRI <- c(TempMatrix[2,1], TempMatrix[3,1], TempMatrix[4,1], TempMatrix[5,1])
+  counter <- 0
+ 
   cat("######### results #######\n")
   # make print loop for Mode and quantile
   for (i in 1:length(result$prior.names)) {
+    counter <- counter + 1
     thisPriorName <- result$prior.names[i]
     name.rm.PRI <- sub("PRI[.]", "", thisPriorName)
     if(! is.null(verbose.print[[thisPriorName]])) {
@@ -200,6 +214,9 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
       print(temp.pd.ar)
       cat ("## Mode (from simple rejection method):\n")
       print(names(which(post.distn.accRej == max(post.distn.accRej))))
+      
+      real.mode.mean.median <- append(real.mode.mean.median, c(truePRI[counter],1,mean.median.vect), after = length(real.mode.mean.median))
+      
     } else {  # Do regular summary, Not PRI.Psi.*
       cat ("### Mode\n")
       # With locfit 1.5_4, newsplit error of locfit() will stop the
@@ -210,10 +227,16 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
         cat("** locfit failed to find mode, this occurs with an " ,
             "extreme\n** L-shaped posterior distribution, and the mode is ",
             "at the boundary (e.g. 0)\n", sep="")
+
+        if(name.rm.PRI == "Psi")
+          { modeToPrint <- 1.0 }
+        else if((name.rm.PRI == "var.t")||(name.rm.PRI == "omega"))
+          { modeToPrint <- 0.0 }
       } else {
         cat ("MODE:\n" )
         res.mode <- res.mode[1]
         print(res.mode)
+        modeToPrint <- res.mode
       }
       cat ("### Mean/Median\n")
       mean.median.vect <- c(mean((result[[thisPriorName]])$x),
@@ -223,10 +246,14 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
       
       cat ("### 95 % quantile\n")
       print(quantile((result[[thisPriorName]])$x,prob=c(0.025,0.975)))
+
+      real.mode.mean.median <- append(real.mode.mean.median, c(truePRI[counter], modeToPrint, mean.median.vect),after = length(real.mode.mean.median))
     }
     cat("\n")
   }
 
+  write(real.mode.mean.median, file = fileToPrint, ncol = 20, append = T)
+  
   # Print out figures
   pdf(pdf.outfile, width=7.5, height=10, paper="letter")
   for (i in 1:length(result$prior.names)) {
