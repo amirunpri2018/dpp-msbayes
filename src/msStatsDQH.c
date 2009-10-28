@@ -47,8 +47,8 @@ extern int gSortPattern;
 double nucdiv (int, int, char **);
 double nucdiv_w (int, int, char **, int, int *, int);
 double nucdiv_bw (int, int, char **, int, int *);
-double tajddenominator (int, int, double);
-double tajddenominator2 (int, int, double);
+double tajddenominator (int, int, int);
+double tajddenominator2 (int, int, int);
 double thetaW (int, int);
 double thetah (int, int, char **);
 void FuLi (double *D, double *F, int, int, char **, double pi);
@@ -248,9 +248,9 @@ CalcSumStats (msOutput *msOut)
   /*   th = thetah(nsam, segsites, list) ; */
 
   /* Tajima's D denominator */
-  resultSS->TDD = tajddenominator (nsam, segsites, resultSS->PI);
-  resultSS->TDD1 = tajddenominator2 (n[0], segwithin[0], resultSS->PI_w1);
-  resultSS->TDD2 = tajddenominator2 (n[1], segwithin[1], resultSS->PI_w2);
+  resultSS->TDD = tajddenominator (nsam, segsites, BasePairs);
+  resultSS->TDD1 = tajddenominator2 (n[0], segwithin[0], BasePairs);
+  resultSS->TDD2 = tajddenominator2 (n[1], segwithin[1], BasePairs);
 
   /* Tajima's D */
   resultSS->TD = (resultSS->PI - resultSS->TW) / resultSS->TDD;
@@ -1513,12 +1513,12 @@ FuLi (D, F, n, S, list, pi)
 }
 
 double
-tajddenominator (int n, int S, double p)
+tajddenominator (int n, int S, int bp)
 {
   int i;
   double n1, S1, a1, a2, b1, b2, e1, e2, denom;
   n1 = (double) n;
-  S1 = (double) S;
+  S1 = (double) S / bp;
   a1 = a2 = 0.;
   for (i = 1; i < n; i++)
     {
@@ -1534,7 +1534,7 @@ tajddenominator (int n, int S, double p)
 }
 
 double
-tajddenominator2 (int n, int S, double p)
+tajddenominator2 (int n, int S, int bp)
 {
   int i;
   double n1, S1, a1, a2, b1, b2, e1, e2, denom;
