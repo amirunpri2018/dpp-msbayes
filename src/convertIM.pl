@@ -351,7 +351,7 @@ my @settings = (
     "upperTheta = $thetaRangeFromObs[1]",
     "lowerTheta = $thetaRangeFromObs[0]",
     "# upper limit of tau (divergence time)",
-    "upperTau = 10.0",
+    "upperTau = 7.0",
     "# number of tau classes (Psi): 0 means Psi are drawn from [0,#taxonPairs]",
     "numTauClasses = 0",
     "# upper bound of migration rate (0 disables migration)",
@@ -359,6 +359,7 @@ my @settings = (
     "upperRec = 0.0",
     "# Ancestral theta multiplier: product of this and upperTheta is the upper bound of ancestral theta",
     "upperAncPopSize = 1.0",
+    "reps = 1000000",
     "# Most users don't want to constrain the subparameters",
     "constrain = 0",
     "subParamConstrain = 111111111");

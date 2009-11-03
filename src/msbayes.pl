@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 
 # msbayes.pl
 #
@@ -37,7 +37,7 @@ my $usage="Usage: $0 [-hd] [-b observedSummaryStatistics] [-r numSims] [-c confi
     "      By default (without -s), unique seed is automaically set from time\n".
     "  -d: debug (msprior and msDQH uses the same initial seed = 1)\n";
 
-# my $defaultOutFile = "Prior_SumStat_Outfile";
+use strict;
 
 use File::Copy;
 use IO::File;
@@ -46,8 +46,11 @@ use IPC::Open2;
 
 use Getopt::Std;
 
+our ($opt_h, $opt_d, $opt_o, $opt_b, $opt_c, $opt_i, $opt_r, $opt_S, $opt_s);
 getopts('hdo:b:c:i:r:S:s:') || die "$usage\n";
 die "$usage\n" if (defined($opt_h));
+
+my $defaultOutFile = "Prior_SumStat_Outfile";
 
 my $batchFile;
 
@@ -182,7 +185,7 @@ my @priorCache = ();
 
 my $prepPriorHeader = 1;
 
-my $msCacheSize = $mspriorConf{'numTaxonLocusPairs'} * 500; # ADJUST MULTIPLIER to reduce I/O
+my $msCacheSize = $mspriorConf{'numTaxonLocusPairs'} * 100; # ADJUST MULTIPLIER to reduce I/O
 # $numTaxonLocusPairs is the total number of taxa:locus pairs.  If
 # taxon pair 1 have 3 loci, taxon pair 2 have 4 loci, and taxon pair 3
 # have 1 locus, the 2nd term = 8 So $totalNumSims are the number of
@@ -234,7 +237,7 @@ while (<RAND>) {
 	# it to be 0 here
 	# $rec = 0;
 	
-	$SEED = int(rand(2**32));  # msDQH expect unsigned long, the max val (2**32-1) is chosen here
+	my $SEED = int(rand(2**32));  # msDQH expect unsigned long, the max val (2**32-1) is chosen here
 
 	# At the bottom of this script, msDQH options are explained.
 	my $ms1run = `$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 5 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $durationOfBottleneck 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonLocusPairID 1 Nc $Nanc $mspriorConf{numTaxonLocusPairs}`;
@@ -315,6 +318,7 @@ while (<RAND>) {
 	for my $index (0..$#msOutCache) {
 	    print WRITE_SS "$msOutCache[$index]";
 	}
+
 	close(WRITE_SS);  # need to close this to prevent dead-lock
 	
 	my @ssOut = <READ_SS>;
@@ -455,12 +459,12 @@ sub ColCatFiles {
 
     open FILE1, "<$infilename1" || die "Can't open $infilename1\n";
     open FILE2, "<$infilename2" || die "Can't open $infilename2\n";
-    open OUT, ">$outfilename" || die "Can't open $outfile\n";
+    open OUT, ">$outfilename" || die "Can't open $outfilename\n";
 
-    $numLines1 = `wc -l < $infilename1`;
+    my $numLines1 = `wc -l < $infilename1`;
     die "wc failed: $?" if $?;
     chomp $numLines1;
-    $numLines2 = `wc -l < $infilename2`;
+    my $numLines2 = `wc -l < $infilename2`;
     die "wc failed: $?" if $?;
     chomp $numLines2;
 
@@ -473,14 +477,14 @@ sub ColCatFiles {
     
     for(my $i = 0; $i < $maxLines; $i++) {
 	if ($i < $numLines1) {
-	    $line = <FILE1>;
+	    my $line = <FILE1>;
 	    chomp $line;
 	    print OUT $line;
 	}
 	print OUT "\t";
 
 	if ($i < $numLines2) {
-	    $line = <FILE2>;
+	    my $line = <FILE2>;
 	    chomp $line;
 	    print OUT $line;
 	}

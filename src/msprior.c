@@ -336,7 +336,7 @@ main (int argc, char *argv[])
 	shape = gsl_ran_flat(gBaseRand, 1.0, 20);
 	/* shape = 1 is exponential with lambda=1, 
 	   larger shape -> normal dist'n with smaller var */
-	scale = 1/shape; /* E[x] = 1, Var[x] = shape * scale62 = 1/shape */
+	scale = 1/shape; /* E[x] = 1, Var[x] = shape * scale^2 = 1/shape */
 	
 	/* use gamma */
 	for (u=0; u < gParam.numLoci; u++) {
@@ -531,11 +531,13 @@ main (int argc, char *argv[])
 	      /* this scaling is done inside of locus loop to accomodate 
 		 the gamma dist'n of mut rate for each locus */
 
-	      tauequalizer = gParam.upperTheta * taxonPairDat.seqLen / 
-		2 / locTheta;
 	      tauequalizer = gParam.upperTheta / 
 		2 / (spTheta * taxonPairDat.NScaler);
-	      /* WORK, CONFIRM THIS */
+	      /* WORK, CONFIRM THIS. Naoki Nov 2, 2009.  IT USED TO BE
+		 tauequalizer = gParam.upperTheta * taxonPairDat.seqLen / 
+		 2 / locTheta;
+
+	      */
 
 	      /* Division by 2 is coming from N1 + N2 = 2.
 		 We are considering that N_0 in theta_0 (=4 N_0 mu) specified 

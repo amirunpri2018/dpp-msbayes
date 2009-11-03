@@ -270,11 +270,12 @@ sub CreateObsSumStats {
     }  # done with processing all fasta, and making fake msDQH output
 
     ### run sumstat.
-    open2(\*READ_SS, \*WRITE_SS, "$sumStatsBin $sumstatsOptions -H ");
+    my $ssPid = open2(\*READ_SS, \*WRITE_SS, "$sumStatsBin $sumstatsOptions -H ");
     print WRITE_SS "$sumStatInput";;
     close(WRITE_SS);  # need to close this to prevent dead-lock
     my @sumStatsResultArr = <READ_SS>;
     close (READ_SS);
+    waitpid ($ssPid, 0);
 
     if (@sumStatsResultArr != 2) {
 	die "ERROR: $sumStatsBin returned " . scalar(@sumStatsResultArr) .
