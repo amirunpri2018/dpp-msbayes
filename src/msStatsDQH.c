@@ -47,8 +47,8 @@ extern int gSortPattern;
 double nucdiv (int, int, char **);
 double nucdiv_w (int, int, char **, int, int *, int);
 double nucdiv_bw (int, int, char **, int, int *);
-double tajddenominator (int, int, int);
-double tajddenominator2 (int, int, int);
+double tajddenominator (int, double);
+
 double thetaW (int, int);
 double thetah (int, int, char **);
 void FuLi (double *D, double *F, int, int, char **, double pi);
@@ -62,7 +62,8 @@ static int SS_comp (const void *, const void *);
 #if 0
 static int compare_doubles (const void *a, const void *b);
 #endif
-int frequency (char, int, int, char **);
+int pwDiffAtOneSite (int, int, char **);
+int cntBase (char, int, int, char **);
 
 
 void shannonIndex (char **list, int *config, double **shannonIndexArray);
@@ -126,9 +127,13 @@ PrintSumStatNames (void)
 struct SumStat *
 CalcSumStats (msOutput *msOut)
 {
-  int i, nsam, npops, *n, BasePairs, segsites;
-  int *freqdist, *segwithin, tW_w_npops;
-  double  FuLiD, FuLiF, Fst, Nm, tW_w;
+  int nsam, npops, *n, BasePairs, segsites;
+  int *segwithin;
+  double  FuLiD, FuLiF, Fst;
+  // int i, tW_w_npops;
+  // double tW_w;
+  // int *freqdist;
+  // double Nm;
 
   double  Dx,Dy, Dxy, K;
   double sx, sy, sxy, jw_psi;
@@ -139,7 +144,7 @@ CalcSumStats (msOutput *msOut)
   /* struct SumStat SumStat_list[NumTaxa]; */
   struct SumStat * resultSS;
 
-  /* copying frequently used valuse for easy access */
+  /* copying frequently used values for easy access */
   nsam = msOut->nsam;
   npops = msOut->npops;
   n = msOut->n;
@@ -156,13 +161,10 @@ CalcSumStats (msOutput *msOut)
   /* initalize with -1 */
   resultSS->PI_b = resultSS->PI_Net = resultSS->PI_w2 = resultSS->PI_w1 =
     resultSS->PI_w = -1;
+  resultSS->Sx = resultSS->Sy = resultSS->Sxy = resultSS->JW_Psi = -1;
 
-
-  resultSS->Sx = -1;
-  resultSS->Sy = -1;
-  resultSS->Sxy = -1;
-  resultSS->JW_Psi = -1;
-
+#if 0
+  /* Not used */
   if (! (freqdist = (int *) malloc (nsam * sizeof (int)))) {
 	perror("ERROR: No Mem 2 in CalcSumStats\n");
 	exit(EXIT_FAILURE);
@@ -171,6 +173,7 @@ CalcSumStats (msOutput *msOut)
     FrequencyDistrQ (freqdist, nsam, segsites, list);
   else
     FrequencyDistrInfSites (freqdist, nsam, segsites, list);
+#endif
 
   /* this is actually already taken care of, so this is redundant */
   if (msOut->isNumSegSitesFixed)
@@ -178,9 +181,17 @@ CalcSumStats (msOutput *msOut)
   else
     resultSS->TW = thetaW (nsam, segsites);
 
-  resultSS->PI = nucdiv (nsam, segsites, list);
+  resultSS->PI = nucdiv (nsam, segsites, list); /* pi per gene */
 
-  if (msOut->Fst_bool)
+  /* Tajima's D denominator PER SITE */
+  resultSS->TDD = tajddenominator (nsam, (double) segsites/BasePairs);
+  /* Tajima's D PER GENE */
+  resultSS->TD = (resultSS->PI - resultSS->TW) / tajddenominator (nsam, (double) segsites);
+  
+  /* converting Pi to PER SITE, This should occur after TajD calc */
+  resultSS->PI = resultSS->PI / BasePairs;
+
+  if (msOut->Fst_bool) /* stats for the simulation with more than 1 subpop */
     {
       if (!(segwithin = (int *) malloc (npops * sizeof (int)))) {
 	perror("ERROR: No Mem 3 in CalcSumStats\n");
@@ -189,6 +200,8 @@ CalcSumStats (msOutput *msOut)
 
       segsubs (segwithin, segsites, list, npops, n);
 
+#if 0
+      /* not used */
       tW_w = 0.;
       tW_w_npops = 0;
       for (i = 0; i < npops; i++)
@@ -197,66 +210,85 @@ CalcSumStats (msOutput *msOut)
 	    tW_w += thetaW (n[i], segwithin[i]);
 	    tW_w_npops++;
 	  }
-      tW_w /= tW_w_npops;
+      tW_w /= tW_w_npops;  /* watterson's theta averaged over subpops */
+#endif
 
-      /*yyy ABOVE  Eli 05/15/06 yyy */
       resultSS->TW1 = thetaW (n[0], segwithin[0]);
       resultSS->TW2 = thetaW (n[1], segwithin[1]);
-      /* -1 signals Average of pi's within subpop */
-
-      resultSS->PI_w =
-	nucdiv_w (nsam, segsites, list, npops, n, -1) ;
       resultSS->PI_w1 = nucdiv_w (nsam, segsites, list, npops, n, 0);
       resultSS->PI_w2 = nucdiv_w (nsam, segsites, list, npops, n, 1);
+#if 0
+      resultSS->PI_w =
+	nucdiv_w (nsam, segsites, list, npops, n, -1) ;
+                         /* -1 signals Average of pi's within subpop */
+#endif
+      /* This is equivalent to the commented out PI_w above, but faster.
+       * This basically pi_within for each sub pop, and taking the
+       * weighted averages.  I confirmed that this gives the identical
+       * results as above.
+       */
+      resultSS->PI_w = (resultSS->PI_w1 * n[0] * (n[0] - 1)  +
+			resultSS->PI_w2 * n[1] * (n[1] - 1))/
+	( n[0] * (n[0] - 1) +  n[1] * (n[1] - 1));
+
       resultSS->PI_b = nucdiv_bw (nsam, segsites, list, npops, n);
 
-      resultSS->PI = resultSS->PI / BasePairs;
-      resultSS->PI_w = resultSS->PI_w/BasePairs;
+      /* Tajima's D denominator PER SITE for each sub pop */
+      resultSS->TDD1 = tajddenominator (n[0], (double) segwithin[0]/BasePairs);
+      resultSS->TDD2 = tajddenominator (n[1], (double) segwithin[1]/BasePairs);
+      
+      /* Tajima's D PER GENE for each sub pop*/
+      resultSS->TD1 = (resultSS->PI_w1 - resultSS->TW1) / 
+	tajddenominator (n[0], (double) segwithin[0]);
+      resultSS->TD2 = (resultSS->PI_w2 - resultSS->TW2) / 
+	tajddenominator (n[1], (double) segwithin[1]);
+
+      /* converting Pi to PER SITE , This should occur after TajD, but
+	 before jw_psi calc */
+      resultSS->PI_w = resultSS->PI_w / BasePairs;
       resultSS->PI_w1 = resultSS->PI_w1 / BasePairs;
       resultSS->PI_w2 = resultSS->PI_w2 / BasePairs;
       resultSS->PI_b = resultSS->PI_b / BasePairs;
 
+      /* expected values of pairwise differences */
+      /* All of PI are PER SITE below */
+      Dx = resultSS->PI_w1;  //dx  (Pop1)
+      Dy = resultSS->PI_w2;  //dy  (Pop2)
+      Dxy = resultSS->PI_b;  //dxy (between)
+      K = resultSS->PI;      //k   (overall)
 
-      //expected values of pairwise differences
-	  Dx = resultSS->PI_w1;  //dx (Pop1)
-	  Dy = resultSS->PI_w2;  //dy (Pop2)
-	  Dxy = resultSS->PI_b;    //dxy (between)
-      K = resultSS->PI; //k   (overall)
-
+      /* These are coming from Wakely 1996a,b Thoretical Population
+	 Biology 49:39-57 and 49:369-386 */
       sx = S_w(segsites, nsam, list, npops, n, 0, Dx, BasePairs);
       sy = S_w(segsites, nsam, list, npops, n, 1, Dy, BasePairs);
       sxy = S_xy(segsites, nsam, list, npops, n, 0,1,Dxy, BasePairs);
-      jw_psi = JWakely_Psi(n, sx, sy, sxy, Dx, Dy, K);
+      /* expression (11) of Wakely 1996b */
+      jw_psi = JWakely_Psi(n, sx, sy, sxy, Dx, Dy, K); 
 
       resultSS->Sx = sx;
 	  resultSS->Sy = sy;
 	  resultSS->Sxy = sxy;
       resultSS->JW_Psi = jw_psi;
 
+      resultSS->PI_Net = resultSS->PI_b - resultSS->PI_w; /* PER SITE */
+
+#if 0
+      /* not used */
       Fst = 1. - resultSS->PI_w / resultSS->PI_b;
-      resultSS->PI_Net = resultSS->PI_b - resultSS->PI_w;
       if (Fst < 0)
 	  {
 	    Fst = 0.;
-	    Nm = -1.;
+	    // Nm = -1.;  /* Nm doesn't seems to be used any where */
 	  }
       else
 	  {
-	    Nm = (1. / Fst - 1.) / 4.;
+	    // Nm = (1. / Fst - 1.) / 4.;
 	  }
+#endif
     }
   /*   th = thetah(nsam, segsites, list) ; */
-
-  /* Tajima's D denominator */
-  resultSS->TDD = tajddenominator (nsam, segsites, BasePairs);
-  resultSS->TDD1 = tajddenominator2 (n[0], segwithin[0], BasePairs);
-  resultSS->TDD2 = tajddenominator2 (n[1], segwithin[1], BasePairs);
-
-  /* Tajima's D */
-  resultSS->TD = (resultSS->PI - resultSS->TW) / resultSS->TDD;
-  resultSS->TD1 = (resultSS->PI_w1 - resultSS->TW1) / resultSS->TDD1;
-  resultSS->TD2 = (resultSS->PI_w2 - resultSS->TW2) / resultSS->TDD2;
-
+  
+  
 /*  FuLi(&FuLiD,&FuLiF,nsam,segsites,list,resultSS->PI);*/
 /*   h = resultSS->PI-th ; */
 #if 0
@@ -264,28 +296,35 @@ CalcSumStats (msOutput *msOut)
   if (msOut->nsub > 0)
     nsegsub = segsub (msOut->nsub, segsites, list);
 #endif
+
+  /* Convert watterson's theta to PER SITE */
   resultSS->TW = resultSS->TW / BasePairs;
-  resultSS->TW1 = resultSS->TW1 / BasePairs;
-  resultSS->TW2 = resultSS->TW2 / BasePairs;
+  if (msOut->Fst_bool) {
+    resultSS->TW1 = resultSS->TW1 / BasePairs;
+    resultSS->TW2 = resultSS->TW2 / BasePairs;
+  }
 
-  if (segsites < 1)
-    resultSS->PI_b = resultSS->PI_Net =
-      resultSS->TD = resultSS->TD1 = resultSS->TD2 =
-      resultSS->PI_w = resultSS->PI_w1 = resultSS->PI_w2 = resultSS->PI =
-      resultSS->TW = resultSS->TW1 = resultSS->TW2 =
-      resultSS->TDD = resultSS->TDD1 = resultSS->TDD2 =
-      FuLiD = FuLiF = Fst = 0;
-
-  if (segwithin[1] < 1)
-    resultSS->TD2 = 0;
+  if (segsites < 1) {
+    resultSS->PI_b =  resultSS->TD = resultSS->PI = resultSS->TW = 
+      resultSS->TDD = FuLiD = FuLiF = 0;
+    if (msOut->Fst_bool) {
+      resultSS->PI_Net = resultSS->TD1 = resultSS->TD2 = 
+	resultSS->PI_w = resultSS->PI_w1 = resultSS->PI_w2 = 
+	resultSS->TW1 = resultSS->TW2 = resultSS->TDD1 = resultSS->TDD2 = 
+	Fst = 0;
+    }
+  }
   if (segwithin[0] < 1)
     resultSS->TD1 = 0;
+  if (segwithin[1] < 1)
+    resultSS->TD2 = 0;
   if (resultSS->PI_Net < 0)
     resultSS->PI_Net = 0;
   if (resultSS->PI_b < 0)
     resultSS->PI_b = 0;
 
-
+  /* the following Shannon Index probably should be done after testing
+   Fst_bool Naoki Nov 2, 2009 */
   double *shannonIndexArray;
 
   shannonIndexArray = (double *) malloc (4 * sizeof (double));
@@ -300,7 +339,9 @@ CalcSumStats (msOutput *msOut)
 
   free (shannonIndexArray);
   free(segwithin);
+#if 0
   free(freqdist);
+#endif
 
   return resultSS;
 }
@@ -1217,40 +1258,37 @@ pairwisediffc_b (int ss, int nsam, char **list, int np, int *n, int pop1,
 double
 S_w (int ss, int nsam, char **list, int np, int *n, int pop, double D_w, int basePairs)
 {
-  int n1, n2, diffc = 0;
+  int n1, n2, diffc;
   int popi, startn = 0;
   int s;
-  int comparisons = 0;
-  double diff_square = 0.0;
+  double diffcPerSite, diff_square = 0.0;
   double var_D_w = 0.0, Sw = 0.0;
-
+  
   if (n[pop] > 1)
     {
       for (popi = 0; popi < pop; popi++)
-      {
-	    startn += n[popi];
-	  }
-
+	{
+	  startn += n[popi];
+	}
+      
       for (n1 = startn; n1 < (startn + n[pop] - 1); n1++)
         for (n2 = n1 + 1; n2 < (startn + n[pop]); n2++)
     	  {
+    	    diffc = 0;
     	    for (s = 0; s < ss; s++)
     	      if (list[n1][s] != list[n2][s])
-    	         diffc++;
-
-    		comparisons ++;
-	    diffc = diffc / basePairs;
-    	    diff_square = (diffc - D_w) * (diffc - D_w);
+		diffc++;
+	    
+	    diffcPerSite = (double) diffc / basePairs;
+    	    diff_square = (diffcPerSite - D_w) * (diffcPerSite - D_w);
     	    var_D_w += diff_square;
-    	    diffc = 0;
-
     	  }//for n2
-
     }// if
     else
       return -1.0;
 
-  var_D_w = var_D_w/comparisons;
+  /* denominator is number of pairwise comparison n[pop] choose 2 */
+  var_D_w = var_D_w/ (n[pop] * (n[pop]-1)/2);
   Sw = sqrt(var_D_w);
   //fprintf(stderr, "Sw, ss = %d, nsam = %d, np = %d, pop = %d, Sw = %lf\n", ss, nsam, np, pop, Sw);
 
@@ -1264,37 +1302,35 @@ double
 S_xy (int ss, int nsam, char **list, int np, int *n, int pop1,
       int pop2, double D_xy, int basePairs)
 {
-  int n1, n2, diffc = 0;
+  int n1, n2, diffc;
   int popi, startn1, startn2;
   int s;
-  int comparisons = 0;
-  double diff_square = 0.0;
+
+  double diffcPerSite, diff_square = 0.0;
   double var_D_b = 0.0, Sxy = 0.0;
   if ((n[pop1] > 0) && (n[pop2] > 0))
     {
       startn1 = startn2 = 0;
       for (popi = 0; popi < pop1; popi++)
-	     startn1 += n[popi];
+	startn1 += n[popi];
       for (popi = 0; popi < pop2; popi++)
-	     startn2 += n[popi];
-
+	startn2 += n[popi];
+      
       for (n1 = startn1; n1 < (startn1 + n[pop1]); n1++)
-	   for (n2 = startn2; n2 < (startn2 + n[pop2]); n2++)
-	    {
+	for (n2 = startn2; n2 < (startn2 + n[pop2]); n2++)
+	  {
+	    diffc = 0;
 	    for (s = 0; s < ss; s++)
 	      if (list[n1][s] != list[n2][s])
-		    diffc++;
-
-        comparisons ++;
-	diffc = diffc / basePairs;
-		diff_square = (diffc - D_xy)*(diffc - D_xy);
-		var_D_b += diff_square;
-		diffc = 0;
-
+		diffc++;
+	    
+	    diffcPerSite = (double) diffc / basePairs;
+	    diff_square = (diffcPerSite - D_xy)*(diffcPerSite - D_xy);
+	    var_D_b += diff_square;
 	  }
     }
 
-  var_D_b = var_D_b / comparisons;
+  var_D_b = var_D_b / (n[pop1] * n[pop2]);
   Sxy = sqrt(var_D_b);
   //fprintf(stderr, "S_xy: ss = %d, nsam = %d, np = %d, pop1 = %d, pop2 = %d, Sxy = %lf\n", ss, nsam, np, pop1, pop2, Sxy);
 
@@ -1450,12 +1486,12 @@ nucdiv_bw (int nsam, int segsites, char **list, int np, int *n)
 void
 FrequencyDistrInfSites (int *freqdist, int n, int S, char **list)
 {
-  int i, oldfrequency (char, int, int, char **);
+  int i;
   for (i = 0; i < n; i++)
     freqdist[i] = 0;
   for (i = 0; i < S; i++)
     {
-      freqdist[oldfrequency ('1', i, n, list)]++;	/* probably bogus for ACGT */
+      freqdist[cntBase ('1', i, n, list)]++;	/* probably bogus for ACGT */
     }
 }
 
@@ -1463,12 +1499,12 @@ FrequencyDistrInfSites (int *freqdist, int n, int S, char **list)
 void
 FrequencyDistrQ (int *freqdist, int n, int S, char **list)
 {
-  int i, f, oldfrequency (char, int, int, char **);
+  int i, f, cntBase (char, int, int, char **);
   for (i = 0; i < n; i++)
     freqdist[i] = 0;
   for (i = 0; i < S; i++)
     {
-      f = oldfrequency (list[0][i], i, n, list);
+      f = cntBase (list[0][i], i, n, list);
       freqdist[f < n / 2 + 0.0001 ? f : n - f]++;	/* probably bogus for ACGT */
     }
 }
@@ -1480,12 +1516,12 @@ FuLi (D, F, n, S, list, pi)
      char **list;
      double *D, *F, pi;
 {
-  int k, s, etae, oldfrequency (char, int, int, char **);
+  int k, s, etae, cntBase (char, int, int, char **);
   double n1, S1, vD, uD, uF, vF, an, bn, cn;
   n1 = (double) n;
   S1 = (double) S;
   for (s = etae = 0; s < S; s++)
-    if (oldfrequency ('1', s, n, list) == 1)
+    if (cntBase ('1', s, n, list) == 1)
       etae++;
   for (k = 1, an = bn = 0.; k < n; k++)
     {
@@ -1512,15 +1548,21 @@ FuLi (D, F, n, S, list, pi)
   *F /= sqrt (uF * S1 + vF * S1 * S1);
 }
 
+/* 
+ * Argument:
+ *  n: number of samples
+ *  S: number of segregating sites
+ * S can be floating points, e.g. S/seqLen to calculate "PER SITE" value
+ */
 double
-tajddenominator (int n, int S, int bp)
+tajddenominator (int n, double S)
 {
   int i;
-  double n1, S1, a1, a2, b1, b2, e1, e2, denom;
+  double n1, a1, a2, b1, b2, e1, e2, denom;
   n1 = (double) n;
-  S1 = (double) S / bp;
+
   a1 = a2 = 0.;
-  for (i = 1; i < n; i++)
+  for (i = n-1; i > 0; i--)
     {
       a1 += 1. / i;
       a2 += 1. / (i * i);
@@ -1529,44 +1571,20 @@ tajddenominator (int n, int S, int bp)
   b2 = 2. * ((n1 * n1) + n1 + 3) / (9. * n1 * (n1 - 1));
   e1 = (b1 - 1. / a1) / a1;
   e2 = (b2 - (n1 + 2.) / (a1 * n1) + a2 / (a1 * a1)) / (a1 * a1 + a2);
-  denom = sqrt (e1 * S1 + e2 * S1 * (S1 - 1));
+  denom = sqrt (e1 * S + e2 * S * (S - 1));
   return (denom);
 }
-
-double
-tajddenominator2 (int n, int S, int bp)
-{
-  int i;
-  double n1, S1, a1, a2, b1, b2, e1, e2, denom;
-  n1 = (double) n;
-  S1 = (double) S;
-  a1 = a2 = 0.;
-  for (i = 1; i < n; i++)
-    {
-      a1 += 1. / i;
-      a2 += 1. / (i * i);
-    }
-  b1 = (n1 + 1) / (3. * (n1 - 1));
-  b2 = 2. * ((n1 * n1) + n1 + 3) / (9. * n1 * (n1 - 1));
-  e1 = (b1 - 1. / a1) / a1;
-  e2 = (b2 - (n1 + 2.) / (a1 * n1) + a2 / (a1 * a1)) / (a1 * a1 + a2);
-  denom = sqrt (e1 * S1 + e2 * S1 * (S1 - 1));
-  return (denom);
-}
-
 
 double
 thetaW (int n, int S)
 {
   int i;
-  double n1, S1, a1, theta;
-  n1 = (double) n;
-  S1 = (double) S;
-  a1 = 0.;
-  for (i = 1; i < n; i++)
+  double a1=0.;
+
+  for (i = n-1; i > 0; i--)
     a1 += 1. / i;
-  theta = S1 / a1;
-  return (theta);
+
+  return ((double) S / a1);
 }
 
 
@@ -1577,12 +1595,11 @@ nucdiv (int nsam, int segsites, char **list)
 {
   int s;
   double pi = 0.0, denom;
-  char dummy;
 
   for (s = 0; s < segsites; s++)
     {
-      pi += frequency (dummy, s, nsam, list);
-      /* frequency() returns the number of pair wise differences at site s
+      pi += pwDiffAtOneSite (s, nsam, list);
+      /* pwDiffAtOneSite() returns the number of pair wise differences at site s
        * from all pairwise comparison */
     }
 
@@ -1592,12 +1609,20 @@ nucdiv (int nsam, int segsites, char **list)
 }
 
 
+/*
+ * count the occurence of "allele" at the "site"
+ * nsam: number of samples
+ * For example, 
+ *   cntBase('A', 0, 10, list)
+ * goes through the 1st polymorphic site (10 samples), and 
+ * returns number of 'A' at this site
+ */
 int
-oldfrequency (char allele, int site, int nsam, char **list)
+cntBase (char base, int site, int nsam, char **list)
 {
   int i, count = 0;
   for (i = 0; i < nsam; i++)
-    count += (list[i][site] == allele ? 1 : 0);
+    count += (list[i][site] == base);
   return (count);
 }
 
@@ -1608,7 +1633,6 @@ oldfrequency (char allele, int site, int nsam, char **list)
  * nsam * (nsam - 1) / 2 pairs are compared.
  *
  * Arguments:
- *   base: ignored
  *   site: i-th segregating sites
  *   nsam: total number of samples
  *   list: character matrix of segregating sites
@@ -1616,7 +1640,7 @@ oldfrequency (char allele, int site, int nsam, char **list)
  * Returns:  the number of pairwise differences at the site
  */
 int
-frequency (char base, int site, int nsam, char **list)
+pwDiffAtOneSite (int site, int nsam, char **list)
 {
   char allele1;			/*7/27/04; Hickerson */
   int i, n, denom, count = 0;
@@ -1627,7 +1651,7 @@ frequency (char base, int site, int nsam, char **list)
     {
       allele1 = list[n][site];
 
-      for (i = n; i < nsam; i++)
+      for (i = n + 1; i < nsam; i++)
 	{
 	  if (list[i][site] != allele1)
 	    count = count + 1;
@@ -1690,7 +1714,7 @@ frequencySING (char base, int site, int nsam, char **list)	/* in progress Hicker
 double
 thetah (int nsam, int segsites, char **list)
 {
-  int s, oldfrequency (char, int, int, char **);
+  int s;
   double pi, p1, nd, nnm1;
 
   pi = 0.0;
@@ -1699,7 +1723,7 @@ thetah (int nsam, int segsites, char **list)
   nnm1 = nd / (nd - 1.0);
   for (s = 0; s < segsites; s++)
     {
-      p1 = oldfrequency ('1', s, nsam, list);
+      p1 = cntBase ('1', s, nsam, list);
 
       pi += p1 * p1;
     }
@@ -1713,11 +1737,10 @@ int
 segsub (int nsub, int segsites, char **list)
 {
   int i, count = 0, c1;
-  int oldfrequency (char, int, int, char **);
 
   for (i = 0; i < segsites; i++)
     {
-      c1 = oldfrequency ('1', i, nsub, list);
+      c1 = cntBase ('1', i, nsub, list);
       if ((c1 > 0) && (c1 < nsub))
 	count++;
     }
