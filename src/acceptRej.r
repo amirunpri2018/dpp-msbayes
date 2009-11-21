@@ -58,11 +58,11 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
     prior.dat <- data.frame(matrix(prior.dat, ncol=length(priorHeader), byrow=T))
     names(prior.dat) <- priorHeader
   }
+
   nPairs <- simDat[["numTaxonPairs"]]
   params.from.priorDistn <- simDat[["prior.names"]]
   summary.stat.names <- simDat[["summary.stats"]]
   simDat <- simDat[["dat"]]
-
   # construct the column names
   usedColNames <- as.vector(sapply(used.stats, paste,
                                    1:nPairs, sep="."))
@@ -153,6 +153,23 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
     
     result <- c(result, temp)
   }
+
+
+big_table<-c()
+for (i in 1:length(result$prior.names)){
+	thisPriorName <- result$prior.names[i]
+	big_table<-rbind(big_table,result[[thisPriorName]]$x,result[[thisPriorName]]$vals)
+}
+rownames(big_table)<-rownames(big_table,do.NULL=FALSE)
+for (i in 1:length(result$prior.names)){
+	thisPriorName <- result$prior.names[i]
+	name.post<- sub("PRI[.]", "Pos.LLR.", thisPriorName)
+	name.post.raw<-sub("PRI[.]", "Pos.wo.LLR.", thisPriorName)
+	rownames(big_table)[(i*2-1)]<-name.post
+	rownames(big_table)[i*2]<-name.post.raw
+}
+write.table(cbind(t(big_table),result$PRI.Psi$ss),file="posterior_table",row.names = FALSE)
+
 
   real.mode.mean.median <- NULL
   modeToPrint <- NULL
@@ -256,6 +273,7 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
   
   # Print out figures
   pdf(pdf.outfile, width=7.5, height=10, paper="letter")
+layout(mat=matrix(1:2,2,1))
   for (i in 1:length(result$prior.names)) {
     thisPriorName <- result$prior.names[i]
     name.rm.PRI <- sub("PRI[.]", "", thisPriorName)
@@ -267,22 +285,25 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
 
     this.title <- paste(name.rm.PRI, additional.print, sep=" ")
     old.mfcol <- par()$mfcol
-    par(mfcol=c(3,1))  # 3 plots per page
+#    par(mfcol=c(2,1))  # 2 plots per page
     if (pre.rejected) {
       make.hist(prior.dat[,thisPriorName],result[[thisPriorName]], title=this.title, breaks=20)
-      plot.bf(prior.dat[,thisPriorName],result[[thisPriorName]]$x, main="Bayes Support for true Hyper-parameter value < threshold")
+      
     } else {
       make.hist(simDat[,thisPriorName],result[[thisPriorName]],title=this.title,breaks=20)
       plot.bf(simDat[,thisPriorName],result[[thisPriorName]]$x,main="Bayes Support for true Hyper-parameter value < threshold")
     }
-    par(mfcol=old.mfcol)
+#    par(mfcol=old.mfcol)
   }
-  
-  plot((result[["PRI.omega"]])$x,(result[["PRI.E.t"]])$x,lty=2,lwd=0.5)
+
+#  print(thisPriorName)
+  plot((result[["PRI.omega"]])$x,(result[["PRI.E.t"]])$x,lty=2,lwd=0.5,ylim=c(0,max(prior.dat[["PRI.E.t"]])),xlim=c(0,max(prior.dat[["PRI.omega"]])))
 
   rc <- try(plotKernDensity(result[["PRI.omega"]],result[["PRI.E.t"]],
                             xlab="Omega", ylab="E(t)", title="Omega and E(t)"))
-  if(class(rc) == "try-error") {
+  
+
+if(class(rc) == "try-error") {
     cat("WARN: plotKernDensity failed for some reason, so the kernel density ",
         "plot was not created\n", file=stderr())
   }
@@ -315,7 +336,6 @@ getData <- function (infile) {
 
   prior.names <- first.line[grep("^PRI[.]", first.line)]
   num.prior <- length(prior.names)
-  
   # sum stats column-names (header) have the following form
   #   c("pi.b.1", "pi.b.2", "pi.b.3", "pi.w.1", "pi.w.2", "pi.w.3", ...)
   # Here, I'm getting rid of .digits part and taking uniue names.
@@ -359,29 +379,30 @@ plotKernDensity <- function (res1, res2, title="q1 and q2", xlab="q1", ylab="q2"
         ticktype = "detailed", ltheta = -135, lphi = 145, shade = TRUE)
 }
 
+
 make.hist <-function(vect, res.makepd, title="", xlim, ...) {
   #old.mfcol <- par()$mfcol
-  #par(mfcol=c(2,1))
-  hist.col = "gray"
+#  par(mfcol=c(3,1))
+  hist.col = "white"
   if(missing(xlim)) {
-    hist(vect,col=hist.col,prob=TRUE,main=paste(title, ": Prior Dist'n"),
-       xlab=title, ...)
+    hist(vect,col=hist.col,border ="white",xlim=c(0,max(vect)),ylim=c(0,max(density(vect,bw=0.1)$y,density(res.makepd$x,bw=0.1)$y)),prob=TRUE,main=paste(title),xlab=title, ...)
   } else {
-    hist(vect,col=hist.col,xlim=xlim,prob=TRUE,main=paste(title, ": Prior Dist'n"),
+    hist(vect,col=hist.col,freq=F,xlim=xlim,prob=TRUE,main=paste(title),
        xlab=title, ...)
   }
-  lines(density(vect,bw=0.1),lty=2)
-  if(missing(xlim)) {
-    hist(res.makepd$x,col=hist.col,prob=TRUE,
-         main=paste(title, ": Posterior Dist'n "), xlab=title, ...)
-  } else {
-    hist(res.makepd$x,col=hist.col,xlim=xlim,prob=TRUE,
-         main=paste(title, ": Posterior Dist'n "), xlab=title, ...)
-  }
-  lines(density(res.makepd$x,bw=0.1))
+  lines(density(vect,bw=0.1),lty=2,col="red",pch=3)
+#  if(missing(xlim)) {
+#    hist(res.makepd$x,col="blue",prob=TRUE,freq=F,xlim=c(0,max(vect)),
+#         main=paste(title, ": Posterior Dist'n "), xlab=title, ...)
+#  } else {
+#    hist(res.makepd$x,col=hist.col,xlim=xlim,freq=F,prob=TRUE,
+#         main=paste(title, ": Posterior Dist'n "), xlab=title, ...)
+#  
+  lines(density(res.makepd$x,bw=0.1),lty=1,col="blue",pch=3)
   #par(mfcol=old.mfcol)
-}
+legend("topright",c("Prior","Posterior"),text.col=c("red","blue"),lty=c(2,1),col=c("red","blue"))
 
+}
 
 plot.bf <- function(prior,posterior,...) {
   bf.out <- make.bf.vect(prior,posterior)
