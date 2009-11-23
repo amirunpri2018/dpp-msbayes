@@ -388,14 +388,16 @@ plotKernDensity <- function (res1, res2, title="q1 and q2", xlab="q1", ylab="q2"
 make.hist <-function(vect, res.makepd, title="", xlim, ...) {
   #old.mfcol <- par()$mfcol
 #  par(mfcol=c(3,1))
+bw_vect<-max(vect)/300
+bw_res.makepd<-max(res.makepd$x)/100
   hist.col = "white"
   if(missing(xlim)) {
-    hist(vect,col=hist.col,border ="white",xlim=c(0,max(vect)),ylim=c(0,max(density(vect,bw=0.1)$y,density(res.makepd$x,bw=0.1)$y)),prob=TRUE,main=paste(title),xlab=title, ...)
+    hist(vect,col=hist.col,border ="white",xlim=c(0,max(vect)),ylim=c(0,max(density(vect,bw=bw_vect)$y,density(res.makepd$x,bw=bw_res.makepd)$y)),prob=TRUE,main=paste(title),xlab=title, ...)
   } else {
     hist(vect,col=hist.col,freq=F,xlim=xlim,prob=TRUE,main=paste(title),
        xlab=title, ...)
   }
-  lines(density(vect,bw=0.1),lty=2,col="red",pch=3)
+  lines(density(vect,bw=bw_vect),lty=2,col="red",pch=3)
 #  if(missing(xlim)) {
 #    hist(res.makepd$x,col="blue",prob=TRUE,freq=F,xlim=c(0,max(vect)),
 #         main=paste(title, ": Posterior Dist'n "), xlab=title, ...)
@@ -403,7 +405,7 @@ make.hist <-function(vect, res.makepd, title="", xlim, ...) {
 #    hist(res.makepd$x,col=hist.col,xlim=xlim,freq=F,prob=TRUE,
 #         main=paste(title, ": Posterior Dist'n "), xlab=title, ...)
 #  
-  lines(density(res.makepd$x,bw=0.1),lty=1,col="blue",pch=3)
+  lines(density(res.makepd$x,bw=bw_res.makepd),lty=1,col="blue",pch=3)
   #par(mfcol=old.mfcol)
 legend("topright",c("Prior","Posterior"),text.col=c("red","blue"),lty=c(2,1),col=c("red","blue"))
 
