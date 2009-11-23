@@ -155,21 +155,26 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
   }
 
 
-big_table<-c()
-for (i in 1:length(result$prior.names)){
-	thisPriorName <- result$prior.names[i]
-	big_table<-rbind(big_table,result[[thisPriorName]]$x,result[[thisPriorName]]$vals)
+if(is.null(result$PRI.Psi$vals)==FALSE){
+	big_table<-c()
+	for (i in 1:length(result$prior.names)){
+	    thisPriorName <- result$prior.names[i]
+	    big_table<-rbind(big_table,result[[thisPriorName]]$x,result[[thisPriorName]]$vals)
+	    }
+	rownames(big_table)<-rownames(big_table,do.NULL=FALSE) 
+	    
+	for (i in 1:length(result$prior.names)){
+	    	thisPriorName <- result$prior.names[i]
+		name.post<- sub("PRI[.]", "Pos.LLR.", thisPriorName)
+		name.post.raw<-sub("PRI[.]", "Pos.wo.LLR.", thisPriorName)
+		rownames(big_table)[(i*2-1)]<-name.post
+		rownames(big_table)[i*2]<-name.post.raw
+		}
+		
+		write.table(cbind(t(big_table),result$PRI.Psi$ss),file="posterior_table",row.names = FALSE)
+}else{
+	cat("Local linear regression is not used. Please use '-a' to get the accepted posteriors.\n\n")
 }
-rownames(big_table)<-rownames(big_table,do.NULL=FALSE)
-for (i in 1:length(result$prior.names)){
-	thisPriorName <- result$prior.names[i]
-	name.post<- sub("PRI[.]", "Pos.LLR.", thisPriorName)
-	name.post.raw<-sub("PRI[.]", "Pos.wo.LLR.", thisPriorName)
-	rownames(big_table)[(i*2-1)]<-name.post
-	rownames(big_table)[i*2]<-name.post.raw
-}
-write.table(cbind(t(big_table),result$PRI.Psi$ss),file="posterior_table",row.names = FALSE)
-
 
   real.mode.mean.median <- NULL
   modeToPrint <- NULL
