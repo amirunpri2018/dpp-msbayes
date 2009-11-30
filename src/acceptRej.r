@@ -155,7 +155,7 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
   }
 
 
-if(is.null(result$PRI.Psi$vals)==FALSE){
+if(is.null(result$PRI.E.t$vals)==FALSE){
 	big_table<-c()
 	for (i in 1:length(result$prior.names)){
 	    thisPriorName <- result$prior.names[i]
@@ -388,8 +388,8 @@ plotKernDensity <- function (res1, res2, title="q1 and q2", xlab="q1", ylab="q2"
 make.hist <-function(vect, res.makepd, title="", xlim, ...) {
   #old.mfcol <- par()$mfcol
 #  par(mfcol=c(3,1))
-bw_vect<-max(vect)/300
-bw_res.makepd<-max(res.makepd$x)/100
+bw_vect<-max(vect)/100
+bw_res.makepd<-max(res.makepd$x)/50
   hist.col = "white"
   if(missing(xlim)) {
     hist(vect,col=hist.col,border ="white",xlim=c(0,max(vect)),ylim=c(0,max(density(vect,bw=bw_vect)$y,density(res.makepd$x,bw=bw_res.makepd)$y)),prob=TRUE,main=paste(title),xlab=title, ...)
