@@ -71,9 +71,9 @@ int charCount (char *arr);
 double S_w (int ss, int nsam, char **list, int np, int *n, int pop, double D_w, int basePairs);
 double S_xy (int ss, int nsam, char **list, int np, int *n, int pop1,int pop2, double D_xy, int basePairs);
 double JWakely_Psi(int* n, double Sx, double Sy, double Sxy, double dx, double dy, double k);
-void getUniqueLoci(int *lociArray, int *uniqueLociArray, int numTaxonLocusPairs, int numLoci);
-void getSumStat(struct SumStat **base, double *data, int ssIndex, int numTaxa);
-double moment(double *data, int numTaxa, int order);
+void getUniqueItems(int *Array, int *uniqueItemArray, int totalSize, int uniqueSize);
+void getSumStat(struct SumStat** base, double *data, int ssIndex, int size);
+double moment(double *data, int size, int order);
 
 
 extern int gPrintHeader;	/* boolean 1 means print header (column names), 0 = no header
@@ -82,9 +82,13 @@ static void PrintHeader (char priorNames[][MAX_LEN_COLUMN_NAME],
 			 int numPriors,
 			 char sumStatNames[][MAX_LEN_COLUMN_NAME],
 			 int numSumStats, int numTaxonPairs);
-static void PrintHeader_threeMoments (char priorNames[][MAX_LEN_COLUMN_NAME], int numPriors,
+static void PrintHeader_fourMoments2 (char priorNames[][MAX_LEN_COLUMN_NAME], int numPriors,
 	     char sumStatNames[][MAX_LEN_COLUMN_NAME], int numSumStats,
 	     int numLoci);
+		 
+static void PrintHeader_fourMoments (char priorNames[][MAX_LEN_COLUMN_NAME], int numPriors,
+	     char sumStatNames[][MAX_LEN_COLUMN_NAME], int numSumStats,
+	     int numTaxonPairs);
 
 /***** MAKE SURE the following two lines are up-to-date *****/
 int numSumStats = 21;
@@ -95,6 +99,37 @@ char ssNameVect[][MAX_LEN_COLUMN_NAME] =
   "ShannonsIndex.Net", "ShannonsIndex.Pop1", "ShannonsIndex.Pop2",
   "S_x", "S_y", "S_xy","JWakeley_Psi"
 };
+
+enum SS //summmary statistics enum, the order is the same as in ssNameVect
+{
+  taxonID = 23,
+  locusID = 24,
+  PI_b = 0,
+  PI_w,	// 1
+  PI,	// 2
+  TW,	// 3
+  PI_Net,	// 4
+  TD,	// 5
+  TDD,	//6
+  PI_w2,	// 7
+  PI_w1,	// 8
+  TW2,	// 9
+  TW1,	// 10
+  TDD2,	// 11
+  TDD1,	// 12
+  si1,	// 13 ?
+  si2,	// 14
+  si3,	// 15
+  si4,	// 16
+  Sx,	// 17
+  Sy,	// 18
+  Sxy,	// 19
+  JW_Psi,	// 20
+  // we are using summary statistics from pi_b to JW_PSI
+  TD1,	// 21
+  TD2	// 22
+};
+
 
 /* Print out the available summary stats and Exit */
 void
@@ -158,10 +193,11 @@ CalcSumStats (msOutput *msOut)
     exit(EXIT_FAILURE);
   }
 
-  /* initalize with -1 */
-  resultSS->PI_b = resultSS->PI_Net = resultSS->PI_w2 = resultSS->PI_w1 =
-    resultSS->PI_w = -1;
-  resultSS->Sx = resultSS->Sy = resultSS->Sxy = resultSS->JW_Psi = -1;
+  //initialize PI_b, PI_Net, PI_w2, PI_w1 and PI_w with -1 
+  (resultSS->SS)[PI_b] = (resultSS->SS)[PI_Net] = (resultSS->SS)[PI_w2] = (resultSS->SS)[PI_w1] = (resultSS->SS)[PI_w] = -1;
+ 
+  //initialize Sx, Sy, Sxy and JW_Psi with -1
+  (resultSS->SS)[Sx] = (resultSS->SS)[Sy] = (resultSS->SS)[Sxy] = (resultSS->SS)[JW_Psi] = -1;
 
 #if 0
   /* Not used */
@@ -177,20 +213,19 @@ CalcSumStats (msOutput *msOut)
 
   /* this is actually already taken care of, so this is redundant */
   if (msOut->isNumSegSitesFixed)
-    resultSS->TW = msOut->theta;
+    (resultSS->SS)[TW] = msOut->theta; 
   else
-    resultSS->TW = thetaW (nsam, segsites);
+    (resultSS->SS)[TW] = thetaW (nsam, segsites); 
 
-  resultSS->PI = nucdiv (nsam, segsites, list); /* pi per gene */
+  (resultSS->SS)[PI] = nucdiv (nsam, segsites, list); // pi per gene
 
   /* Tajima's D denominator PER SITE */
-  resultSS->TDD = tajddenominator (nsam, (double) segsites/BasePairs);
+  (resultSS->SS)[TDD] = tajddenominator (nsam, (double) segsites/BasePairs); 
   /* Tajima's D PER GENE */
-  resultSS->TD = (resultSS->PI - resultSS->TW) / tajddenominator (nsam, (double) segsites);
-  
+  (resultSS->SS)[TD] = ((resultSS->SS)[PI] - (resultSS->SS)[TW]) / tajddenominator (nsam, (double) segsites);   
   /* converting Pi to PER SITE, This should occur after TajD calc */
-  resultSS->PI = resultSS->PI / BasePairs;
-
+  (resultSS->SS)[PI] = (resultSS->SS)[PI] / BasePairs;  
+  
   if (msOut->Fst_bool) /* stats for the simulation with more than 1 subpop */
     {
       if (!(segwithin = (int *) malloc (npops * sizeof (int)))) {
@@ -213,13 +248,13 @@ CalcSumStats (msOutput *msOut)
       tW_w /= tW_w_npops;  /* watterson's theta averaged over subpops */
 #endif
 
-      resultSS->TW1 = thetaW (n[0], segwithin[0]);
-      resultSS->TW2 = thetaW (n[1], segwithin[1]);
-      resultSS->PI_w1 = nucdiv_w (nsam, segsites, list, npops, n, 0);
-      resultSS->PI_w2 = nucdiv_w (nsam, segsites, list, npops, n, 1);
+      (resultSS->SS)[TW1] =  thetaW (n[0], segwithin[0]); 
+	  (resultSS->SS)[TW2] = thetaW (n[1], segwithin[1]); 
+      (resultSS->SS)[PI_w1] =  nucdiv_w (nsam, segsites, list, npops, n, 0); 
+      (resultSS->SS)[PI_w2] =  nucdiv_w (nsam, segsites, list, npops, n, 1); 
 #if 0
-      resultSS->PI_w =
-	nucdiv_w (nsam, segsites, list, npops, n, -1) ;
+      (resultSS->SS)[PI_w] = 
+	nucdiv_w (nsam, segsites, list, npops, n, -1) ; 
                          /* -1 signals Average of pi's within subpop */
 #endif
       /* This is equivalent to the commented out PI_w above, but faster.
@@ -227,35 +262,35 @@ CalcSumStats (msOutput *msOut)
        * weighted averages.  I confirmed that this gives the identical
        * results as above.
        */
-      resultSS->PI_w = (resultSS->PI_w1 * n[0] * (n[0] - 1)  +
-			resultSS->PI_w2 * n[1] * (n[1] - 1))/
-	( n[0] * (n[0] - 1) +  n[1] * (n[1] - 1));
+      (resultSS->SS)[PI_w] = ((resultSS->SS)[PI_w1] * n[0] * (n[0] - 1)  +
+			(resultSS->SS)[PI_w2] * n[1] * (n[1] - 1))/
+	( n[0] * (n[0] - 1) +  n[1] * (n[1] - 1)); 
 
-      resultSS->PI_b = nucdiv_bw (nsam, segsites, list, npops, n);
+      (resultSS->SS)[PI_b] = nucdiv_bw (nsam, segsites, list, npops, n);
 
       /* Tajima's D denominator PER SITE for each sub pop */
-      resultSS->TDD1 = tajddenominator (n[0], (double) segwithin[0]/BasePairs);
-      resultSS->TDD2 = tajddenominator (n[1], (double) segwithin[1]/BasePairs);
+      (resultSS->SS)[TDD1] = tajddenominator (n[0], (double) segwithin[0]/BasePairs);
+      (resultSS->SS)[TDD2] = tajddenominator (n[1], (double) segwithin[1]/BasePairs);
       
       /* Tajima's D PER GENE for each sub pop*/
-      resultSS->TD1 = (resultSS->PI_w1 - resultSS->TW1) / 
+      (resultSS->SS)[TD1] = ((resultSS->SS)[PI_w1] - (resultSS->SS)[TW1]) / 
 	tajddenominator (n[0], (double) segwithin[0]);
-      resultSS->TD2 = (resultSS->PI_w2 - resultSS->TW2) / 
+      (resultSS->SS)[TD2] = ((resultSS->SS)[PI_w2] - (resultSS->SS)[TW2]) / 
 	tajddenominator (n[1], (double) segwithin[1]);
 
       /* converting Pi to PER SITE , This should occur after TajD, but
 	 before jw_psi calc */
-      resultSS->PI_w = resultSS->PI_w / BasePairs;
-      resultSS->PI_w1 = resultSS->PI_w1 / BasePairs;
-      resultSS->PI_w2 = resultSS->PI_w2 / BasePairs;
-      resultSS->PI_b = resultSS->PI_b / BasePairs;
+      (resultSS->SS)[PI_w] = (resultSS->SS)[PI_w] / BasePairs;
+      (resultSS->SS)[PI_w1] = (resultSS->SS)[PI_w1] / BasePairs;
+      (resultSS->SS)[PI_w2] = (resultSS->SS)[PI_w2] / BasePairs;
+      (resultSS->SS)[PI_b] = (resultSS->SS)[PI_b] / BasePairs;
 
       /* expected values of pairwise differences */
       /* All of PI are PER SITE below */
-      Dx = resultSS->PI_w1;  //dx  (Pop1)
-      Dy = resultSS->PI_w2;  //dy  (Pop2)
-      Dxy = resultSS->PI_b;  //dxy (between)
-      K = resultSS->PI;      //k   (overall)
+      Dx = (resultSS->SS)[PI_w1];  //dx  (Pop1)
+      Dy = (resultSS->SS)[PI_w2];  //dy  (Pop2)
+      Dxy = (resultSS->SS)[PI_b];  //dxy (between)
+      K = (resultSS->SS)[PI];      //k   (overall)
 
       /* These are coming from Wakely 1996a,b Thoretical Population
 	 Biology 49:39-57 and 49:369-386 */
@@ -265,16 +300,16 @@ CalcSumStats (msOutput *msOut)
       /* expression (11) of Wakely 1996b */
       jw_psi = JWakely_Psi(n, sx, sy, sxy, Dx, Dy, K); 
 
-      resultSS->Sx = sx;
-	  resultSS->Sy = sy;
-	  resultSS->Sxy = sxy;
-      resultSS->JW_Psi = jw_psi;
+      (resultSS->SS)[Sx] = sx;
+	  (resultSS->SS)[Sy] = sy;
+	  (resultSS->SS)[Sxy] = sxy;
+      (resultSS->SS)[JW_Psi] = jw_psi;
 
-      resultSS->PI_Net = resultSS->PI_b - resultSS->PI_w; /* PER SITE */
+      (resultSS->SS)[PI_Net] = (resultSS->SS)[PI_b] - (resultSS->SS)[PI_w]; /* PER SITE */
 
 #if 0
       /* not used */
-      Fst = 1. - resultSS->PI_w / resultSS->PI_b;
+      Fst = 1. - (resultSS->SS)[PI_w] / (resultSS->SS)[PI_b];
       if (Fst < 0)
 	  {
 	    Fst = 0.;
@@ -298,30 +333,30 @@ CalcSumStats (msOutput *msOut)
 #endif
 
   /* Convert watterson's theta to PER SITE */
-  resultSS->TW = resultSS->TW / BasePairs;
+  (resultSS->SS)[TW] = (resultSS->SS)[TW] / BasePairs;
   if (msOut->Fst_bool) {
-    resultSS->TW1 = resultSS->TW1 / BasePairs;
-    resultSS->TW2 = resultSS->TW2 / BasePairs;
+    (resultSS->SS)[TW1] = (resultSS->SS)[TW1] / BasePairs;
+    (resultSS->SS)[TW2] = (resultSS->SS)[TW2] / BasePairs;
   }
 
   if (segsites < 1) {
-    resultSS->PI_b =  resultSS->TD = resultSS->PI = resultSS->TW = 
-      resultSS->TDD = FuLiD = FuLiF = 0;
+    (resultSS->SS)[PI_b] =  (resultSS->SS)[TD] = (resultSS->SS)[PI] = (resultSS->SS)[TW] = 
+      (resultSS->SS)[TDD] = FuLiD = FuLiF = 0;
     if (msOut->Fst_bool) {
-      resultSS->PI_Net = resultSS->TD1 = resultSS->TD2 = 
-	resultSS->PI_w = resultSS->PI_w1 = resultSS->PI_w2 = 
-	resultSS->TW1 = resultSS->TW2 = resultSS->TDD1 = resultSS->TDD2 = 
+      (resultSS->SS)[PI_Net] = (resultSS->SS)[TD1] = (resultSS->SS)[TD2] = 
+	(resultSS->SS)[PI_w] = (resultSS->SS)[PI_w1] = (resultSS->SS)[PI_w2] = 
+	(resultSS->SS)[TW1] = (resultSS->SS)[TW2] = (resultSS->SS)[TDD1] = (resultSS->SS)[TDD2] = 
 	Fst = 0;
     }
   }
   if (segwithin[0] < 1)
-    resultSS->TD1 = 0;
+    (resultSS->SS)[TD1] = 0;
   if (segwithin[1] < 1)
-    resultSS->TD2 = 0;
-  if (resultSS->PI_Net < 0)
-    resultSS->PI_Net = 0;
-  if (resultSS->PI_b < 0)
-    resultSS->PI_b = 0;
+    (resultSS->SS)[TD2] = 0;
+  if ((resultSS->SS)[PI_Net] < 0)
+    (resultSS->SS)[PI_Net] = 0;
+  if ((resultSS->SS)[PI_b] < 0)
+    (resultSS->SS)[PI_b] = 0;
 
   /* the following Shannon Index probably should be done after testing
    Fst_bool Naoki Nov 2, 2009 */
@@ -329,14 +364,14 @@ CalcSumStats (msOutput *msOut)
 
   shannonIndexArray = (double *) malloc (4 * sizeof (double));
   shannonIndex (list, n, &shannonIndexArray);
-  resultSS->si1 = shannonIndexArray[0];
-  resultSS->si2 = shannonIndexArray[1];
-  resultSS->si3 = shannonIndexArray[2];
-  resultSS->si4 = shannonIndexArray[3];
+  (resultSS->SS)[si1] = shannonIndexArray[0];
+  (resultSS->SS)[si2] = shannonIndexArray[1];
+  (resultSS->SS)[si3] = shannonIndexArray[2];
+  (resultSS->SS)[si4] = shannonIndexArray[3];
 
-  resultSS->taxonID = msOut->taxonID;
-  resultSS->locusID = msOut->locusID;
-
+  (resultSS->SS)[taxonID] = msOut->taxonID;
+  (resultSS->SS)[locusID] = msOut->locusID;
+    
   free (shannonIndexArray);
   free(segwithin);
 #if 0
@@ -379,179 +414,113 @@ SS_comp (const void *p1, const void *p2)
   struct SumStat **sp1 = (struct SumStat **) p1;
   struct SumStat **sp2 = (struct SumStat **) p2;
 
-  return (((*sp1)->PI_b) > ((*sp2)->PI_b)) - (((*sp1)->PI_b) < ((*sp2)->PI_b));
+  return ((((*sp1)->SS)[PI_b]) > (((*sp2)->SS)[PI_b])) - ((((*sp1)->SS)[PI_b]) < (((*sp2)->SS)[PI_b]));
+}
+
+/*
+ * Used for qsort to sort the array of SumStat_moments
+ *   Uses PI_b_mean as the criteria of sorting
+ * Returns: 1  if p1 > p2
+ *          0  if p1 == p2
+ *         -1  if p1 < p2
+ */
+static int
+SS_comp_moments (const void *p1, const void *p2)
+{
+  double **sp1 = (double **) p1;
+  double **sp2 = (double **) p2;
+  
+  // *sp1[0][PI_b]
+  return (((*sp1)[PI_b]) > ((*sp2)[PI_b])) - (((*sp1)[PI_b]) < ((*sp2)[PI_b]));
 }
 
 /*
   This function gets unique taxonID from all taxaLoci by looking at each taxonLocus's taxonID
 */
-void getUniqueLoci(int *lociArray, int *uniqueLociArray, int numTaxonLocusPairs, int numLoci)
+void getUniqueItems(int *Array, int *uniqueItemArray, int totalSize, int UniqueSize)
 {
 
    int a, b, c = 0, notFound = 1;
    // fill unqiueLoci with dummy value
-   for (b= 0; b < numLoci; b++)
+   for (b= 0; b < UniqueSize; b++)
    {
-      uniqueLociArray[b] = -1;
+      uniqueItemArray[b] = -1;
    }
 
 
-   for (a = 0; a < numTaxonLocusPairs; a++ )
+   for (a = 0; a < totalSize; a++ )
    {
-      for(b = 0; b < numLoci; b++)
+      for(b = 0; b < UniqueSize; b++)
 	  {
-	     if(lociArray[a] == uniqueLociArray[b])
+	     if(Array[a] == uniqueItemArray[b])
 		 {
 		    notFound = 0;
 			break;
 		 }
-	  }// for (uniqueLoci)
+	  }// for (uniqueItem)
 
 	  if(notFound == 1)
 	  {
-	     uniqueLociArray[c++] = lociArray[a];
+	     uniqueItemArray[c++] = Array[a];
 	  }
 
-	  // reinitiallize notFound for each taxonLocus
+	  // reinitiallize notFound for each item
 	  notFound = 1;
-   }//for (taxonLocus)
+   }//for (all items)
 
 }
 
-
-void getSumStat(struct SumStat **base, double *data, int ssIndex, int numTaxa)
+void getSumStat(struct SumStat **base, double *data, int ssIndex, int size)//numTaxa can also mean numLoci, depending on the structure of base)
 {
-   int a;
+   int i;
 
-   if((ssIndex < 0) || (ssIndex >= numSumStats))
+   if((ssIndex < PI_b) || (ssIndex > JW_Psi))
    {
 		perror("ERROR: ssName index out of bound\n");
         exit(EXIT_FAILURE);
    }
 
-   switch (ssIndex)
-   {
-     case 0:
-       for(a = 0; a < numTaxa; a++)
-	      data[a] = base[a]->PI_b;
-	   break;
-     case 1:
-       for(a = 0; a < numTaxa; a++)
-	      data[a] = base[a]->PI_w;
-	   break;
-	 case 2:
-       for(a = 0; a < numTaxa; a++)
-	      data[a] = base[a]->PI;
-	   break;
-     case 3:
-      for(a = 0; a < numTaxa; a++)
-	      data[a] = base[a]->TW;
-	   break;
-     case 4:
-      for(a = 0; a < numTaxa; a++)
-	      data[a] = base[a]->PI_Net;
-	   break;
-     case 5:
-      for(a = 0; a < numTaxa; a++)
-	      data[a] = base[a]->TD;
-	   break;
-     case 6:
-      for(a = 0; a < numTaxa; a++)
-	      data[a] = base[a]->TDD;
-	   break;
-     case 7:
-      for(a = 0; a < numTaxa; a++)
-	      data[a] = base[a]->PI_w2;
-	   break;
-     case 8:
-      for(a = 0; a < numTaxa; a++)
-	      data[a] = base[a]->PI_w1;
-	   break;
-     case 9:
-      for(a = 0; a < numTaxa; a++)
-	      data[a] = base[a]->TW2;
-	   break;
-     case 10:
-      for(a = 0; a < numTaxa; a++)
-	      data[a] = base[a]->TW1;
-	   break;
-     case 11:
-      for(a = 0; a < numTaxa; a++)
-	      data[a] = base[a]->TDD2;
-	   break;
-     case 12:
-      for(a = 0; a < numTaxa; a++)
-	      data[a] = base[a]->TDD1;
-	   break;
-     case 13:
-      for(a = 0; a < numTaxa; a++)
-	      data[a] = base[a]->si1;
-	   break;
-     case 14:
-      for(a = 0; a < numTaxa; a++)
-	      data[a] = base[a]->si2;
-	   break;
-     case 15:
-      for(a = 0; a < numTaxa; a++)
-	      data[a] = base[a]->si3;
-	   break;
-     case 16:
-      for(a = 0; a < numTaxa; a++)
-	      data[a] = base[a]->si4;
-	   break;
-     case 17:
-      for(a = 0; a < numTaxa; a++)
-	      data[a] = base[a]->Sx;
-	   break;
-     case 18:
-      for(a = 0; a < numTaxa; a++)
-	      data[a] = base[a]->Sy;
-	   break;
-     case 19:
-      for(a = 0; a < numTaxa; a++)
-	      data[a] = base[a]->Sxy;
-	   break;
-     case 20:
-      for(a = 0; a < numTaxa; a++)
-	      data[a] = base[a]->JW_Psi;
-	   break;
-   }
+   for(i = 0; i < size; i ++)
+	{	data[i] = (base[i]->SS)[ssIndex]; }
+	
 }
 
-
-double moment(double *data, int numTaxa, int order)
+double moment(double *data, int size, int order)
 {
-	if ((numTaxa <= 0)  || (order < 1))
-	{
-		perror("ERROR: correct range expected for number of taxa and order to calculate moment\n");
+    if ((size <= 0)  || (order < 1))
+    {
+	perror("ERROR: correct range expected for number of taxa and order to calculate moment\n");
         exit(EXIT_FAILURE);
-	}
+    }
+
     int a, b;
     double sum = 0.0, val = 1.0;
 
-    for(a = 0; a< numTaxa; a++)
+    for(a = 0; a < size; a++)
     {
-		for(b= 1; b <= order; b++)
-		 {
-			 val *= data[a];
-		 }
-
-		sum += val;
+	for(b = 1; b <= order; b++)
+	{
+	       val *= data[a];
+	       //fprintf(stderr, "val : %lf\n", val);
 	}
+       sum += val;
+       val = 1.0;
+    }
 
-    sum /= numTaxa;
-
-	return sum;
+    //fprintf(stderr, "sum : %lf \n", sum);
+    sum /= ((double)size);
+    
+    //fprintf(stderr, "answer : %lf \n", sum);
+    //fprintf(stderr, "%lf %lf %d\n", data[0], sum, size);
+    return sum;
 }
-
 
 /*
 */
 void
-PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs, int numLoci)
+PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs, int numLoci, int numTaxonPairs)
 {
   int a, b;
-
 
   /****** NOTE ******
    *
@@ -568,6 +537,7 @@ PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs, int n
    * ORDER of names is important!
    */
 
+  
   /* WORK HERE: Is this sorting appropriate? */
   if (gSortPattern == 0) {
     ; /* no sorting */
@@ -578,22 +548,20 @@ PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs, int n
      * taxonPairs:genes.
      * The taxonPairs:gene with the largerest pi.b (divergence between the
      * pair) becomes the 1st column (left most).
-     */
-    qsort (SumStat_list, numTaxonLocusPairs, sizeof (SumStat_list[0]), SS_comp);
-   }
+     */	 
+   qsort(SumStat_list, numTaxonLocusPairs, sizeof(SumStat_list[0]), SS_comp);
+  }
   else if(gSortPattern == 2)
-  {
-    /*
+  {  
+     /*
      * SumStats vectors of each locus will be sorted seperately by PI_b
      */
-
     int *uniqueLociArray =  calloc (numLoci, sizeof (int));
     int *lociArray = calloc (numTaxonLocusPairs, sizeof(int));
 
-    struct SumStat **head;
     struct SumStat **tempSumStat = calloc(numTaxonLocusPairs, sizeof(struct SumStat*));
 
-	if ((uniqueLociArray == NULL) || (lociArray == NULL) || (tempSumStat == NULL))
+    if ((uniqueLociArray == NULL) || (lociArray == NULL) || (tempSumStat == NULL))
 	{
 	    fprintf(stderr, "Not enough memory for sorting summary statistics array\n");
         exit(0);
@@ -601,18 +569,19 @@ PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs, int n
 
     for (a = 0; a <numTaxonLocusPairs; a++)
     {
-		lociArray[a] = SumStat_list[a]->locusID;
+       lociArray[a] = (int)((SumStat_list[a]->SS)[locusID]);
     }
 
-    getUniqueLoci(lociArray, uniqueLociArray, numTaxonLocusPairs, numLoci);
-
+			
+    getUniqueItems(lociArray, uniqueLociArray, numTaxonLocusPairs, numLoci);
+	
 	int headCursor = -1, tailCursor = -1, c = 0;
 
 	for(b = 0; b < numLoci; b++)
 	{
 	   for (a = 0; a <numTaxonLocusPairs; a++)
 	     {
-		    if((SumStat_list[a]->locusID) == uniqueLociArray[b])
+		    if((int)((SumStat_list[a]->SS)[locusID]) == uniqueLociArray[b])
 			{
                if(headCursor == -1)
                {
@@ -625,30 +594,29 @@ PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs, int n
 			}// if
 		 }// for a
 
-        head = &tempSumStat[headCursor];
-
-		qsort(head, tailCursor - headCursor, sizeof(SumStat_list[0]), SS_comp);
-
+		//head = &tempSumStat[headCursor];		
+		qsort(&tempSumStat[headCursor], tailCursor - headCursor, sizeof(tempSumStat[headCursor]), SS_comp);
+			
 		headCursor = tailCursor = -1;
-		head = NULL;
+		//head = NULL;
 	}// for b
 
-    for(a = 0; a < numTaxonLocusPairs; a++)
-	  {
-		  SumStat_list[a] = tempSumStat[a];
-		  //fprintf(stderr, "SumStat[%d]: locusID:%d, taxonID: %d, PI_b: %lf\n",a, SumStat_list[a]->locusID, SumStat_list[a]->taxonID, SumStat_list[a]->PI_b);
-	  }
-
+		
+	for (a = 0; a < numTaxonLocusPairs; a++)
+	{
+		SumStat_list[a] = tempSumStat[a];
+	}
+		
     free(uniqueLociArray);
     free(lociArray);
 	free(tempSumStat);
   }
-  else if(gSortPattern == 3)
+  else if(gSortPattern == 3) /* moment across taxa (by locus)*/
   {
 	int *uniqueLociArray =  calloc (numLoci, sizeof (int));
     int *lociArray = calloc (numTaxonLocusPairs, sizeof(int));
 
-    struct SumStat **head;
+    //struct SumStat **head;
     struct SumStat **tempSumStat = calloc(numTaxonLocusPairs, sizeof(struct SumStat*));
 
 	if ((uniqueLociArray == NULL) || (lociArray == NULL) || (tempSumStat == NULL))
@@ -657,64 +625,46 @@ PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs, int n
         exit(0);
 	}
 
-	struct SumStat **SumStat_mean = calloc(numTaxonLocusPairs, sizeof(struct SumStat*));
-	struct SumStat **SumStat_var = calloc(numTaxonLocusPairs, sizeof(struct SumStat*));
-	struct SumStat **SumStat_3option = calloc(numTaxonLocusPairs, sizeof(struct SumStat*));
+	double **SumStat_mean = calloc(numLoci, sizeof(double *)); //1st central moment
+	double **SumStat_var = calloc(numLoci, sizeof(double *)); //2nd central moment
+	double **SumStat_skewness = calloc(numLoci, sizeof(double *)); //3rd central moment
+	double **SumStat_kurtosis = calloc(numLoci, sizeof(double *)); //4th central moment
 
-	if((SumStat_mean == NULL) || (SumStat_var == NULL) || (SumStat_3option == NULL))
+	if((SumStat_mean == NULL) || (SumStat_var == NULL) || (SumStat_skewness == NULL) || (SumStat_kurtosis == NULL))
 	{
-	   perror("ERROR:Not enough memory for 3-moment summary statistics vectr\n");
+	   perror("ERROR:Not enough memory for 4-moment summary statistics vector across taxa\n");
 	   exit(EXIT_FAILURE);
 	}
 
-	// allocate memory for SumStat_mean
+	// allocate memory for SumStat_mean, SumStat_var, SumStat_skewness and SumStat_kurtosis
     for (a = 0; a < numLoci; a++)
 	{
-	   SumStat_mean[a] = calloc(numSumStats, sizeof(struct SumStat));
-	   if (SumStat_mean[a] == NULL)
+	   SumStat_mean[a] = calloc(numSumStats, sizeof(double));
+	   SumStat_var[a] = calloc(numSumStats, sizeof(double));
+	   SumStat_skewness[a] = calloc(numSumStats, sizeof(double));
+	   SumStat_kurtosis[a] = calloc(numSumStats, sizeof(double));
+	   if ((SumStat_mean[a] == NULL) || (SumStat_var[a] == NULL) || (SumStat_skewness[a] == NULL) || (SumStat_kurtosis[a] == NULL))
 	   {
-	      perror("ERROR: No Mem for SumStat_mean\n");
+	      perror("ERROR: No Mem for 4 moments SS across taxa\n");
           exit(EXIT_FAILURE);
 	   }
 	}
-
-	// allocate memory for SumStat_var
-    for (a = 0; a < numLoci; a++)
-	{
-	   SumStat_var[a] = calloc(numSumStats, sizeof(struct SumStat));
-	   if (SumStat_var[a] == NULL)
-	   {
-	      perror("ERROR: No Mem for SumStat_var\n");
-          exit(EXIT_FAILURE);
-	   }
-	}
-
-	// allocate memory for SumStat_3option
-    for (a = 0; a < numLoci; a++)
-	{
-	   SumStat_3option[a] = calloc(numSumStats, sizeof(struct SumStat));
-	   if (SumStat_3option[a] == NULL)
-	   {
-	      perror("ERROR: No Mem for SumStat_3option\n");
-          exit(EXIT_FAILURE);
-	   }
-	}
-
 
     for (a = 0; a <numTaxonLocusPairs; a++)
     {
-		lociArray[a] = SumStat_list[a]->locusID;
+		lociArray[a] = (SumStat_list[a]->SS)[locusID];
     }
 
-    getUniqueLoci(lociArray, uniqueLociArray, numTaxonLocusPairs, numLoci);
+    getUniqueItems(lociArray, uniqueLociArray, numTaxonLocusPairs, numLoci);
 
-	int headCursor = -1, tailCursor = -1, count = 0, c = 0;
-
+	int headCursor = -1, tailCursor = -1, count = 0;
+	enum SS currentSS;
+	
 	for(b = 0; b < numLoci; b++)
 	{
 	   for (a = 0; a <numTaxonLocusPairs; a++)
 	     {
-		    if((SumStat_list[a]->locusID) == uniqueLociArray[b])
+		    if(((SumStat_list[a]->SS)[locusID]) == uniqueLociArray[b])
 			{
                if(headCursor == -1)
                {
@@ -727,129 +677,21 @@ PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs, int n
 			}// if
 		 }// for a
 
-        head = &tempSumStat[headCursor];
+        //head = &tempSumStat[headCursor];
 
         double *data = calloc(tailCursor - headCursor, sizeof(double));
 
-
-		for (c = 0; c < numSumStats; c++ )
+		for (currentSS = PI_b; currentSS <= JW_Psi; currentSS ++ )
 		{
-			getSumStat(head, data, c, tailCursor - headCursor);
-
-            switch (c)
-            {
-			   case 0:
-			     SumStat_mean[b]->PI_b = moment(data, tailCursor - headCursor, 1);
-			     SumStat_var[b]->PI_b = moment(data, tailCursor - headCursor, 2);
-			     SumStat_3option[b]->PI_b = moment(data, tailCursor - headCursor, HIGHEST_MOMENT);
-				 break;
-			   case 1:
-				 SumStat_mean[b]->PI_w = moment(data, tailCursor - headCursor, 1);
-			     SumStat_var[b]->PI_w = moment(data, tailCursor - headCursor, 2);
-			     SumStat_3option[b]->PI_w = moment(data, tailCursor - headCursor, HIGHEST_MOMENT);
-				 break;
-			   case 2:
-				 SumStat_mean[b]->PI = moment(data, tailCursor - headCursor, 1);
-			     SumStat_var[b]->PI = moment(data, tailCursor - headCursor, 2);
-			     SumStat_3option[b]->PI = moment(data, tailCursor - headCursor, HIGHEST_MOMENT);
-				 break;
-			   case 3:
-				 SumStat_mean[b]->TW = moment(data, tailCursor - headCursor, 1);
-			     SumStat_var[b]->TW = moment(data, tailCursor - headCursor, 2);
-			     SumStat_3option[b]->TW = moment(data, tailCursor - headCursor, HIGHEST_MOMENT);
-				 break;
-			   case 4:
-				 SumStat_mean[b]->PI_Net = moment(data, tailCursor - headCursor, 1);
-			     SumStat_var[b]->PI_Net = moment(data, tailCursor - headCursor, 2);
-			     SumStat_3option[b]->PI_Net = moment(data, tailCursor - headCursor, HIGHEST_MOMENT);
-				 break;
-			   case 5:
-				 SumStat_mean[b]->TD = moment(data, tailCursor - headCursor, 1);
-			     SumStat_var[b]->TD = moment(data, tailCursor - headCursor, 2);
-   			     SumStat_3option[b]->TD = moment(data, tailCursor - headCursor, HIGHEST_MOMENT);
-                 break;
-			   case 6:
-				 SumStat_mean[b]->TDD = moment(data, tailCursor - headCursor, 1);
-			     SumStat_var[b]->TDD = moment(data, tailCursor - headCursor, 2);
-			     SumStat_3option[b]->TDD = moment(data, tailCursor - headCursor, HIGHEST_MOMENT);
-				 break;
-			   case 7:
-				 SumStat_mean[b]->PI_w2 = moment(data, tailCursor - headCursor, 1);
-			     SumStat_var[b]->PI_w2 = moment(data, tailCursor - headCursor, 2);
-			     SumStat_3option[b]->PI_w2 = moment(data, tailCursor - headCursor, HIGHEST_MOMENT);
-				 break;
-			   case 8:
-				 SumStat_mean[b]->PI_w1 = moment(data, tailCursor - headCursor, 1);
-			     SumStat_var[b]->PI_w1 = moment(data, tailCursor - headCursor, 2);
-			     SumStat_3option[b]->PI_w1 = moment(data, tailCursor - headCursor, HIGHEST_MOMENT);
-				 break;
-			   case 9:
-				 SumStat_mean[b]->TW2 = moment(data, tailCursor - headCursor, 1);
-			     SumStat_var[b]->TW2 = moment(data, tailCursor - headCursor, 2);
-			     SumStat_3option[b]->TW2 = moment(data, tailCursor - headCursor, HIGHEST_MOMENT);
-				 break;
-			   case 10:
-				 SumStat_mean[b]->TW1 = moment(data, tailCursor - headCursor, 1);
-			     SumStat_var[b]->TW1 = moment(data, tailCursor - headCursor, 2);
-			     SumStat_3option[b]->TW1 = moment(data, tailCursor - headCursor, HIGHEST_MOMENT);
-				 break;
-			   case 11:
-				 SumStat_mean[b]->TDD2 = moment(data, tailCursor - headCursor, 1);
-			     SumStat_var[b]->TDD2 = moment(data, tailCursor - headCursor, 2);
-			     SumStat_3option[b]->TDD2 = moment(data, tailCursor - headCursor, HIGHEST_MOMENT);
-				 break;
-			   case 12:
-				 SumStat_mean[b]->TDD1 = moment(data, tailCursor - headCursor, 1);
-			     SumStat_var[b]->TDD1 = moment(data, tailCursor - headCursor, 2);
-			     SumStat_3option[b]->TDD1 = moment(data, tailCursor - headCursor, HIGHEST_MOMENT);
-				 break;
-			   case 13:
-				 SumStat_mean[b]->si1 = moment(data, tailCursor - headCursor, 1);
-			     SumStat_var[b]->si1 = moment(data, tailCursor - headCursor, 2);
-			     SumStat_3option[b]->si1 = moment(data, tailCursor - headCursor, HIGHEST_MOMENT);
-				 break;
-			   case 14:
-				 SumStat_mean[b]->si2 = moment(data, tailCursor - headCursor, 1);
-			     SumStat_var[b]->si2 = moment(data, tailCursor - headCursor, 2);
-			     SumStat_3option[b]->si2 = moment(data, tailCursor - headCursor, HIGHEST_MOMENT);
-				 break;
-			   case 15:
-				 SumStat_mean[b]->si3 = moment(data, tailCursor - headCursor, 1);
-			     SumStat_var[b]->si3 = moment(data, tailCursor - headCursor, 2);
-			     SumStat_3option[b]->si3 = moment(data, tailCursor - headCursor, HIGHEST_MOMENT);
-				 break;
-			   case 16:
-				 SumStat_mean[b]->si4 = moment(data, tailCursor - headCursor, 1);
-			     SumStat_var[b]->si4 = moment(data, tailCursor - headCursor, 2);
-			     SumStat_3option[b]->si4 = moment(data, tailCursor - headCursor, HIGHEST_MOMENT);
-				 break;
-			   case 17:
-				 SumStat_mean[b]->Sx = moment(data, tailCursor - headCursor, 1);
-			     SumStat_var[b]->Sx = moment(data, tailCursor - headCursor, 2);
-			     SumStat_3option[b]->Sx = moment(data, tailCursor - headCursor, HIGHEST_MOMENT);
-				 break;
-			   case 18:
-				 SumStat_mean[b]->Sy = moment(data, tailCursor - headCursor, 1);
-			     SumStat_var[b]->Sy = moment(data, tailCursor - headCursor, 2);
-			     SumStat_3option[b]->Sy = moment(data, tailCursor - headCursor, HIGHEST_MOMENT);
-				 break;
-			   case 19:
-				 SumStat_mean[b]->Sxy = moment(data, tailCursor - headCursor, 1);
-			     SumStat_var[b]->Sxy = moment(data, tailCursor - headCursor, 2);
-			     SumStat_3option[b]->Sxy = moment(data, tailCursor - headCursor, HIGHEST_MOMENT);
-				 break;
-			   case 20:
-				 SumStat_mean[b]->JW_Psi = moment(data, tailCursor - headCursor, 1);
-			     SumStat_var[b]->JW_Psi = moment(data, tailCursor - headCursor, 2);
-			     SumStat_3option[b]->JW_Psi = moment(data, tailCursor - headCursor, HIGHEST_MOMENT);
-				 break;
-			} // switch
-
-
+			getSumStat(&tempSumStat[headCursor], data, currentSS, tailCursor - headCursor);
+			SumStat_mean[b][currentSS] = moment(data,tailCursor - headCursor, 1 );
+			SumStat_var[b][currentSS] = moment(data, tailCursor - headCursor, 2);
+			SumStat_skewness[b][currentSS] = moment(data, tailCursor - headCursor, 3);
+			SumStat_kurtosis[b][currentSS] = moment(data, tailCursor - headCursor, 4);
 		}
 
 		headCursor = tailCursor = -1;
-		head = NULL;
+		//head = NULL;
 
 		free(data);
 	}// for b
@@ -858,160 +700,23 @@ PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs, int n
     {
       int numPriorColumns = 0; /* Prior is not printed anymore */
       char priorNameVect2[][MAX_LEN_COLUMN_NAME] = { "PRI.Psi", "PRI.var.t", "PRI.E.t", "PRI.omega" };
-      PrintHeader_threeMoments (priorNameVect2, numPriorColumns, ssNameVect,
+      PrintHeader_fourMoments2 (priorNameVect2, numPriorColumns, ssNameVect,
 		   numSumStats, numLoci);
 
       gPrintHeader = 0; /* lower the flag to print only once */
 
     }
 
-
-    for(a = 0; a < numLoci; a++)
+	for(currentSS = PI_b; currentSS <= JW_Psi; currentSS ++)
 	{
-	   printf ("%lf\t", SumStat_mean[a]->PI_b);
-	   printf ("%lf\t", SumStat_var[a]->PI_b);
-	   printf ("%lf\t", SumStat_3option[a]->PI_b);
-	}
-
-	for(a = 0; a < numLoci; a++)
-	{
-	   printf ("%lf\t", SumStat_mean[a]->PI_w);
-	   printf ("%lf\t", SumStat_var[a]->PI_w);
-	   printf ("%lf\t", SumStat_3option[a]->PI_w);
-	}
-
-	for(a = 0; a < numLoci; a++)
-	{
-	   printf ("%lf\t", SumStat_mean[a]->PI);
-	   printf ("%lf\t", SumStat_var[a]->PI);
-	   printf ("%lf\t", SumStat_3option[a]->PI);
-	}
-
-	for(a = 0; a < numLoci; a++)
-	{
-	   printf ("%lf\t", SumStat_mean[a]->TW);
-	   printf ("%lf\t", SumStat_var[a]->TW);
-	   printf ("%lf\t", SumStat_3option[a]->TW);
-	}
-
-	for(a = 0; a < numLoci; a++)
-	{
-	   printf ("%lf\t", SumStat_mean[a]->PI_Net);
-	   printf ("%lf\t", SumStat_var[a]->PI_Net);
-	   printf ("%lf\t", SumStat_3option[a]->PI_Net);
-	}
-
-	for(a = 0; a < numLoci; a++)
-	{
-	   printf ("%lf\t", SumStat_mean[a]->TD);
-	   printf ("%lf\t", SumStat_var[a]->TD);
-	   printf ("%lf\t", SumStat_3option[a]->TD);
-	}
-
-	for(a = 0; a < numLoci; a++)
-	{
-	   printf ("%lf\t", SumStat_mean[a]->TDD);
-	   printf ("%lf\t", SumStat_var[a]->TDD);
-	   printf ("%lf\t", SumStat_3option[a]->TDD);
-	}
-
-	for(a = 0; a < numLoci; a++)
-	{
-	   printf ("%lf\t", SumStat_mean[a]->PI_w2);
-	   printf ("%lf\t", SumStat_var[a]->PI_w2);
-	   printf ("%lf\t", SumStat_3option[a]->PI_w2);
-	}
-
-	for(a = 0; a < numLoci; a++)
-	{
-	   printf ("%lf\t", SumStat_mean[a]->PI_w1);
-	   printf ("%lf\t", SumStat_var[a]->PI_w1);
-	   printf ("%lf\t", SumStat_3option[a]->PI_w1);
-	}
-
-	for(a = 0; a < numLoci; a++)
-	{
-	   printf ("%lf\t", SumStat_mean[a]->TW2);
-	   printf ("%lf\t", SumStat_var[a]->TW2);
-	   printf ("%lf\t", SumStat_3option[a]->TW2);
-	}
-
-	for(a = 0; a < numLoci; a++)
-	{
-	   printf ("%lf\t", SumStat_mean[a]->TW1);
-	   printf ("%lf\t", SumStat_var[a]->TW1);
-	   printf ("%lf\t", SumStat_3option[a]->TW1);
-	}
-
-	for(a = 0; a < numLoci; a++)
-	{
-	   printf ("%lf\t", SumStat_mean[a]->TDD2);
-	   printf ("%lf\t", SumStat_var[a]->TDD2);
-	   printf ("%lf\t", SumStat_3option[a]->TDD2);
-	}
-
-	for(a = 0; a < numLoci; a++)
-	{
-	   printf ("%lf\t", SumStat_mean[a]->TDD1);
-	   printf ("%lf\t", SumStat_var[a]->TDD1);
-	   printf ("%lf\t", SumStat_3option[a]->TDD1);
-	}
-
-	for(a = 0; a < numLoci; a++)
-	{
-	   printf ("%lf\t", SumStat_mean[a]->si1);
-	   printf ("%lf\t", SumStat_var[a]->si1);
-	   printf ("%lf\t", SumStat_3option[a]->si1);
-	}
-
-	for(a = 0; a < numLoci; a++)
-	{
-	   printf ("%lf\t", SumStat_mean[a]->si2);
-	   printf ("%lf\t", SumStat_var[a]->si2);
-	   printf ("%lf\t", SumStat_3option[a]->si2);
-	}
-
-	for(a = 0; a < numLoci; a++)
-	{
-	   printf ("%lf\t", SumStat_mean[a]->si3);
-	   printf ("%lf\t", SumStat_var[a]->si3);
-	   printf ("%lf\t", SumStat_3option[a]->si3);
-	}
-
-	for(a = 0; a < numLoci; a++)
-	{
-	   printf ("%lf\t", SumStat_mean[a]->si4);
-	   printf ("%lf\t", SumStat_var[a]->si4);
-	   printf ("%lf\t", SumStat_3option[a]->si4);
-	}
-
-	for(a = 0; a < numLoci; a++)
-	{
-	   printf ("%lf\t", SumStat_mean[a]->Sx);
-	   printf ("%lf\t", SumStat_var[a]->Sx);
-	   printf ("%lf\t", SumStat_3option[a]->Sx);
-	}
-
-	for(a = 0; a < numLoci; a++)
-	{
-	   printf ("%lf\t", SumStat_mean[a]->Sy);
-	   printf ("%lf\t", SumStat_var[a]->Sy);
-	   printf ("%lf\t", SumStat_3option[a]->Sy);
-	}
-
-	for(a = 0; a < numLoci; a++)
-	{
-	   printf ("%lf\t", SumStat_mean[a]->Sxy);
-	   printf ("%lf\t", SumStat_var[a]->Sxy);
-	   printf ("%lf\t", SumStat_3option[a]->Sxy);
-	}
-
-
-	for(a = 0; a < numLoci; a++)
-	{
-	   printf ("%lf\t", SumStat_mean[a]->JW_Psi);
-	   printf ("%lf\t", SumStat_var[a]->JW_Psi);
-	   printf ("%lf\t", SumStat_3option[a]->JW_Psi);
+		for(a = 0; a < numTaxonPairs; a++)
+		{	
+			printf("%lf\t", SumStat_mean[a][currentSS]);
+			printf("%lf\t", SumStat_var[a][currentSS]);
+			printf("%lf\t", SumStat_skewness[a][currentSS]);
+			printf("%lf\t", SumStat_kurtosis[a][currentSS]);
+			
+		}
 	}
 
 	printf ("\n");
@@ -1022,103 +727,219 @@ PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs, int n
 
     // free memory for SumStat_mean
     for (a = 0; a < numLoci; a++)
+	{
 	   free(SumStat_mean[a]);
-
-
-	// free memory for SumStat_var
-    for (a = 0; a < numLoci; a++)
-       free(SumStat_var[a]);
-
-	// free memory for SumStat_3option
-    for (a = 0; a < numLoci; a++)
-       free(SumStat_3option[a]);
+	   free(SumStat_var[a]);
+	   free(SumStat_skewness[a]);
+	   free(SumStat_kurtosis[a]);
+	}
 
     free(SumStat_mean);
 	free(SumStat_var);
-	free(SumStat_3option);
+	free(SumStat_skewness);
+	free(SumStat_kurtosis);
+
+  } 
+  else if((gSortPattern >= 4) && (gSortPattern <= 7)) // moment across loci (by taxon)
+  {
+    int *uniqueTaxaArray =  calloc (numTaxonPairs, sizeof (int));
+    int *taxaArray = calloc (numTaxonLocusPairs, sizeof(int));
+
+        struct SumStat **tempSumStat = calloc(numTaxonLocusPairs, sizeof(struct SumStat*));
+		
+	if ((uniqueTaxaArray == NULL) || (taxaArray == NULL) || (tempSumStat == NULL))
+	{
+	    fprintf(stderr, "Not enough memory for sorting summary statistics array\n");
+        exit(0);
+	}
+	
+	double **SumStat_mean = calloc(numTaxonPairs, sizeof(double *)); //1st central moment
+	double **SumStat_var = calloc(numTaxonPairs, sizeof(double *)); //2nd central moment
+	double **SumStat_skewness = calloc(numTaxonPairs, sizeof(double *)); //3rd central moment
+	double **SumStat_kurtosis = calloc(numTaxonPairs, sizeof(double *)); //4th central moment
+	
+	if((SumStat_mean == NULL) || (SumStat_var == NULL) || (SumStat_skewness == NULL) || (SumStat_kurtosis == NULL))
+	{
+	   perror("ERROR:Not enough memory for 4 moment summary statistics vectr\n");
+	   exit(EXIT_FAILURE);
+	}
+
+	// allocate memory for SumStat_mean
+	for (a = 0; a < numTaxonPairs; a++)
+	{
+	   SumStat_mean[a] = calloc(numSumStats, sizeof(double));
+	   SumStat_var[a] = calloc(numSumStats, sizeof(double));
+	   SumStat_skewness[a] = calloc(numSumStats, sizeof(double));
+	   SumStat_kurtosis[a] = calloc(numSumStats, sizeof(double));
+	   if ((SumStat_mean[a] == NULL) || (SumStat_var[a] == NULL) || (SumStat_skewness[a] == NULL) || (SumStat_kurtosis[a] == NULL))
+	   {
+	      perror("ERROR: No Mem for moments SumStat vectors\n");
+	      exit(EXIT_FAILURE);
+	   }
+	   
+	}
+	
+    for (a = 0; a < numTaxonLocusPairs; a ++)
+    {
+		taxaArray[a] = (int)((SumStat_list[a]->SS)[taxonID]);
+    }
+
+   getUniqueItems(taxaArray, uniqueTaxaArray, numTaxonLocusPairs, numTaxonPairs);
+
+	int headCursor = -1, tailCursor = -1, count = 0;
+
+	for(b = 0; b < numTaxonPairs; b++)
+	{
+	   for (a = 0; a <numTaxonLocusPairs; a++)
+	     {
+		    if((int)((SumStat_list[a]->SS)[taxonID]) == uniqueTaxaArray[b])
+			{
+               if(headCursor == -1)
+               {
+				   headCursor = tailCursor = count;
+			   }
+               tempSumStat[count++] = SumStat_list[a];
+
+               tailCursor ++;
+
+			}// if
+		 }// for a
+
+
+		double *data = calloc(tailCursor - headCursor, sizeof(double));
+
+		// calculate moment for each summary statistics
+		enum SS currentSS;
+		for (currentSS = PI_b; currentSS <= JW_Psi; currentSS ++ )
+		{
+			getSumStat(&tempSumStat[headCursor], data, currentSS, tailCursor - headCursor);
+			SumStat_mean[b][currentSS] = moment(data,tailCursor - headCursor, 1 );
+			
+			//fprintf(stderr, "%d %d %lf\n", b, currentSS,SumStat_mean[b][currentSS]);
+		
+			SumStat_var[b][currentSS] = moment(data, tailCursor - headCursor, 2);
+			SumStat_skewness[b][currentSS] = moment(data, tailCursor - headCursor, 3);
+			SumStat_kurtosis[b][currentSS] = moment(data, tailCursor - headCursor, 4);
+			
+		}
+
+		headCursor = tailCursor = -1;
+		//head = NULL;
+
+		free(data);
+	}// for b
+	
+	// fill entries of matrixToPrint
+	double **matrixToPrint = calloc(numTaxonPairs, sizeof(double*));
+	int rowSize = (8 - gSortPattern)*numSumStats;
+	int ii; 
+	enum SS currentSS;
+	for(ii = 0; ii < numTaxonPairs; ii++)
+			{	matrixToPrint[ii] = calloc(rowSize, sizeof(double));	}
+	
+	// scale is:
+	// 4 if gSortPattern = 4, we use mean, variance, skewness and kurtosis
+	// 3 if gSortPattern = 5, we use mean, variance, skewness
+	// 2 if gSortPattern = 6, we use mean, variance
+	// 1 if gSortPattern = 7, we use mean
+	int scale = 8 - gSortPattern;
+	for(ii = 0; ii < numTaxonPairs; ii++)
+	{		
+		for (currentSS = PI_b; currentSS <= JW_Psi; currentSS ++)
+		{	
+			matrixToPrint[ii][currentSS*scale + 0] = SumStat_mean[ii][currentSS];
+			//fprintf(stderr, "%d %d %lf\n", ii, currentSS, matrixToPrint[ii][currentSS*scale + 0]);
+			if((gSortPattern == 4) || (gSortPattern == 5) || (gSortPattern == 6))
+				{	matrixToPrint[ii][currentSS*scale + 1] = SumStat_var[ii][currentSS]; }
+			if((gSortPattern == 4) || (gSortPattern == 5))
+				{	matrixToPrint[ii][currentSS*scale + 2] = SumStat_skewness[ii][currentSS]; }
+			if(gSortPattern == 4)
+				{	matrixToPrint[ii][currentSS*scale + 3] = SumStat_kurtosis[ii][currentSS]; }
+		}
+	}
+	
+	
+	// free allocated arrays that we don't need anymore
+	free(uniqueTaxaArray);
+	free(taxaArray);
+	free(tempSumStat);
+
+    // free memory for four moment SumStat
+    for (a = 0; a < numTaxonPairs; a++)
+	{
+	   free(SumStat_mean[a]);
+	   free(SumStat_var[a]);
+	   free(SumStat_skewness[a]);
+	   free(SumStat_kurtosis[a]);
+	}
+
+    free(SumStat_mean);
+	free(SumStat_var);
+	free(SumStat_skewness);
+	free(SumStat_kurtosis);
+
+	// sort rows of ss_moments by PI_b_mean(across loci)
+	qsort(matrixToPrint, numTaxonPairs, sizeof(matrixToPrint[0]), SS_comp_moments);
+    
+	if (gPrintHeader)
+    {
+      int numPriorColumns = 0; // Prior is not printed anymore 
+      char priorNameVect2[][MAX_LEN_COLUMN_NAME] = { "PRI.Psi", "PRI.var.t", "PRI.E.t", "PRI.omega" };
+      PrintHeader_fourMoments (priorNameVect2, numPriorColumns, ssNameVect,
+		   numSumStats, numTaxonPairs);
+
+      gPrintHeader = 0; // lower the flag to print only once
+
+    }
+
+	for(currentSS = PI_b; currentSS <= JW_Psi; currentSS ++)
+	{
+		for(a = 0; a < numTaxonPairs; a++)
+		{	
+			int aa;
+			for(aa = 0; aa < scale; aa ++)
+				{	printf("%lf\t", matrixToPrint[a][currentSS*scale + aa]);	}
+		}
+	}
+
+
+	printf ("\n");
+	
+	    // free memory for four moment SumStat
+    for (a = 0; a < numTaxonPairs; a++)
+	{
+	   free(matrixToPrint[a]);
+	}
+
+    free(matrixToPrint);
 
   }
 
   if (gPrintHeader)
-    {
-      int numPriorColumns = 0; /* Prior is not printed anymore */
-      char priorNameVect[][MAX_LEN_COLUMN_NAME] =
-	{ "PRI.Psi", "PRI.var.t", "PRI.E.t", "PRI.omega" };
-      PrintHeader (priorNameVect, numPriorColumns, ssNameVect,
+	{
+		int numPriorColumns = 0; /* Prior is not printed anymore */
+		char priorNameVect[][MAX_LEN_COLUMN_NAME] =
+			{ "PRI.Psi", "PRI.var.t", "PRI.E.t", "PRI.omega" };
+		PrintHeader (priorNameVect, numPriorColumns, ssNameVect,
 		   numSumStats, numTaxonLocusPairs);
+		gPrintHeader = 0; /* lower the flag to print only once */
+	}
 
-      gPrintHeader = 0; /* lower the flag to print only once */
-    }
-
-  if (gSortPattern != 3)
-  {
-	/* start to print sum stats */
-	for (a = 0; a < numTaxonLocusPairs; a++) {
-       printf ("%lf\t", SumStat_list[a]->PI_b);
-    }
-
-    for (a = 0; a < numTaxonLocusPairs; a++)
-		printf ("%lf\t", SumStat_list[a]->PI_w);
-
-    for (a = 0; a < numTaxonLocusPairs; a++)
-		printf ("%lf\t", SumStat_list[a]->PI);
-
-	for (a = 0; a < numTaxonLocusPairs; a++)
-		printf ("%lf\t", SumStat_list[a]->TW);
-
-	for (a = 0; a < numTaxonLocusPairs; a++)
-		printf ("%lf\t", SumStat_list[a]->PI_Net);
-
-	for (a = 0; a < numTaxonLocusPairs; a++)
-		printf ("%lf\t", SumStat_list[a]->TD);
-
-	for (a = 0; a < numTaxonLocusPairs; a++)
-		printf ("%lf\t", SumStat_list[a]->TDD);
-
-	for (a = 0; a < numTaxonLocusPairs; a++)
-		printf ("%lf\t", SumStat_list[a]->PI_w2);
-
-	for (a = 0; a < numTaxonLocusPairs; a++)
-		printf ("%lf\t", SumStat_list[a]->PI_w1);
-
-	for (a = 0; a < numTaxonLocusPairs; a++)
-		printf ("%lf\t", SumStat_list[a]->TW2);
-
-	for (a = 0; a < numTaxonLocusPairs; a++)
-		printf ("%lf\t", SumStat_list[a]->TW1);
-
-	for (a = 0; a < numTaxonLocusPairs; a++)
-		printf ("%lf\t", SumStat_list[a]->TDD2);
-
-	for (a = 0; a < numTaxonLocusPairs; a++)
-		printf ("%lf\t", SumStat_list[a]->TDD1);
-
-	for (a = 0; a < numTaxonLocusPairs; a++)
-		printf ("%lf\t", SumStat_list[a]->si1);
-
-	for (a = 0; a < numTaxonLocusPairs; a++)
-		printf ("%lf\t", SumStat_list[a]->si2);
-
-	for (a = 0; a < numTaxonLocusPairs; a++)
-		printf ("%lf\t", SumStat_list[a]->si3);
-
-	for (a = 0; a < numTaxonLocusPairs; a++)
-		printf ("%lf\t", SumStat_list[a]->si4);
-
-	for (a = 0; a < numTaxonLocusPairs; a++)
-		printf ("%lf\t", SumStat_list[a]->Sx);
-
-	for (a = 0; a < numTaxonLocusPairs; a++)
-		printf ("%lf\t", SumStat_list[a]->Sy);
-
-	for (a = 0; a < numTaxonLocusPairs; a++)
-		printf ("%lf\t", SumStat_list[a]->Sxy);
-
-	for (a = 0; a < numTaxonLocusPairs; a++)
-		printf ("%lf\t", SumStat_list[a]->JW_Psi);
-
-	printf ("\n");
-  }// if (gSortPattern != 3)
+	if(gSortPattern < 3)
+	{
+		/* start to print sum stats */
+		enum SS currentSS;
+		for(currentSS = PI_b; currentSS <= JW_Psi; currentSS ++)
+		{
+			for(a = 0; a < numTaxonLocusPairs; a ++)
+			{
+				printf("%lf\t", (SumStat_list[a]->SS)[currentSS]);
+			}
+		}
+	
+		printf("\n");
+		
+	}// if (gSortPattern < 3)
 
 }
 
@@ -1145,7 +966,7 @@ PrintHeader (char priorNames[][MAX_LEN_COLUMN_NAME], int numPriors,
 
 
 static void
-PrintHeader_threeMoments (char priorNames[][MAX_LEN_COLUMN_NAME], int numPriors,
+PrintHeader_fourMoments2 (char priorNames[][MAX_LEN_COLUMN_NAME], int numPriors,
 	     char sumStatNames[][MAX_LEN_COLUMN_NAME], int numSumStats,
 	     int numLoci)
 {
@@ -1162,6 +983,35 @@ PrintHeader_threeMoments (char priorNames[][MAX_LEN_COLUMN_NAME], int numPriors,
 	     printf ("%s.%d\t", sumStatNames[i], count++);
 	     printf ("%s.%d\t", sumStatNames[i], count++);
 	     printf ("%s.%d\t", sumStatNames[i], count++);
+		 printf ("%s.%d\t", sumStatNames[i], count++);
+	  }
+    }
+  printf ("\n");
+  return;
+}
+
+static void
+PrintHeader_fourMoments (char priorNames[][MAX_LEN_COLUMN_NAME], int numPriors,
+	     char sumStatNames[][MAX_LEN_COLUMN_NAME], int numSumStats,
+	     int numTaxonPairs)
+{
+  int i, a, count;
+  for (i = 0; i < numPriors; i++)
+    {
+      printf ("%s\t", priorNames[i]);
+    }
+  for (i = 0; i < numSumStats; i++)
+    {
+	  count = 1;
+      for (a = 0; a < numTaxonPairs; a++)
+	  {
+	     printf ("%s.%d\t", sumStatNames[i], count++);
+		 if((gSortPattern == 4) || (gSortPattern == 5) || (gSortPattern == 6))
+			printf ("%s.%d\t", sumStatNames[i], count++);
+		 if((gSortPattern == 4) || (gSortPattern == 5))
+			printf ("%s.%d\t", sumStatNames[i], count++);
+		 if(gSortPattern == 4)
+			printf ("%s.%d\t", sumStatNames[i], count++);
 	  }
     }
   printf ("\n");

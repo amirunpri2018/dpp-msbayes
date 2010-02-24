@@ -47,7 +47,7 @@
 
 #define MAX_LNSZ 1000
 
-/* posit[] was originally double, but I thougt int makes more sense, Naoki 
+/* posit[] was originally double, but I thougt int makes more sense, Naoki
  * Change the typedef to double if I'm wrong */
 typedef unsigned int tPositionOfSegSites;
 
@@ -56,7 +56,10 @@ runParameters gParam;
 int gNadv = 0;
 int gPrintHeader = 0;
 
-/* function prototypes of external functions */
+int sizeMemAllocated = 0;
+
+
+/* Function prototypes of external functions */
 int multiplepopssampledfrom (int nsam, int npops, int *config);
 double thetaW (int, int), mu, N;
 void PrintSumStatNames (void);
@@ -71,10 +74,10 @@ static void ReadInPositionOfSegSites (const char *line,
 				      int numSegSites);
 
 static void ParseCommandLine (int argc, char *argv[]);
-static msOutputArray *ReadInMSoutput (FILE * pfin);
+static void ReadInMSoutputAndCalculateSummaryStatistics (FILE * pfin);
 
 int gSortPattern = 1;
-/* 
+/*
  * 0: no sort
  * 1 (default) is simple sort
  */
@@ -82,42 +85,25 @@ int gSortPattern = 1;
 int
 main (int argc, char *argv[])
 {
-  int i,j;
-  msOutputArray *msOutArr;
-  struct SumStat **sumStatArr;
-
   /* check the command line argument */
   ParseCommandLine (argc, argv);
 
   /* read the data from STDIN */
-  msOutArr = ReadInMSoutput(stdin); 
-  
-  /* go through the array of each msDQH run and get sum stats  */
-  if ((sumStatArr = calloc(msOutArr->numTaxonLocusPairs, 
-			    sizeof(struct SumStat *))) == NULL) {
-    perror("ERROR: No mem in main ");
-    exit(EXIT_FAILURE);
-  }
-  
-  for (i = 0; i < msOutArr->numElements; i++) {
-    j = i % msOutArr->numTaxonLocusPairs;
-    sumStatArr[j] = CalcSumStats (& (msOutArr->dat[i]));
-    
-    if (j == msOutArr->numTaxonLocusPairs - 1) {
-      /* we got sumStats for 1 set */
-      PrintSumStatsArray(sumStatArr, msOutArr->numTaxonLocusPairs, msOutArr->numLoci);
-    }
-  }
+  ReadInMSoutputAndCalculateSummaryStatistics(stdin);
+
   return (0);
 }
 
-static msOutputArray *
-ReadInMSoutput (FILE * pfin){
+static void
+ReadInMSoutputAndCalculateSummaryStatistics (FILE * pfin){
   msOutputArray *msOutArr;
   msOutput *outPtr;
+  struct SumStat **sumStatArr;
+  struct SumStat **sumStatArrTemp;
+
   int initialArrSize;
   int msbayesFormat, taxonID, locusID;
-  
+
   int maxsites = 1000; /* max number of seg sites, used for size of data mat */
   int nsam, i, howmany, npops, *config;
   char **list, line[MAX_LNSZ], longline[32000], *mutscanline;
@@ -126,11 +112,11 @@ ReadInMSoutput (FILE * pfin){
   double theta;
   int segsites, count, numTaxonLocusPairs, BasePairs, taxonLocusID;
   int Fst_bool = 0, Qbool = 0;
-  int isNumSegSitesConst = 0;	/* 1 with -s, the number of segregating sites 
-				 *    will be constant in each sample 
+  int isNumSegSitesConst = 0;	/* 1 with -s, the number of segregating sites
+				 *    will be constant in each sample
 				 * 0 with -t, varies between samples
 				 */
-  
+
   /* read in first line of output (command line options of msDQH) */
   fgets (line, MAX_LNSZ, pfin);
 
@@ -143,20 +129,20 @@ ReadInMSoutput (FILE * pfin){
   if (strcmp(line, "# BEGIN MSBAYES\n") == 0) { /* process info from msbayes.pl */
     fgets(line, MAX_LNSZ,pfin); /* get next line */
     sscanf(line, "# numTaxonLocusPairs %d numTaxonPairs %d numLoci %d",
-	   &(msOutArr->numTaxonLocusPairs), &(msOutArr->numTaxonPairs), 
+	   &(msOutArr->numTaxonLocusPairs), &(msOutArr->numTaxonPairs),
 	   &(msOutArr->numLoci));
     /* if taxon:locus matrix is required, we can process here  */
 
     fgets(line, MAX_LNSZ,pfin); /* get next line */
     msbayesFormat = 1;
-    initialArrSize = 500;    
+    initialArrSize = 500;
   } else {
     msOutArr->numTaxonPairs=msOutArr->numTaxonLocusPairs = 1;
     msOutArr->numLoci = 1;
     msbayesFormat = 0;
     initialArrSize = 1;
   }
-  
+
   /* allocate memory to msOutArr */
   if (! (msOutArr->dat = (msOutput *)calloc(initialArrSize, sizeof(msOutput)))) {
     perror ("ERROR: not enough memory 2 in ReadInMSoutput\n");
@@ -165,7 +151,23 @@ ReadInMSoutput (FILE * pfin){
   msOutArr->numElements = 0;
   msOutArr->allocatedSize = initialArrSize;
 
+   /* go through the array of each msDQH run and get sum stats  */
+  if ((sumStatArr = calloc(initialArrSize,
+			    sizeof(struct SumStat *))) == NULL) {
+    perror("ERROR: No mem in main ");
+    exit(EXIT_FAILURE);
+  }
+				
+   /* go through the array of each msDQH run and get sum stats  */
+  if ((sumStatArrTemp = calloc(msOutArr->numTaxonLocusPairs,
+			    sizeof(struct SumStat *))) == NULL) {
+    perror("ERROR: No mem in main ");
+    exit(EXIT_FAILURE);
+  }
+					
+  int sumStatCounter = 0;					
   do {
+    
     int endOfFile = 0;
     if (msbayesFormat) {
       while (strncmp(line, "# taxonID ", 10) != 0) {
@@ -191,7 +193,7 @@ ReadInMSoutput (FILE * pfin){
 	break;
       taxonID = locusID = 1;
     }
-    
+
     /*
      * Get the following variables from the command line options
      * NOTE: this line has to match with system() line of msbayes.pl
@@ -201,7 +203,7 @@ ReadInMSoutput (FILE * pfin){
      * THETA:     4 Ne mu used for the simulation
      *            This is removed, and getting this in more prper way
      * BasePairs: sequence length
-     * taxonLocusID: sequential ID for each taxon:locus pair 
+     * taxonLocusID: sequential ID for each taxon:locus pair
                      (1 to # of taxon:locus pairs)
      * numTaxonLocusPairs: total number of taxon:locus pairs per 1 set of sims.
      */
@@ -211,18 +213,18 @@ ReadInMSoutput (FILE * pfin){
 	    dum, dum, &nsam, &howmany, dum, dum, dum, dum, dum, dum, dum,
 	    dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum,
 	    dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum,
-	    dum, dum, dum, dum, dum, dum, dum, dum, &BasePairs, dum, dum, 
+	    dum, dum, dum, dum, dum, dum, dum, dum, &BasePairs, dum, dum,
 	    dum, &taxonLocusID, dum, dum, dum, &numTaxonLocusPairs);
-
+	
     if(!msbayesFormat) {
       msOutArr->numTaxonPairs=msOutArr->numTaxonLocusPairs = 1;
       taxonLocusID=numTaxonLocusPairs=1;
     }
-    /* 
+    /*
      * of course, I have to put a prior generator in the actual sample
-     * generator for theta and tau down below for each count 
+     * generator for theta and tau down below for each count
      */
-    
+
     /* Find the theta or number of segregating sites from -t or -s */
     mutscanline = strstr (line, "-s");
     if (mutscanline != NULL)
@@ -243,7 +245,7 @@ ReadInMSoutput (FILE * pfin){
 	    exit (1);
 	  }
 	theta = atof (dum);
-	
+
 	/* -Q will tell transition transversion rate ratio and base freqs */
 	if ((mutscanline = strstr (line, "-Q")) != NULL) {
 	  Qbool = 1;
@@ -256,48 +258,56 @@ ReadInMSoutput (FILE * pfin){
       // dum contains recomb rate
     }
 
-    /* 
-     * config become an array with npops elements, 
+    /*
+     * config become an array with npops elements,
      * it contains subpop sample sizes
      */
     npops = FindNumPopsAndSubpopSampleSizes (line, &config);
-    
+
     if (npops == 1) {
       config[0] = nsam;
     }
-    
+
     /* Checking if 0 < config[i] < nsam for all i */
     if ((npops > 1) && (multiplepopssampledfrom (nsam, npops, config)))
       Fst_bool = 1;
-    
+
     /* prepare the storage for segregating sites data */
     if (isNumSegSitesConst)
       maxsites = segsites;
-    
+
     list = cmatrix (nsam, maxsites + 1);
+
     posit =
       (tPositionOfSegSites *) calloc (maxsites, sizeof (tPositionOfSegSites));
-    
-    if (list == NULL || posit == NULL)
+
+    if (list == NULL)
       {
-	fprintf (stderr, "No mem for segregating sites data\n");
-	exit (EXIT_FAILURE);
+	    fprintf (stderr, "No mem for segregating sites data, couldn't allocated memory for list\n");
+	    exit (EXIT_FAILURE);
+      }
+
+	if (posit == NULL)
+      {
+	    fprintf (stderr, "No mem for segregating sites data, couldn't allocated memory for posit\n");
+	    exit (EXIT_FAILURE);
       }
 
     /* Start to process the data */
     count = 0;
     while (howmany - count++)
       {
+	  
 	/* The line after "//" is the beginning of simulation data */
 	while (strcmp (line, "//\n") != 0)
 	  fgets (line, MAX_LNSZ, pfin);
-	
+
 	/* Number of segregating sites line */
 	fgets (line, MAX_LNSZ, pfin);
 	if (!isNumSegSitesConst)
 	  {
 	    sscanf (line, "segsites: %d\n", &segsites);
-	    
+
 	    if (segsites >= maxsites)	/* readjust the size of data matrix */
 	      {
 		maxsites = segsites + 10;	/* extra 10 elements */
@@ -312,29 +322,29 @@ ReadInMSoutput (FILE * pfin){
 		  }
 	      }
 	  }
-	
+
 	/* get rid of base frequency line */
 	if (Qbool)
 	  {
 	    fgets (line, MAX_LNSZ, pfin);
 	    sscanf (line, "freqACGT: %s %s %s %s", dum, dum, dum, dum);
 	  }
-	
+
 	if (segsites > 0)
 	  {
 	    /* read in position of segregating sites */
 	    fgets (longline, 32000, pfin);
-	    
+
 	    /* posit array initialized */
 	    ReadInPositionOfSegSites (longline, posit, segsites);
-	    
+
 	    /* list[][] get initialized with character states */
 	    for (i = 0; i < nsam; i++)
 	      fscanf (pfin, " %s", list[i]);
-	    
+
 	  }
 	/* what do we do if segsites = 0?, Naoki */
-	
+
 	/* insert the data into the array */
 	msOutArr->numElements ++;
 	if (msOutArr->numElements > msOutArr->allocatedSize) {
@@ -343,12 +353,19 @@ ReadInMSoutput (FILE * pfin){
 	  msOutArr->dat = realloc(msOutArr->dat,
 				  sizeof(msOutput) * (msOutArr->allocatedSize));
 	  if(msOutArr->dat ==NULL) {
-	    perror("Realloc of mem failed\n");
+	    perror("Realloc of msOutArr->dat failed\n");
+	    exit(EXIT_FAILURE);
+	  }
+	  
+	  sumStatArr = realloc(sumStatArr,
+				  msOutArr->allocatedSize * sizeof(struct SumStat *));
+	  if(sumStatArr ==NULL) {
+	    perror("Realloc of sumStatArr failed\n");
 	    exit(EXIT_FAILURE);
 	  }
 	}
 	outPtr = & msOutArr->dat[msOutArr->numElements-1];
-	
+
 	outPtr->nsam = nsam;
 	outPtr->segsites = segsites;
 	outPtr->seqDat = list;
@@ -366,10 +383,32 @@ ReadInMSoutput (FILE * pfin){
 	outPtr->taxonLocusID = taxonLocusID;
 	outPtr->NumTaxonLocusPairs = numTaxonLocusPairs;
 	outPtr->BasePairs = BasePairs;
-      }
+	
+	sumStatArr[sumStatCounter++] = CalcSumStats (outPtr);
+
+	}
+	 	 
+    freeCMatrix (nsam, list);
+	free(posit);
+	
   } while (fgets(line, MAX_LNSZ,pfin));
 
-  return msOutArr;
+ 
+  int k, j;
+  for (k = 0; k < msOutArr->numElements; k++) {
+    j = k % msOutArr->numTaxonLocusPairs;
+    sumStatArrTemp[j] = sumStatArr[k];
+
+    if (j == msOutArr->numTaxonLocusPairs - 1) {
+      // we got sumStats for 1 set 
+      PrintSumStatsArray(sumStatArrTemp, msOutArr->numTaxonLocusPairs, msOutArr->numLoci, msOutArr->numTaxonPairs);
+    }
+  }
+  
+  free(msOutArr->dat); 
+  free(msOutArr);
+  free(sumStatArr);
+ 
 }
 
 
@@ -381,11 +420,11 @@ ReadInMSoutput (FILE * pfin){
  * The line[] is something like this:
  *
 ./msDQH 15 1 -t 22.052669 -Q 4.765400 0.207500 0.231800 0.215000 0.345700 -H 999.000000 -r 137.043900 639 -D 5 2 2 13 0 I 0.000000 1.723360 1.723360 0.276640 0.276640 2.522721 2 1 0 0 1 0 I 0.000000 Nc 0.352105 0.673049 4.170096 1 Nc 0.215405 1.1 1 Nc 0.215405 639 1 Nc 0.215405 2
- * 
+ *
  *
  * Returned value: numSubPops
- *     The number of subpopulations (1st number after these options) 
- * 
+ *     The number of subpopulations (1st number after these options)
+ *
  * Side effect:
  *   Mem is allocated to the pointer *subpopSampleSize (numSubPops elements),
  *   and this array contains the sample sizes of sub-populations.
@@ -475,7 +514,7 @@ FindNumPopsAndSubpopSampleSizes (const char line[], int **subPopSampleSize)
  *
  * Arguments:
  *   line: A character string which contains the position of segregating sites
- *         This line starts with "positions:" and contains integers 
+ *         This line starts with "positions:" and contains integers
  *         delimited by spaces.  There should be numSegSites integers.
  *
  *   positionArray: The values extracted from line will be assigned to this
@@ -486,7 +525,7 @@ FindNumPopsAndSubpopSampleSizes (const char line[], int **subPopSampleSize)
  * Returns: nothing
  *
  * Side effects: values will be assigned to positionArray
- *     
+ *
  */
 static void
 ReadInPositionOfSegSites (const char *line,
@@ -526,12 +565,12 @@ ReadInPositionOfSegSites (const char *line,
 
 /*****************  Character matrix functions **********************/
 
-/* 
+/*
  * Arguments:
  *   list[][]: a matrix storing segregating sites data, allocated by cmatrix()
  *   nsam:     number of rows in list[][]
  *   nmax:     number of columns
- * 
+ *
  * Side effect:
  *   grow the size (character string length) to nmax.
  *
@@ -584,6 +623,12 @@ PrintUsage (char *progname)
 	   "        sort: specify the sorting pattern (-s), the choices of N are:\n"
 	   "               0: no sort\n"
 	   "               1: simple sort (default)\n"
+	   "               2: group by locus then sort by pi.b within each locus(?)\n"
+	   "               3: group by locus then sort by the average of pi.b, can use up to 4 moments\n"
+	   "               4: group by taxon then sort by the average of pi.b, use first 4 moments\n"
+	   "               5: group by taxon then sort by the average of pi.b, use first 3 moments\n"
+	   "               6: group by taxon then sort by the average of pi.b, use first 2 moments\n"
+	   "               7: group by taxon then sort by the average of pi.b, use the first moment\n"
 	   "        nadv: Specify nadv (-a)\n"
 	   "stdin is used to read in a single line of msDQH output "
 	   "(output_line_of_msDQH)" "\n\n", p);
@@ -630,7 +675,7 @@ ParseCommandLine (int argc, char *argv[])
 	      PrintUsage (argv[0]);
 	    }
 	  gSortPattern = strtol(optarg, NULL, 10);
-	  if (errno || (gSortPattern < 0) || (gSortPattern > 3))
+	  if (errno || (gSortPattern < 0) || (gSortPattern > 7))
 	    {
 	      fprintf (stderr, "Invalid sort: %s\n", optarg);
 	      PrintUsage (argv[0]);

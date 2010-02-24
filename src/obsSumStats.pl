@@ -55,7 +55,7 @@ my $usage = "Usage: $0 [-h] [-T tblOutFileName] [-t headerTmplFile] [-s sortPatt
     "      Integer value can be used to specify different sorting.".
     "       Arguments:\n".
     "        0: do not sort the column at all\n".
-    "        1: default simple sorting\n".
+    "        1: default simple sorting(need to expand sorting algorithm)\n".
     "      To create the input file for acceptRej.pl, this option\n" .
     "      SHOULD BE LEFT AS THE DEFAULT\n".
     "  -T: Print out an additional human readable table of summary statistics\n" .
@@ -112,7 +112,7 @@ if (defined($opt_s)) {
     if ($opt_s != 1) {
 	warn "INFO: Using the sorting pattern of $opt_s, DO NOT USE THIS as the input to acceptRej.pl\n";
     }
-    if ($opt_s < 0 || $opt_s > 1) {
+    if ($opt_s < 0 || $opt_s > 7) {
 	die "ERROR: argument of -s has to be between 0 and 1\n$usage\n";
     }
     $sumstatsOptions = "-s $opt_s";

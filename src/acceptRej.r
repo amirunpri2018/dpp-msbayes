@@ -321,8 +321,12 @@ if(class(rc) == "try-error") {
   cat("######### end of results #######\n")
   dev.off()
 
+  aaa <- list(nPairs=nPairs, simDat=simDat, obsDat=obsDat, result=result)
+	aaa
+	
   if (return.res)
     return (list(nPairs=nPairs, simDat=simDat, obsDat=obsDat, result=result))
+	
   
 }
 

@@ -116,8 +116,8 @@ if (defined ($opt_S)) {
 
 my $ssvSortOpt = "-s 1";
 if (defined($opt_s)) {
-    die "$usage\nERROR: sorting pattern (-s) should be 0 or 1" 
-	if ($opt_s != 0 && $opt_s != 1 && $opt_s != 2 && $opt_s != 3);
+    die "$usage\nERROR: sorting pattern (-s) should be 0 t0 7"
+	if ($opt_s != 0 && $opt_s != 1 && $opt_s != 2 && $opt_s != 3 && $opt_s != 4 && $opt_s != 5 && $opt_s != 6 && $opt_s != 7);
     $ssvSortOpt = "-s $opt_s";
 }
 
@@ -185,7 +185,7 @@ my @priorCache = ();
 
 my $prepPriorHeader = 1;
 
-my $msCacheSize = $mspriorConf{'numTaxonLocusPairs'} * 100; # ADJUST MULTIPLIER to reduce I/O
+my $msCacheSize = $mspriorConf{'numTaxonLocusPairs'} * 50; # ADJUST MULTIPLIER to reduce I/O
 # $numTaxonLocusPairs is the total number of taxa:locus pairs.  If
 # taxon pair 1 have 3 loci, taxon pair 2 have 4 loci, and taxon pair 3
 # have 1 locus, the 2nd term = 8 So $totalNumSims are the number of

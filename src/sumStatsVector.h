@@ -37,38 +37,14 @@ typedef struct
 } msOutputArray;
 
 struct SumStat
-{
-  int taxonID;
-  int locusID;
-  double PI_b;
-  double PI_Net;
-  double TD;
-  double TD1;
-  double TD2;
-  double PI_w;
-  double PI_w1;
-  double PI_w2;
-  double PI;
-  double TW;
-  double TW1;
-  double TW2;
-  double TDD;
-  double TDD1;
-  double TDD2;
-  double si1;
-  double si2;
-  double si3;
-  double si4;
-  double Sx;
-  double Sy;
-  double Sxy;
-  double JW_Psi;
+{  
+	// 21 summary statistics + 2 imtermiate summary statistics + 2 spots for locsusID and taxonID
+	double SS[25];
 };
-
 
 /* in msStatsDQH.c */
 struct SumStat * CalcSumStats (msOutput *msOut);
-void PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs, int numLoci);
+void PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs, int numLoci, int numTaxonPairs);
 
 
 
@@ -77,3 +53,5 @@ void printstats (struct SumStat **SumStat_list, int numTauClassesHyper, double *
 */
 
 #endif /* SUM_STATS_VECTOR_H */
+
+
