@@ -69,7 +69,7 @@ loc1stats <- function(x,prob=0.95,alpha=0.5,xlim,...)
         if(length(x.mode)>1)x.mode <- x.mode[1]
         lev <- sort(fx)[floor(prob*length(x))]
        
-        cat("INFO: loca1stats: difference in log(prob. density) between the ",
+        cat("INFO: loc1stats: difference in log(prob. density) between the ",
             "max (mode) and the ends of confidence interval (at p=", prob,
             ") is ", log(x.modef)-log(lev), ".\n", sep="")
 		

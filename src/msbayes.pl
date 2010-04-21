@@ -111,7 +111,7 @@ if (defined($opt_b)) {
 }
  
 if (defined ($opt_S)) {
-    $options = $options . " --seed $opt_s ";
+    $options = $options . " --seed $opt_S ";
 }
 
 my $ssvSortOpt = "-s 1";
@@ -119,6 +119,8 @@ if (defined($opt_s)) {
     die "$usage\nERROR: sorting pattern (-s) should be 0 t0 7"
 	if ($opt_s != 0 && $opt_s != 1 && $opt_s != 2 && $opt_s != 3 && $opt_s != 4 && $opt_s != 5 && $opt_s != 6 && $opt_s != 7);
     $ssvSortOpt = "-s $opt_s";
+} else  {
+    $ssvSortOpt = "-s 7";  # default sorting option set to 7
 }
 
 if (defined($opt_S) || defined($opt_d)) {  # set the msDQH use the same seeds

@@ -1,6 +1,8 @@
 #library and R code  and package stuff
 source("make_pd2005.r")
 source("loc2plot.r")
+source("calmod.r")
+library(VGAM, warn.conflicts=F)
 library(KernSmooth)
 library(locfit)  # this need to be installed from CRAN 
 # 1. To install locfit, download a package locfit_*.tar.gz from CRAN.
@@ -37,9 +39,11 @@ library(locfit)  # this need to be installed from CRAN
 #             so you can analyze the results further.
 # rejmethod: if True, it doesn't boether with the regression, and uses
 #            simple rejection
+# If tol=NA, tolearance is set to select 1000 closest matches.
 stdAnalysis <- function(obs.infile, sim.infile, prior.infile, 
 	                pdf.outfile="figs.pdf",
-                        tol=0.002,
+                        posterior.tbl.file="posterior_table",
+                        tol=NA,
                         used.stats=c("pi","wattTheta","pi.net","tajD.denom"),
                         rejmethod=T, pre.rejected=F,
                         return.res=F
@@ -58,11 +62,17 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
     prior.dat <- data.frame(matrix(prior.dat, ncol=length(priorHeader), byrow=T))
     names(prior.dat) <- priorHeader
   }
-
+  
   nPairs <- simDat[["numTaxonPairs"]]
   params.from.priorDistn <- simDat[["prior.names"]]
   summary.stat.names <- simDat[["summary.stats"]]
   simDat <- simDat[["dat"]]
+
+  # if tol is NA, set default tol to get 1000 best matches.
+  if (is.na(tol)) {
+    tol <- 1000/nrow(simDat)
+  }
+
   # construct the column names
   usedColNames <- as.vector(sapply(used.stats, paste,
                                    1:nPairs, sep="."))
@@ -103,7 +113,11 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
   } else {
     constrained <- F
   }
-  
+                           
+  # divide prior.names into discrete and continuous priors
+  prior.names.cont <- result$prior.names[- grep("^PRI[.]Psi", result$prior.names)]
+  prior.names.discrete <- result$prior.names[  grep("^PRI[.]Psi", result$prior.names)]
+
   # set min, max boundary of prior parameters, and verbose print message
   # PRI.omega >= 0, PRI.E.t >= 0, PRI.Psi > 0
   min.val <- list(PRI.Psi = 1, PRI.var.t = 0, PRI.E.t = 0, PRI.omega = 0 )
@@ -134,15 +148,15 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
     verbose.print <- c(verbose.print, temp.val)
   }
   
-  # run makepdANY for each para
-  for (i in 1:length(result$prior.names)) {
-    thisPriorName <- result$prior.names[i]
+  # run makepdANY for each para for continuous
+  for (i in 1:length(prior.names.cont)) {
+    thisPriorName <- prior.names.cont[i]
     # might need to work on constrained vs unconstrained here
     temp <- list(makepdANY(as.vector(obsDat[1,usedColNames],mode="numeric"),
                            simDat[,thisPriorName], simDat[,usedColNames], tol,
                            rep(T,len=nrow(simDat)),rejmethod=rejmethod))
     names(temp) <- thisPriorName
-
+    
     # absorbing boundary
     if ( !  is.null(min.val[[thisPriorName]])) {
       temp[[thisPriorName]]$x[which(temp[[thisPriorName]]$x<min.val[[thisPriorName]])] <- min.val[[thisPriorName]]
@@ -150,32 +164,54 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
     if ( !  is.null(max.val[[thisPriorName]])) {
       temp[[thisPriorName]]$x[which(temp[[thisPriorName]]$x>max.val[[thisPriorName]])] <- max.val[[thisPriorName]]
     }
-    
+
     result <- c(result, temp)
   }
 
+  # deal with the discrete priors
+  for (i in 1:length(prior.names.discrete)) {
+    thisPriorName <- prior.names.discrete[i]
+    temp <- list(calmod(as.vector(obsDat[1,usedColNames],mode="numeric"),
+                           simDat[,thisPriorName], simDat[,usedColNames], tol,
+                           rep(T,len=nrow(simDat)),rejmethod=rejmethod))
+    names(temp) <- thisPriorName
 
-if(is.null(result$PRI.E.t$vals)==FALSE){
-	big_table<-c()
-	for (i in 1:length(result$prior.names)){
-	    thisPriorName <- result$prior.names[i]
-	    big_table<-rbind(big_table,result[[thisPriorName]]$x,result[[thisPriorName]]$vals)
-	    }
-	rownames(big_table)<-rownames(big_table,do.NULL=FALSE) 
-	    
-	for (i in 1:length(result$prior.names)){
-	    	thisPriorName <- result$prior.names[i]
-		name.post<- sub("PRI[.]", "Pos.LLR.", thisPriorName)
-		name.post.raw<-sub("PRI[.]", "Pos.wo.LLR.", thisPriorName)
-		rownames(big_table)[(i*2-1)]<-name.post
-		rownames(big_table)[i*2]<-name.post.raw
-		}
-		
-		write.table(cbind(t(big_table),result$PRI.Psi$ss),file="posterior_table",row.names = FALSE)
-}else{
-	cat("Local linear regression is not used. Please use '-a' to get the accepted posteriors.\n\n")
-}
+    if (rejmethod) {
+      # with simple rejection, $x contains the accepted values
+      # Need to copy to $vals to make the later handling easier.
+      temp[[thisPriorName]]$vals <- temp[[thisPriorName]]$x
+    }
+    result <- c(result, temp)
+  }
 
+  # create tables for posterior_table file
+  big.table<-c()
+  for (i in 1:length(result$prior.names)){
+    thisPriorName <- result$prior.names[i]
+    if(any(thisPriorName==prior.names.cont)) {
+      # transformed values (or untransfomred with simple rejection)
+      big.table<-cbind(big.table,result[[thisPriorName]]$x)
+      if (! rejmethod)  # untransformed values
+        big.table<-cbind(big.table,result[[thisPriorName]]$vals)
+      # following is needed because colname vector is NULL at first
+      # and assignment of names won't work.
+      if (i==1) {colnames(big.table) <- colnames(big.table,do.NULL=FALSE)}
+      if (! rejmethod)
+        colnames(big.table)[ncol(big.table)-1] <- sub("PRI[.]", "Pos.LLR.", thisPriorName)        
+      colnames(big.table)[ncol(big.table)] <- sub("PRI[.]", "Pos.wo.LLR.", thisPriorName)
+    } else {  # discrete doesn't have transformed values
+      big.table<-cbind(big.table,result[[thisPriorName]]$vals)
+      if (i==1) {
+        colnames(big.table) <- sub("PRI[.]", "Pos.wo.LCR.", thisPriorName)
+      } else {
+        colnames(big.table)[ncol(big.table)] <- sub("PRI[.]", "Pos.wo.LCR.", thisPriorName)
+      }
+    }
+  }
+
+  # combining the selected priors and summary stats and print
+  write.table(cbind(big.table,result$PRI.Psi$ss),file=posterior.tbl.file,row.names = FALSE)
+  
   real.mode.mean.median <- NULL
   modeToPrint <- NULL
   fileToPrint <- paste("acceptedPriorSummary_")
@@ -188,7 +224,7 @@ if(is.null(result$PRI.E.t$vals)==FALSE){
   TempMatrix <- matrix(tempMatrix, ncol = 1, byrow = T)
   truePRI <- c(TempMatrix[2,1], TempMatrix[3,1], TempMatrix[4,1], TempMatrix[5,1])
   counter <- 0
- 
+
   cat("######### results #######\n")
   # make print loop for Mode and quantile
   for (i in 1:length(result$prior.names)) {
@@ -210,35 +246,62 @@ if(is.null(result$PRI.E.t$vals)==FALSE){
     # Error: newsplit: out of vertex space Error: Descend tree proble
     # So, simply printing the posterior mean, and mode from
     # accepted values
-    if (length(grep("^PRI\\.Psi\\.[0-9]+$", thisPriorName)) == 1) {
-      if (! rejmethod) 
-        cat ("### With local-linear regression (by default)\n")
-      else
-        cat ("### With simple rejection method, NO LOCAL LINEAR REGRESSION\n")
-      mean.median.vect <- c(mean((result[[thisPriorName]])$x),
-                                 median((result[[thisPriorName]])$x))
-      names(mean.median.vect) <- c("mean", "median")
-      
-      cat ("## Mean/Median\n")
-      print(mean.median.vect)
-      
-      cat ("## 95 % quantile\n")
-      print(quantile((result[[thisPriorName]])$x,prob=c(0.025,0.975)))
-      if (! rejmethod)
-        cat("\n### With simple rejection method, CAUTION: not using local-linear regression\n");
-      cat ("## posterior distribution\n")
-      if (! rejmethod) 
-        post.distn.accRej <- table(result[[thisPriorName]]$vals)
-      else
-        post.distn.accRej <- table(result[[thisPriorName]]$x)
-      temp.pd.ar <- c("frequencies", post.distn.accRej)
-      names(temp.pd.ar)[1] <- name.rm.PRI
-      print(temp.pd.ar)
-      cat ("## Mode (from simple rejection method):\n")
-      print(names(which(post.distn.accRej == max(post.distn.accRej))))
+    if (length(grep("^PRI\\.Psi(|\\.[0-9]+)$", thisPriorName)) == 1) {
+      if (! rejmethod)  {
+        cat ("\n### Posterior probability table with local multinomial logit regression.\n")
+        transformed.posterior.p.tbl <- (result[[thisPriorName]])$x2
+        # removing "mu" from mu1, mu2, mu3 ...
+        colnames(transformed.posterior.p.tbl) <- sub("mu", "", colnames(transformed.posterior.p.tbl))
+
+        print(transformed.posterior.p.tbl)
+        
+        cat ("## Mode (from local multinomial logit regression):\n")
+        print(colnames(transformed.posterior.p.tbl)[which.max(transformed.posterior.p.tbl)])
+
+        # posterior mean and median, a little weird with categorical var
+        this.posterior.mean <- sum(as.numeric(colnames(transformed.posterior.p.tbl)) * transformed.posterior.p.tbl)
+        this.posterior.median <- as.numeric(colnames(transformed.posterior.p.tbl)[ncol(transformed.posterior.p.tbl)])
+        this.cumu <- 0
+        for(j in 1:ncol(transformed.posterior.p.tbl)) {
+          this.cumu <- this.cumu + transformed.posterior.p.tbl[1,j]
+          if(this.cumu >= 0.5) {
+            this.posterior.median <- as.numeric(colnames(transformed.posterior.p.tbl)[j])
+            break
+          }
+        }
+        mean.median.vect <- c(this.posterior.mean, this.posterior.median)
+        names(mean.median.vect) <- c("mean", "median")
+        cat ("## Mean/Median  (from local multinomial logit regression):\n")
+        print(mean.median.vect)
+        cat ("\n### The above results should be better than simple rejection method below.\n")
+      }
+    
+      cat ("\n### Posterior probability table with SIMPLE rejection method, NO REGRESSION.\n")
+
+      raw.accepted.tbl <- table((result[[thisPriorName]])$vals)
+      raw.posterior.p <- raw.accepted.tbl / sum(raw.accepted.tbl)
+      print(raw.posterior.p)
+            
+      cat ("## Mode (from simple rejection):\n")      
+      print(names(raw.posterior.p)[which.max(raw.posterior.p)])
+
+      cat ("## Mean/Median (from simple rejection)\n")
+      this.mean.median.vect <- c(mean((result[[thisPriorName]])$vals),
+                                 median((result[[thisPriorName]])$vals))
+      names(this.mean.median.vect) <- c("mean", "median")
+      print(this.mean.median.vect)
+
+      post.distn.accRej <- c()
+      if (rejmethod) {
+        post.distn.accRej <- raw.posterior.p
+        mean.median.vect <- this.mean.median.vect
+      } else {
+        post.distn.accRej <- transformed.posterior.p.tbl
+      }
       
       real.mode.mean.median <- append(real.mode.mean.median, c(truePRI[counter],1,mean.median.vect), after = length(real.mode.mean.median))
-      
+      #temp.pd.ar <- c("frequencies", post.distn.accRej)
+      #names(temp.pd.ar)[1] <- name.rm.PRI      
     } else {  # Do regular summary, Not PRI.Psi.*
       cat ("### Mode\n")
       # With locfit 1.5_4, newsplit error of locfit() will stop the
@@ -274,41 +337,78 @@ if(is.null(result$PRI.E.t$vals)==FALSE){
     cat("\n")
   }
 
-  write(real.mode.mean.median, file = fileToPrint, ncol = 20, append = T)
-  
-  # Print out figures
+  # Wen was using the following, Mike said that we can disable this
+  # write(real.mode.mean.median, file = fileToPrint, ncol = 20, append = T)
+                         
+  # Print out figures for continuous variables
   pdf(pdf.outfile, width=7.5, height=10, paper="letter")
-layout(mat=matrix(1:2,2,1))
-  for (i in 1:length(result$prior.names)) {
-    thisPriorName <- result$prior.names[i]
+  layout(mat=matrix(1:2,2,1))
+  for (i in 1:length(prior.names.cont)) {
+    thisPriorName <- prior.names.cont[i]
     name.rm.PRI <- sub("PRI[.]", "", thisPriorName)
     if(! is.null(verbose.print[[thisPriorName]])) {
       additional.print <- verbose.print[[thisPriorName]]
     } else {
       additional.print <- ""
     }
-
+    
     this.title <- paste(name.rm.PRI, additional.print, sep=" ")
-    old.mfcol <- par()$mfcol
-#    par(mfcol=c(2,1))  # 2 plots per page
     if (pre.rejected) {
       make.hist(prior.dat[,thisPriorName],result[[thisPriorName]], title=this.title, breaks=20)
       
     } else {
       make.hist(simDat[,thisPriorName],result[[thisPriorName]],title=this.title,breaks=20)
-      plot.bf(simDat[,thisPriorName],result[[thisPriorName]]$x,main="Bayes Support for true Hyper-parameter value < threshold")
+#      plot.bf(simDat[,thisPriorName],result[[thisPriorName]]$x,main="Bayes Support for true Hyper-parameter value < threshold")
     }
-#    par(mfcol=old.mfcol)
   }
+                         
+  for (i in 1:length(prior.names.discrete)) {
+    thisPriorName <- prior.names.discrete[i]
+    name.rm.PRI <- sub("PRI[.]", "", thisPriorName)
+    if(! is.null(verbose.print[[thisPriorName]])) {
+      additional.print <- verbose.print[[thisPriorName]]
+    } else {
+      additional.print <- ""
+    }
+    
+    this.title <- paste(name.rm.PRI, additional.print, sep=" ")
+    this.legend <- c("posterior probability", "prior probability")
 
-#  print(thisPriorName)
-  plot((result[["PRI.omega"]])$x,(result[["PRI.E.t"]])$x,lty=2,lwd=0.5,ylim=c(0,max(prior.dat[["PRI.E.t"]])),xlim=c(0,max(prior.dat[["PRI.omega"]])))
+    # prior distribution
+    if(pre.rejected) {
+      this.prior.p <- table(prior.dat[,thisPriorName])
+    } else {
+      this.prior.p <- table(simDat[,thisPriorName])
+    }
+    this.prior.p <- this.prior.p / sum(this.prior.p)
+    
+    # transformed posterior prob.
+    if (!rejmethod) {
+      this.pp.tbl <- result[[thisPriorName]]$x2
+      # note $x2 is 1 x N matrix, and converting it to a vector (similar to table() output)
+      barplot(merge.2tbl.byName(this.pp.tbl[1,], this.prior.p),beside=T,ylab="Posterior probability",
+              legend=this.legend, main=paste(this.title,"With categorical regression", sep="\n"), space=c(0,0.05))
+    }
 
+    # posterior probability from simple rejection    
+    this.pp.tbl <- 
+      table(result[[thisPriorName]]$vals)/sum(table(result[[thisPriorName]]$vals))
+    barplot(merge.2tbl.byName(this.pp.tbl, this.prior.p),beside=T,ylab="Posterior probability",
+              legend=this.legend, main=paste(this.title,"With Simple Rejection",sep="\n"), space=c(0,0.05))
+  }
+  
+
+  if(pre.rejected) {
+    plot((result[["PRI.omega"]])$x,(result[["PRI.E.t"]])$x,lty=2,lwd=0.5,ylim=c(0,max(prior.dat[["PRI.E.t"]])),xlim=c(0,max(prior.dat[["PRI.omega"]])))
+  } else {
+    plot((result[["PRI.omega"]])$x,(result[["PRI.E.t"]])$x,lty=2,lwd=0.5,ylim=c(0,max(simDat[["PRI.E.t"]])),xlim=c(0,max(simDat[["PRI.omega"]])))
+
+  }
   rc <- try(plotKernDensity(result[["PRI.omega"]],result[["PRI.E.t"]],
                             xlab="Omega", ylab="E(t)", title="Omega and E(t)"))
   
 
-if(class(rc) == "try-error") {
+  if(class(rc) == "try-error") {
     cat("WARN: plotKernDensity failed for some reason, so the kernel density ",
         "plot was not created\n", file=stderr())
   }
@@ -321,8 +421,8 @@ if(class(rc) == "try-error") {
   cat("######### end of results #######\n")
   dev.off()
 
-  aaa <- list(nPairs=nPairs, simDat=simDat, obsDat=obsDat, result=result)
-	aaa
+#  aaa <- list(nPairs=nPairs, simDat=simDat, obsDat=obsDat, result=result)
+#  aaa
 	
   if (return.res)
     return (list(nPairs=nPairs, simDat=simDat, obsDat=obsDat, result=result))
@@ -347,7 +447,7 @@ getData <- function (infile) {
   num.prior <- length(prior.names)
   # sum stats column-names (header) have the following form
   #   c("pi.b.1", "pi.b.2", "pi.b.3", "pi.w.1", "pi.w.2", "pi.w.3", ...)
-  # Here, I'm getting rid of .digits part and taking uniue names.
+  # Here, I'm getting rid of .digits part and taking unique names.
   sum.stat.names <- unique(sub("[.][0-9]+$", "", first.line[(num.prior+1):length(first.line)],fixed=F))  
 
   # number of taxon pairs can be calculated from
@@ -498,4 +598,30 @@ make.bf.vect <- function(prior, posterior, crit.vals = NULL, num.points=100) {
   }
 
   return (data.frame(crit.vals=crit.vals, bf=bf.vect))
+}
+
+# Marging two tables created by table()
+# this is not generic, only for 1 dimensional table
+merge.2tbl.byName <- function(arr1, arr2) {
+  #this.name <- dimnames(arr1)[[length(dimnames(arr1))]]
+  this.name <- names(arr1)
+  d1 <- data.frame(cbind(this.name, arr1))
+  names(d1)[1] <- 'name'
+  
+  #this.name <- dimnames(arr2)[[length(dimnames(arr2))]]
+  this.name <- names(arr2)
+  d2 <- data.frame(cbind(this.name, arr2))
+  names(d2)[1] <- 'name'
+  print(d1)
+  print(d2)
+  
+  m1 <- merge(d1,d2,by='name',all=T)
+  m1 <- m1[order(as.numeric(levels(m1$name)[m1$name])),]  #sorting rows
+  m1 <- as.matrix(m1)
+  m1[is.na(m1)] <- 0  # replacing NA with 0
+  result <- as.table(t(m1[,2:3]))
+  colnames(result) <- m1[,1]
+  print(result) # debug
+  # convert character table to numeric
+  return(type.convert(result))
 }

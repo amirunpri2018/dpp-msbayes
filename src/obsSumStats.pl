@@ -109,13 +109,15 @@ if (@ARGV > 0) {
 
 my $sumstatsOptions = "";
 if (defined($opt_s)) {
-    if ($opt_s != 1) {
+    if ($opt_s != 7) {
 	warn "INFO: Using the sorting pattern of $opt_s, DO NOT USE THIS as the input to acceptRej.pl\n";
     }
     if ($opt_s < 0 || $opt_s > 7) {
 	die "ERROR: argument of -s has to be between 0 and 1\n$usage\n";
     }
     $sumstatsOptions = "-s $opt_s";
+} else {
+    $sumstatsOptions = "-s 7";
 }
 
 my @obsSumStats = CreateObsSumStats($filename, $headerTmpl);

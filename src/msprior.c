@@ -23,10 +23,9 @@
 
 
 /*
-* This program read in 3 positive integer values as the input.
-*   msprior reps taxa loci
-* reps is number of replications, taxa is the number of taxon pairs
-* loci is number of loci.
+* This program 
+*   msprior --reps reps --config file
+* reps is number of replications
 * Additionally, it reads in a configuration file.
 *
 * Output: Each line is tab delimited, and the columns contain following info.
@@ -399,7 +398,7 @@ main (int argc, char *argv[])
 
 	  /* After the populations diverge, they experience pop. bottleneck.
 	     Then the population size exponentially grows until current size.
-	     BottleTime indicate the time when population start to grow.  
+	     BottleTime indicate the time when population started to grow.  
 	     BottleTime of 1 means, populations start to expand immediately
 	     after divergence. Closer to 0 means, populations hasn't started
 	     to expand until very recently.  */
@@ -515,6 +514,7 @@ main (int argc, char *argv[])
 #ifndef HOMOGENEOUS_MUT
 	      locTheta *=  mutScalerTbl[locus];
 #endif
+
 	      /* thisNanc is basically a random deviate from a uniform dist'n:
 		 [0.01 / spTheta, 
 		   gParam.upperAncPopSize * gParam.upperTheta/spTheta) 
@@ -525,9 +525,9 @@ main (int argc, char *argv[])
 		 by locTheta is required.
 	      */
 	      /* thisNanc = Nanc * taxonPairDat.seqLen / locTheta; */
-	      thisNanc = Nanc / spTheta; /* this can be done outside of locus loog */
+	      thisNanc = Nanc / spTheta; /* this can be done outside of locus loop */
 	      /* NAOKI, discuss this with Mike */
-	      /* seqLen is required because the unit of Nanc = theta PER SITE */
+
 	      /* this scaling is done inside of locus loop to accomodate 
 		 the gamma dist'n of mut rate for each locus */
 

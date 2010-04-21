@@ -144,7 +144,7 @@ foreach my $currentFile (@fileList)
        $line =~ s/\s+$//;   # remove trailing whitespace
        
        # find out whether the line is a comment or an empty line 
-       $line =~ s/#.*$//;  # remove comments
+       #$line =~ s/#.*$//;  # remove comments
        next if ( $line =~ /^\s*$/ ); # empty line
        
        # increment $lineRead for each valid line

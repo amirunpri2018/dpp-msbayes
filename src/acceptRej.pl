@@ -25,6 +25,7 @@
 my $pdfOut = "figs.pdf";  # default pdf output file name
 my $defaultAcceptCnt = 500;  # used to set default tolerance
 my $statString = "'pi','wattTheta','pi.net','tajD.denom'";  # default stat strings
+my $defaultAcceptedFile = "posterior_table";
 
 my $usage="Usage: $0 [-hncr] [-p outPDF] [-a acceptedOutFileName] [-s summary_stats]\n" .
           "                       [-t tolerance] obsData simData \n".
@@ -32,7 +33,8 @@ my $usage="Usage: $0 [-hncr] [-p outPDF] [-a acceptedOutFileName] [-s summary_st
     "  -n: print out the names of all available summary stats\n".
     "  -r: Simple rejection method without regression will be used\n".
     "  -p: output pdf filename (default: $pdfOut)\n".
-    "  -a: create a file with accepted parameter values and summary stats\n".
+    "  -a: specify a filename of accepted parameter values and summary stats\n".
+    "      Without this flag, a default filename \"$defaultAcceptedFile\" is used.\n".
     "  -s: statString (e.g. -s '$statString', <=default)\n".
     "      The summary statistics listed here will be used\n".
     "  -t: tolerance (a value between 0 an 1, default: set the tolerance so that\n".
@@ -194,19 +196,11 @@ if(defined($opt_p)) {
 }
 CheckNBackupFile($pdfOut, 'file');
 
-MkStdAnalysisRScript($tmpRfh);
-close($tmpRfh);  # the tmp R script is ready to use
-
-if(defined($opt_d)) {
-    open RSCRIPT, "<$tmpR" || die ("ERROR: Can't open $tmpR\n");
-    warn "### debug: contents of R script file\n";
-    while(<RSCRIPT>) {
-	print STDERR $_;
-    }
-    close RSCRIPT;
-    warn "### debug: end of R script file\n";
-}
-
+## save the accepted sims (+ transfomed prior values + sum stats) to a file
+my $acceptedFile = (defined ($opt_a)) ? $opt_a : $defaultAcceptedFile;
+CheckNBackupFile($acceptedFile, 'file');
+copy($tmpSimDat, $acceptedFile) || 
+    warn "WARN: copying $tmpSimDat to $acceptedFile failed: $!";
 
 {   # Making sure R is installed
     my $checkR = system("which R > /dev/null");
@@ -315,6 +309,20 @@ if (defined($opt_t)) {
     print STDERR "INFO: tolerance set to $defaultTolerance.\n" ;
 }
 
+#### Making the R script
+MkStdAnalysisRScript($tmpRfh);
+close($tmpRfh);  # the tmp R script is ready to use
+
+if(defined($opt_d)) {
+    open RSCRIPT, "<$tmpR" || die ("ERROR: Can't open $tmpR\n");
+    warn "### debug: contents of R script file\n";
+    while(<RSCRIPT>) {
+	print STDERR $_;
+    }
+    close RSCRIPT;
+    warn "### debug: end of R script file\n";
+}
+
 if (! $ROnlyAnalysis) {  # use the external acceptRejection C program
     
     ## create the prior columns only file, and a file without header
@@ -404,12 +412,6 @@ if (! $ROnlyAnalysis) {  # use the external acceptRejection C program
 	warn "WARN: With tolerance of $tol, there are only $rc sampling " .
 	    "points.\nWARN: If you encouter a problem, you may need to run ".
 	    "more simulations\nWARN: or use a higher tolerance (-t option).\n";
-    }
-    # save the accepted sims to a file
-    if(defined ($opt_a)) {
-	CheckNBackupFile($opt_a, 'file');
-	copy($tmpSimDat, $opt_a) || 
-	    warn "WARN: copying $tmpSimDat to $opt_a failed: $!";
     }
 } else {  # Not using preprocessing by rejection
     open SIMDAT, "<$simDat" || die "Can't open $simDat\n";
@@ -521,10 +523,10 @@ sub MkStdAnalysisRScript {
     print $fh "$mainRScript\n";
     
     if($ROnlyAnalysis) {
-      print $fh "res <- stdAnalysis(\"$tmpObs\", \"$tmpSimDat\", pdf.outfile=\"$pdfOut\",pre.rejected=F";
+      print $fh "res <- stdAnalysis(\"$tmpObs\", \"$tmpSimDat\", pdf.outfile=\"$pdfOut\",posterior.tbl.file=\"$acceptedFile\",pre.rejected=F";
       print $fh ", tol=$tol";
     } else {
-      print $fh "res <- stdAnalysis(\"$tmpObs\", \"$tmpSimDat\", \"$tmpPrior\",pdf.outfile=\"$pdfOut\",pre.rejected=T";
+      print $fh "res <- stdAnalysis(\"$tmpObs\", \"$tmpSimDat\", \"$tmpPrior\",pdf.outfile=\"$pdfOut\",posterior.tbl.file=\"$acceptedFile\",pre.rejected=T";
       print $fh ", tol=1";
     }
     

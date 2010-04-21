@@ -5,6 +5,9 @@
 
 VERSION = 20080613
 
+# downloaded from CPAN
+MATH_RANDOM_VERSION = 0.71
+
 ####  Installation related
 PREFIX = $(HOME)
 LIB_DIR = $(PREFIX)/lib/msbayes
@@ -18,7 +21,7 @@ CCOPT = -O0 -g  -Wunused
 #-Wall -Werror
 LDFLAGS =  -g         # for debugging but not profiling
 # for performance
-CCOPT = -O3 -Wall -fomit-frame-pointer -funroll-loops
+#CCOPT = -O3 -Wall -fomit-frame-pointer -funroll-loops
 #LDFLAGS =
 INCLS = -I.
 DEFS =
@@ -52,7 +55,7 @@ CFLAGS = $(DEFS) $(INCLS) $(CCOPT)
 TARGET = sumstatsvector msDQH msprior msReject
 PERL_SCRIPTS = acceptRej.pl convertIM.pl dataSummary.pl msbayes.pl obsSumStats.pl
 
-LIB_EXEC_FILES = acceptRej.r make_pd2005.r loc2plot.r
+LIB_EXEC_FILES = acceptRej.r make_pd2005.r loc2plot.r calmod.r
 # LIBEXEC files are used by acceptRej.r, these has to be installed
 # inside of ../lib/msbayes/ relative to binaries
 
@@ -61,7 +64,7 @@ MSDQH_O = msQHarbpop.o QHarbpop-streec.o QHsubs.o QHarbpop-getpars.o rand2new.o
 MSREJECT_O = rejectinC.o
 SUMSTATSVECTOR = msStatsDQH.o sumStatsVector.o hashtab.o whiteSpaces.o stringUtils.o
 
-all: $(TARGET)
+all: $(TARGET) Math-Random
 
 sumstatsvector: $(SUMSTATSVECTOR) 
 	$(CC) $(LDFLAGS) -o $@ $(SUMSTATSVECTOR) $(GSL_LIB) -lm
@@ -75,12 +78,19 @@ msReject: $(MSREJECT_O)
 msprior: $(MSPRIOR_O)
 	$(CC) $(LDFLAGS) -o $@ $(MSPRIOR_O) $(GSL_LIB)
 
+Math-Random:
+	mkdir -p Math-Random
+	cd Math-Random-$(MATH_RANDOM_VERSION); \
+	perl Makefile.PL; make; \
+	cp -r blib/lib/Math blib/arch/auto ../Math-Random
+	rm -f Math-Random/Math/.exists Math-Random/auto/Math/Random/.exists
+
 install: all
 	mkdir -p $(PREFIX)/bin
 	install -m 755 $(TARGET) $(PERL_SCRIPTS) $(PREFIX)/bin
 	mkdir -p $(LIB_DIR)
 	install -m 644 $(LIB_EXEC_FILES) $(LIB_DIR)
-	cp msbayes.pl $(PREFIX)/bin
+	cp -rp Math-Random $(LIB_DIR)
 	@echo
 	@echo "##############################################################"
 	@echo "Installation complete"
@@ -117,7 +127,9 @@ help:
 	@echo
 
 clean: cleanObj
-	rm -f $(TARGET)
+	cd Math-Random-$(MATH_RANDOM_VERSION); make clean
+	rm -rf $(TARGET)
+	rm -rf Math-Random
 
 cleanObj:
 	rm -f *.o core
