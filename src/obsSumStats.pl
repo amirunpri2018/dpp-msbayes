@@ -48,14 +48,23 @@ my $usage = "Usage: $0 [-h] [-T tblOutFileName] [-t headerTmplFile] [-s sortPatt
     "  -h: help, print this message\n" .
 #    "  -g: Do not remove the sites with any gaps. This probably cause problems.\n".
 #    "      So do not use this option." .
-    "  -s: Specify the sorting pattern.  By default, the columns are sorted\n".
-    "      by PI_B (pi between the pairs).  So the column 1 corresponds to the\n".
-    "      pair with the lowest PI_B, column 2 is the pair with the 2nd lowest\n" .
-    "      PI_B etc, and all other summary statistics are ordered accordingly\n" .
-    "      Integer value can be used to specify different sorting.".
+    "  -s: Specify the sorting pattern and moments of summary statistics.\n".
+    "      By default, the columns are sortedby pi.b (pi between the pairs).\n".
+    "      So the column 1 corresponds to the pair with the lowest pi.b\n".
+    "      column 2 is the pair with the 2nd lowest\n" .
+    "      pi.b etc, and all other summary statistics are ordered accordingly\n" .
+    "      Integer value can be used to specify different sorting.\n".
     "       Arguments:\n".
-    "        0: do not sort the column at all\n".
-    "        1: default simple sorting(need to expand sorting algorithm)\n".
+    "        0: do not sort the column at all\n" .
+    "        1: simple sort\n" .
+    "        2: group by locus then sort by pi.b within each locus(?)\n" .
+    "        3: group by locus then sort by the average of pi.b, use 4 moments\n" .
+    "        4-7: group by taxon then sort by the average of pi.b\n" .
+    "         Moments of summary statistics across loci:\n".
+    "          4: use first 4 moments for each summary statistics\n".
+    "          5: use first 3 moments for each summary statistics\n".
+    "          6: use first 2 moments for each summary statistics\n".
+    "          7: use first 1 moment (mean) for each summary statistics (default)\n".
     "      To create the input file for acceptRej.pl, this option\n" .
     "      SHOULD BE LEFT AS THE DEFAULT\n".
     "  -T: Print out an additional human readable table of summary statistics\n" .

@@ -29,10 +29,20 @@ my $usage="Usage: $0 [-hd] [-b observedSummaryStatistics] [-r numSims] [-c confi
     "  -i: IM format configuration file for msprior,\n" .
     "      it will be converted so that msprior can read \n" .      
     "  -o: output file name.  If not specified, output is STDOUT\n" .
-    "  -b: observed summary statistics file name. If not specified, it won't calculate summary statisctics \n".
+    "  -b: observed summary statistics file name.\n".
+    "      If not specified, it won't calculate summary statisctics \n".
     "  -s: Specify how to sort the summary statistics.\n".
-    "       0: no sort\n".
-    "       1: simple sort (default)\n" .
+    "       Arguments:\n".
+    "        0: do not sort the column at all\n" .
+    "        1: simple sort\n" .
+    "        2: group by locus then sort by pi.b within each locus(?)\n" .
+    "        3: group by locus then sort by the average of pi.b, use 4 moments\n" .
+    "        4-7: group by taxon then sort by the average of pi.b\n" .
+    "         Moments of summary statistics across loci:\n".
+    "          4: use first 4 moments for each summary statistics\n".
+    "          5: use first 3 moments for each summary statistics\n".
+    "          6: use first 2 moments for each summary statistics\n".
+    "          7: use first 1 moment (mean) for each summary statistics (default)\n".
     "  -S: set the initial seed (but not verbose like -d)\n" .
     "      By default (without -s), unique seed is automaically set from time\n".
     "  -d: debug (msprior and msDQH uses the same initial seed = 1)\n";

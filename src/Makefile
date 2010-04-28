@@ -17,12 +17,14 @@ MAKE = make
 CC = gcc
 
 # for debugging
-CCOPT = -O0 -g  -Wunused
+#CCOPT = -O0 -g  -Wunused
 #-Wall -Werror
-LDFLAGS =  -g         # for debugging but not profiling
+#LDFLAGS =  -g         # for debugging but not profiling
+
 # for performance
-#CCOPT = -O3 -Wall -fomit-frame-pointer -funroll-loops
-#LDFLAGS =
+CCOPT = -O3 -Wall -fomit-frame-pointer -funroll-loops
+LDFLAGS =
+
 INCLS = -I.
 DEFS =
 
@@ -64,7 +66,8 @@ MSDQH_O = msQHarbpop.o QHarbpop-streec.o QHsubs.o QHarbpop-getpars.o rand2new.o
 MSREJECT_O = rejectinC.o
 SUMSTATSVECTOR = msStatsDQH.o sumStatsVector.o hashtab.o whiteSpaces.o stringUtils.o
 
-all: $(TARGET) Math-Random
+#all: $(TARGET) Math-Random
+all: $(TARGET)
 
 sumstatsvector: $(SUMSTATSVECTOR) 
 	$(CC) $(LDFLAGS) -o $@ $(SUMSTATSVECTOR) $(GSL_LIB) -lm
