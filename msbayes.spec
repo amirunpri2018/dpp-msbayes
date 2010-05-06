@@ -1,7 +1,7 @@
 %define debug_package  %{nil}
 
 %define name msbayes
-%define version 20081106
+%define version 20100505
 %define release 1
 
 %define prefix   /usr/local
@@ -81,7 +81,11 @@ rm -r %{builddir}
 %{prefix}/lib/msbayes
 
 %changelog
-* Fri Jun 13 2008 Naoki Takebayashi <ffnt@uaf.edu> [20081106-1]
+* Wed May 05 2010 Naoki Takebayashi <ffnt@uaf.edu> [20100505-1]
+- version update
+- multi-locus version
+
+* Thu Nov 06 2008 Naoki Takebayashi <ffnt@uaf.edu> [20081106-1]
 - version update
 
 * Fri Jun 13 2008 Naoki Takebayashi <ffnt@uaf.edu> [20080613-1]

@@ -3,7 +3,7 @@
 #### We want to specify suffix rules for .c and .o
 .SUFFIXES: .c .o
 
-VERSION = 20080613
+VERSION = 20100505
 
 # downloaded from CPAN
 MATH_RANDOM_VERSION = 0.71
@@ -79,7 +79,7 @@ msReject: $(MSREJECT_O)
 	$(CC) $(LDFLAGS) -o $@ $(MSREJECT_O) -lm
 
 msprior: $(MSPRIOR_O)
-	$(CC) $(LDFLAGS) -o $@ $(MSPRIOR_O) $(GSL_LIB)
+	$(CC) $(LDFLAGS) -o $@ $(MSPRIOR_O) $(GSL_LIB) -lm
 
 Math-Random:
 	mkdir -p Math-Random
@@ -130,7 +130,7 @@ help:
 	@echo
 
 clean: cleanObj
-	cd Math-Random-$(MATH_RANDOM_VERSION); make clean
+#	cd Math-Random-$(MATH_RANDOM_VERSION); make clean
 	rm -rf $(TARGET)
 	rm -rf Math-Random
 
