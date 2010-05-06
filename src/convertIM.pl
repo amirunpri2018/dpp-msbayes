@@ -28,14 +28,23 @@ my $fastaDir = "fastaFromIM";
 
 my $defaultMutScaler = 20;  # with shrimp pi_b it is about 19.71.
 
-my $usage="Usage: $0 [-h] [-o batchFileName] [-m mutationRateMultiplier] imfileListFile\n".
+my $usage="Usage: $0 [-h] [-o batchFileName] [-m mutationRateMultiplier] [-s substModel] imfileListFile\n".
     "  -h: help\n".
-    "  -o: specify the output file (configFile for msbayes.pl\n".
+    "  -o: specify the output file (configFile for msbayes.pl)\n".
     "      default filename: $batchFileName\n" .
     "  -m: If the theta scaler of IM file is set to 0.25, it assumes animal\n".
     "      mtDNA.  The mutation rate is higher, and the value given to this\n".
     "      option is used as the mutation rate scaler (4-th column of\n".
-    "      SAMPLE_TBL). default value is $defaultMutScaler.\n";
+    "      SAMPLE_TBL) for mtDNA. default value is $defaultMutScaler.\n".
+    "  -s: specify mutational model\n".
+    "        Argument:\n".
+    "          JC: Jukes Cantor model\n".
+    "          F81: equal input model\n".
+    "      By default, it creastes the configFile which uses equal-input\n".
+    "      model (= F81).  To use HKY model, you need to estimate transition\n".
+    "      transversion rate ratio for each locus of each taxon pair, and change \n".
+    "      the values of the 7-th column (tstv) of configFile for msbayes.pl (output\n".
+    "      of this script).\n";
 
 #use strict;  # need to check the exact syntax
 use File::Copy;
@@ -45,7 +54,7 @@ use Getopt::Std;
 
 our ($opt_h, $opt_o);
 
-getopts('ho:m:') || die "$usage\n";
+getopts('ho:m:s:') || die "$usage\n";
 die "$usage\n" if (defined($opt_h));
 
 if(defined($opt_o)) {
@@ -53,6 +62,11 @@ if(defined($opt_o)) {
 }
 
 $defaultMutScaler = $opt_m if (defined($opt_m));
+
+my $mutModel="F81";
+if (defined($opt_s)) {
+    $mutModel = "JC" if ($opt_s =~ /^JC$/i);
+}
 
 $readingHeader = 1;
 $readingData = 0;
@@ -137,20 +151,24 @@ foreach my $currentFile (@fileList)
 	       $warnFlag2 = 0;
 	   }
        }
+
+       # increment $lineRead for each valid line
+       $lineRead++ ;
+       
+       next if($lineRead == 1); # 1st line contains arbitary text
+
+       # comments can come between the 1st and 2nd line
+       if ($lineRead == 2 && $line =~ /^\s*#.*$/) {
+	   $lineRead--;
+	   next;
+       }
        
        # trim the line
        chomp $line;         # remove newline
        $line =~ s/^\s+//;   # remove leading whitespace
        $line =~ s/\s+$//;   # remove trailing whitespace
        
-       # find out whether the line is a comment or an empty line 
-       #$line =~ s/#.*$//;  # remove comments
        next if ( $line =~ /^\s*$/ ); # empty line
-       
-       # increment $lineRead for each valid line
-       $lineRead++ ;
-       
-       next if($lineRead == 1); # 1st line contains arbitary text
        
        if($lineRead == 2)
        {
@@ -170,8 +188,8 @@ foreach my $currentFile (@fileList)
 	   {
 	       my @tmpLine = split /\s+/, $line;
 	       if (@tmpLine < 6) {
-		   die "Reading the locus info of $currentFile, it".
-		       " should conatin at least 6 elements: $line\n";
+		   die "ERROR: Reading the locus info of $currentFile, it".
+		       " should conatin at least 6 elements:\n$line\n";
 	       }
 	       ($locus_name, $number_pop1, $number_pop2, 
 		$sample_length, $mutation_model, $NScaler) = @tmpLine;
@@ -311,6 +329,10 @@ foreach my $currentFile (@fileList)
 	   }
 	   $mutScaler = 1;
        }
+
+       if ($mutModel eq "JC") {
+	   $baseCnter{A} = $baseCnter{C} = $baseCnter{G} = $baseCnter{T} = 0.25;
+       }
        print BATCH
 	   join("\t",($currentFileBasename, $locus_name, $NScaler, $mutScaler, 
 		      $number_pop1, $number_pop2, $tstv, $newSeqLen)) .
@@ -379,7 +401,9 @@ my @csData = ("1.0	0.9	0.1	0.5	0.0	10.1	1.5	0.1	0.0",
 open (UPDATE, "+<$batchFileName") || die "Can't open $batchFileName\n";
 
 my @sampleTblString = <UPDATE>;
-my $output = join("\n", @settings) . "\n\n" . join("",@sampleTblString) . "\n" .
+my $output = join("\n", @settings) . "\n\n" . 
+    "# taxonName\tlocusName\tNe_Scalar\tMut_Scalar\tsampleSizeA\tsampleSizeB\ttstv\tseqLen\tAfreq\tCfreq\tGfreq\n" .
+    join("",@sampleTblString) . "\n" .
     "# Most users can ignore the following table\n" .
     "BEGIN CONSTRAIN\n" . join ("\n", @csData) . "\nEND CONSTRAIN\n";
 

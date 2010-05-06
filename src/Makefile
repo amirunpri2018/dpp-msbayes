@@ -93,7 +93,7 @@ install: all
 	install -m 755 $(TARGET) $(PERL_SCRIPTS) $(PREFIX)/bin
 	mkdir -p $(LIB_DIR)
 	install -m 644 $(LIB_EXEC_FILES) $(LIB_DIR)
-	cp -rp Math-Random $(LIB_DIR)
+#	cp -rp Math-Random $(LIB_DIR)
 	@echo
 	@echo "##############################################################"
 	@echo "Installation complete"
