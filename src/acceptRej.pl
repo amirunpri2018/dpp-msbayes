@@ -64,10 +64,14 @@ use POSIX qw(tmpnam);
 # and this option is not needed any more.
 my $ROnlyAnalysis = 0;
 
+# R command
+my $Rbin = "R";
+
 # The names (not paths) of 3 R scripts and a C prog required for this program.
 my $mainRscript = "acceptRej.r";
 my $make_pdRscript = "make_pd2005.r";
 my $loc2plotRscript = "loc2plot.r";
+my $calmodRscript = "calmod.r";
 my $rejectionExe = "msReject";         # rejection program
 my $sumStatExe = "sumstatsvector";
 
@@ -203,9 +207,15 @@ copy($tmpSimDat, $acceptedFile) ||
     warn "WARN: copying $tmpSimDat to $acceptedFile failed: $!";
 
 {   # Making sure R is installed
-    my $checkR = system("which R > /dev/null");
-    die "\nERROR: Can't find R.  Make sure R is installed and in your PATH.\n" 
-	unless ($checkR == 0);
+    # Mac may have R64 for 64 bit operation
+    my $checkR64 = system("which R64 > /dev/null");
+    if ($checkR64 == 0) {
+	$Rbin = "R64";
+    } else {
+	my $checkR = system("which R > /dev/null");
+	die "\nERROR: Can't find R.  Make sure R is installed and in your PATH.\n" 
+	    unless ($checkR == 0);
+    }
 }
 
 ## preprocess the simDat
@@ -465,7 +475,7 @@ close OBS;
 #    FreqOfValuesLessThan([1..$numPriorCols],\@tmpCritVals, $simDat, 1);
 
 # run R
-my @output = `R --quiet --no-save --no-restore --slave < $tmpR`;
+my @output = `$Rbin --quiet --no-save --no-restore --slave < $tmpR`;
 
 print @output;
 
@@ -487,16 +497,22 @@ sub ProperMainRScript {
     }
 
     my $loc2plot = FindFile($loc2plotRscript);
-    if ($make_pd eq '-1') {
+    if ($loc2plot eq '-1') {
 	die "Can't find $loc2plotRscript in directories:\n",join(":", @INC),"\n";
     }
 
-    $result = "source(\"$make_pd\")\nsource(\"$loc2plot\")\n";
+    my $calmod = FindFile($calmodRscript);
+    if ($calmod eq '-1') {
+	die "Can't find $calmodRscript in directories:\n",join(":", @INC),"\n";
+    }
+
+    $result = "source(\"$make_pd\")\nsource(\"$loc2plot\")\nsource(\"$calmod\")\n";
 
     open MAIN_R_TMPL, "<$mainR";
     while(<MAIN_R_TMPL>) {
 	s/^\s*source\s*\(\s*["']$make_pdRscript['"]\s*\)\s*$//;
 	s/^\s*source\s*\(\s*["']$loc2plotRscript['"]\s*\)\s*$//;
+	s/^\s*source\s*\(\s*["']$calmodRscript['"]\s*\)\s*$//;
 	$result .= $_;
     }
     close MAIN_R_TMPL;

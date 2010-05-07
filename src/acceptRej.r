@@ -169,14 +169,25 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
   }
 
   # deal with the discrete priors
+  calmod.fail <- c()
   for (i in 1:length(prior.names.discrete)) {
     thisPriorName <- prior.names.discrete[i]
-    temp <- list(calmod(as.vector(obsDat[1,usedColNames],mode="numeric"),
+    calmod.res <- try(calmod(as.vector(obsDat[1,usedColNames],mode="numeric"),
+                             simDat[,thisPriorName], simDat[,usedColNames], tol,
+                             rep(T,len=nrow(simDat)),rejmethod=rejmethod))
+    if(class(calmod.res) == "try-error") {
+      calmod.res <- calmod(as.vector(obsDat[1,usedColNames],mode="numeric"),
                            simDat[,thisPriorName], simDat[,usedColNames], tol,
-                           rep(T,len=nrow(simDat)),rejmethod=rejmethod))
+                           rep(T,len=nrow(simDat)),rejmethod=T)
+      calmod.fail <- c(calmod.fail, thisPriorName)
+      this.failed <- T
+    } else {
+      this.failed <- F
+    }
+    temp <- list(calmod.res)
     names(temp) <- thisPriorName
 
-    if (rejmethod) {
+    if (rejmethod || this.failed) {
       # with simple rejection, $x contains the accepted values
       # Need to copy to $vals to make the later handling easier.
       temp[[thisPriorName]]$vals <- temp[[thisPriorName]]$x
@@ -247,7 +258,12 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
     # So, simply printing the posterior mean, and mode from
     # accepted values
     if (length(grep("^PRI\\.Psi(|\\.[0-9]+)$", thisPriorName)) == 1) {
-      if (! rejmethod)  {
+      if (thisPriorName %in% calmod.fail) {
+        this.calmod.failed <- T
+      } else {
+        this.calmod.failed <- F
+      }
+      if ((! rejmethod) && (! this.calmod.failed))  {
         cat ("\n### Posterior probability table with local multinomial logit regression.\n")
         transformed.posterior.p.tbl <- (result[[thisPriorName]])$x2
         # removing "mu" from mu1, mu2, mu3 ...
@@ -275,7 +291,11 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
         print(mean.median.vect)
         cat ("\n### The above results should be better than simple rejection method below.\n")
       }
-    
+
+      if(this.calmod.failed) {
+        cat ("\n### WARNING: local mulitnomial logit regression FAILED\n")
+        cat ("### WARNING: reporting results of SIMPLE rejection method\n")
+      }
       cat ("\n### Posterior probability table with SIMPLE rejection method, NO REGRESSION.\n")
 
       raw.accepted.tbl <- table((result[[thisPriorName]])$vals)
@@ -292,7 +312,7 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
       print(this.mean.median.vect)
 
       post.distn.accRej <- c()
-      if (rejmethod) {
+      if (rejmethod || this.calmod.failed) {
         post.distn.accRej <- raw.posterior.p
         mean.median.vect <- this.mean.median.vect
       } else {
@@ -374,6 +394,12 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
     this.title <- paste(name.rm.PRI, additional.print, sep=" ")
     this.legend <- c("posterior probability", "prior probability")
 
+    if(thisPriorName %in% calmod.fail) {
+      this.calmod.failed <- T
+    } else {
+      this.calmod.failed <- F
+    }
+     
     # prior distribution
     if(pre.rejected) {
       this.prior.p <- table(prior.dat[,thisPriorName])
@@ -383,7 +409,7 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
     this.prior.p <- this.prior.p / sum(this.prior.p)
     
     # transformed posterior prob.
-    if (!rejmethod) {
+    if ((!rejmethod) && (!this.calmod.failed)) {
       this.pp.tbl <- result[[thisPriorName]]$x2
       # note $x2 is 1 x N matrix, and converting it to a vector (similar to table() output)
       barplot(merge.2tbl.byName(this.pp.tbl[1,], this.prior.p),beside=T,ylab="Posterior probability",
@@ -612,8 +638,6 @@ merge.2tbl.byName <- function(arr1, arr2) {
   this.name <- names(arr2)
   d2 <- data.frame(cbind(this.name, arr2))
   names(d2)[1] <- 'name'
-  print(d1)
-  print(d2)
   
   m1 <- merge(d1,d2,by='name',all=T)
   m1 <- m1[order(as.numeric(levels(m1$name)[m1$name])),]  #sorting rows
@@ -621,7 +645,6 @@ merge.2tbl.byName <- function(arr1, arr2) {
   m1[is.na(m1)] <- 0  # replacing NA with 0
   result <- as.table(t(m1[,2:3]))
   colnames(result) <- m1[,1]
-  print(result) # debug
   # convert character table to numeric
   return(type.convert(result))
 }
