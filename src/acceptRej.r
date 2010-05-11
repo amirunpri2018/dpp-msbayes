@@ -263,15 +263,27 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
       } else {
         this.calmod.failed <- F
       }
+      
+      # prior distribution
+      if(pre.rejected) {
+        this.prior.p <- table(prior.dat[,thisPriorName])
+      } else {
+        this.prior.p <- table(simDat[,thisPriorName])
+      }
+      this.prior.p <- this.prior.p / sum(this.prior.p)
+
+      # transformed posterior prob.
       if ((! rejmethod) && (! this.calmod.failed))  {
         cat ("\n### Posterior probability table with local multinomial logit regression.\n")
         transformed.posterior.p.tbl <- (result[[thisPriorName]])$x2
         # removing "mu" from mu1, mu2, mu3 ...
-        colnames(transformed.posterior.p.tbl) <- sub("mu", "", colnames(transformed.posterior.p.tbl))
+        # colnames(transformed.posterior.p.tbl) <- sub("mu", "", colnames(transformed.posterior.p.tbl))
 
-        print(transformed.posterior.p.tbl)
+        p.tbl <- merge.2tbl.byName(transformed.posterior.p.tbl[1,], this.prior.p)
+        rownames(p.tbl) <- c("posterior.p", "prior.p")
+        print(p.tbl)
         
-        cat ("## Mode (from local multinomial logit regression):\n")
+        cat ("\n## Mode (from local multinomial logit regression):\n")
         print(colnames(transformed.posterior.p.tbl)[which.max(transformed.posterior.p.tbl)])
 
         # posterior mean and median, a little weird with categorical var
@@ -300,9 +312,13 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
 
       raw.accepted.tbl <- table((result[[thisPriorName]])$vals)
       raw.posterior.p <- raw.accepted.tbl / sum(raw.accepted.tbl)
-      print(raw.posterior.p)
+      
+      p.tbl <- merge.2tbl.byName(raw.posterior.p, this.prior.p)
+      rownames(p.tbl) <- c("posterior.p", "prior.p")
+
+      print (p.tbl)
             
-      cat ("## Mode (from simple rejection):\n")      
+      cat ("\n## Mode (from simple rejection):\n")      
       print(names(raw.posterior.p)[which.max(raw.posterior.p)])
 
       cat ("## Mean/Median (from simple rejection)\n")
@@ -381,7 +397,8 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
 #      plot.bf(simDat[,thisPriorName],result[[thisPriorName]]$x,main="Bayes Support for true Hyper-parameter value < threshold")
     }
   }
-                         
+  
+  # figures for discrete
   for (i in 1:length(prior.names.discrete)) {
     thisPriorName <- prior.names.discrete[i]
     name.rm.PRI <- sub("PRI[.]", "", thisPriorName)

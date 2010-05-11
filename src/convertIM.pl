@@ -68,10 +68,6 @@ if (defined($opt_s)) {
     $mutModel = "JC" if ($opt_s =~ /^JC$/i);
 }
 
-$readingHeader = 1;
-$readingData = 0;
-$startToReadIM = 1;
-
 my $obsSS = "obsSumStats.pl";
 my $tstv = 1;
 my $verbose = 1;  # prints extra info in stderr
@@ -82,11 +78,20 @@ open LISTFILE, "< $ARGV[0]" ||
 
 my @fileList = <LISTFILE>;
 close LISTFILE;
+chomp(@fileList);
 
 # This will create an empty directory to store the fasta files
 CheckNBackupFile("$fastaDir", 'dir');
 
 my $warnFlag = 1;
+
+# create batch.masterIn file
+CheckNBackupFile($batchFileName, 'file');
+open BATCH, "> $batchFileName" || 
+    die "Can't open file $batchFileName : $! \n";    
+
+print BATCH "BEGIN SAMPLE_TBL\n";
+
 foreach my $currentFile (@fileList)
 { 
    if ($warnFlag) {   # Maybe we should handle line ending better at some point
@@ -97,7 +102,6 @@ foreach my $currentFile (@fileList)
    }
 
    # trim the line
-   chomp $currentFile;         # remove newline
    $currentFile =~ s/#.*//;    # remove comments
    $currentFile =~ s/^\s+//;   # remove leading whitespace
    $currentFile =~ s/\s+$//;   # remove trailing whitespace
@@ -108,145 +112,135 @@ foreach my $currentFile (@fileList)
    die "ERROR: $currentFile is not readable\n" unless (-r $currentFile);
    die "ERROR: $currentFile is empty\n" if (-z $currentFile);
    die "ERROR: $currentFile is not a text file\n" unless (-T $currentFile);
-   
-   if( $currentFile !~ /^.+\.im$/)
-   {
-       warn "WARN: $currentFile doesn't have '.im' suffix, ignoring...\n";
-       next;
-   }
-
-   if($startToReadIM == 1)
-   {
-       # create batch.masterIn file
-       CheckNBackupFile($batchFileName, 'file');
-       open BATCH, "> $batchFileName" || 
-	   die "Can't open file $batchFileName : $! \n";    
-
-        printf BATCH ("BEGIN SAMPLE_TBL\n");
-        $startToReadIM = 0;
-   } # $startToReadIM == 1    
-
-   
-   my ($pop1Name,$pop2Name,$numLoci,$locus_name, 
+      
+   my ($locusName, 
        $number_pop1,$number_pop2, $sample_length, 
        $mutation_model,$NScaler, $mutScaler, $total);
    my $lineRead = 0;
    
    # open a .im file, grab the data, then close it (to save resource)
    open IMFILE, "< $currentFile" ||
-       die "Can't open file $currentFile : $! \n";    
+       die "ERROR: Can't open file $currentFile : $! \n";    
    
    my @imData =  <IMFILE>;
    
    close IMFILE;
+
+   # Maybe we should handle line ending better at some point
+   if ($imData[0] =~ /\r\n$/) {
+       warn "WARN: In convertIM.pl, the file $currentFile appears to have DOS style line ending, it may not work correctly if it's not converted to unix style newline characters\n";
+   }
+
+   shift(@imData); # 1st line contains arbitary text
    
-   my $warnFlag2 = 1;
-   my $allele_count = 0;
-   my (@seqDat, @alleleNames);
-   foreach my $line (@imData)  
-   {
-       if ($warnFlag2) {   # Maybe we should handle line ending better at some point
-	   if ($line =~ /\r\n$/) {
-	       warn "WARN: In convertIM.pl, the file $currentFile appears to have DOS style line ending, it may not work correctly if it's not converted to unix style newline characters\n";
-	       $warnFlag2 = 0;
+   # remove leading/trailing spaces and newline char from each line.
+   map {s/^\s+//; s/\s+$//} @imData;
+
+   # remove empty lines
+   @imData = grep { ! /^\s*$/ } @imData;
+
+   my $thisLine = shift(@imData);
+   # comment lines starting with # can be between line 1 and 2.
+   while ($thisLine =~ /^\s*#.*$/) {
+	  $thisLine = shift(@imData);
+   }
+
+   # pop names
+   my @tmpArr = split /\s+/, $thisLine;
+   unless (@tmpArr == 2) {
+       RemovePartialFiles();
+       die "ERROR: 2nd line of $currentFile should be TWO population names separated by spaces\n" .
+	   "$thisLine\n";
+   }
+   my ($pop1Name, $pop2Name) = @tmpArr;
+   
+   # number of loci
+   $thisLine = shift (@imData);
+   if ($thisLine !~ /^\d+$/) {
+       RemovePartialFiles();
+       die "ERROR: 3rd line of $currentFile should be integer (number of Loci)\n";
+   }
+   my $numLoci = $thisLine;
+
+   # Overall headers are done processing
+   # So start to deal with each locus
+   
+   for my $ll (1..$numLoci) {
+       my $thisLocusHeader = shift(@imData);
+       my @info = split /\s+/, $thisLocusHeader;
+       if (@info < 6) {
+	   RemovePartialFiles();
+	   die "ERROR: Reading the locus info of $currentFile, it".
+	       " should contain at least 6 elements:\n$thisLocusHeader\n";
+       }
+       
+       ($locusName, $number_pop1, $number_pop2, 
+	$sample_length, $mutation_model, $NScaler) = @info;
+
+       warn "\n\n### Processing file=$currentFile, $locusName ###\n";
+
+       my $numSamples = $number_pop1 + $number_pop2;
+       
+       # Make sure enough lines left for sequence data
+       if (@imData < $numSamples) {
+	   RemovePartialFiles();
+	   die "ERROR: In $currentFile, there should be $numSamples samples ".
+	       "(= $number_pop1 + $number_pop2)\n".
+	       "for locus= $locusName.  But only " . scalar(@imData) .
+	       " samples are left in the file.\n";
+       }
+
+       # Checking if there are extra lines left after the last locus
+       if ($ll == $numLoci) {
+	   if (@imData > $numSamples) {
+	       warn "WARN: After processing all $ll loci in $currentFile, ".
+		   "there are still\n".
+		   "WARN: some lines left in the file (see below).\n".
+		   "WARN: These extra lines are ignored:\n".
+		   join ("\n", @imData) . "\n";
+	   }
+       }
+       
+       # a set of sequence is extracted
+       my @samples = splice @imData, 0, $numSamples;
+
+       # first 10 characters of each line are the sequence name
+       my @alleleNames = map {substr $_, 0, 10} @samples;
+       my @seqDat = map {uc(substr $_, 10)} @samples;
+
+       # remove leading/trailing spaces
+       # For the name, all spaces are converted to '_'
+       # U -> T
+       map {s/^\s+//; s/\s+$//; s/\s+/_/g} @alleleNames;
+       map {s/^\s+//; s/\s+$//; s/U/T/g} @seqDat;
+
+       # check non-DNA char, and deal with degenarate code
+       my @degenArr = ();
+       foreach my $thisSeqIndex (0..$#seqDat) {
+	   my $degenChar = $seqDat[$thisSeqIndex]; 
+	   $degenChar =~ s/[^RYKMSWBDHVN]//g;
+	   if (length($degenChar) > 0) {
+	       push @degenArr, "$alleleNames[$thisSeqIndex]: $degenChar";
+	       # convert degenerate char to '?'
+	       $seqDat[$thisSeqIndex] =~ s/[RYKMSWBDHVN]/\?/g;
+	   }
+	   
+	   if ($seqDat[$thisSeqIndex] !~ /^[ATGC\?\-]*$/) {
+	       RemovePartialFiles();
+	       $seqDat[$thisSeqIndex] =~ s/[ATGC\?\-]//g;
+	       die "ERROR: a sequence ($alleleNames[$thisSeqIndex]) in ".
+		   "file=$currentFile, locus=$locusName \n".
+		   "ERROR: contains non-DNA characters: $seqDat[$thisSeqIndex]\n";
 	   }
        }
 
-       # increment $lineRead for each valid line
-       $lineRead++ ;
-       
-       next if($lineRead == 1); # 1st line contains arbitary text
-
-       # comments can come between the 1st and 2nd line
-       if ($lineRead == 2 && $line =~ /^\s*#.*$/) {
-	   $lineRead--;
-	   next;
+       if (@degenArr > 0) {
+	   warn "INFO: In $currentFile, locus=$locusName,\n".
+	       "INFO: following degenerate characters were replaced by '?'\n".
+	       "INFO: in the fasta file created by this script:\n".
+	       join ("\n", @degenArr) . "\n\n";
        }
        
-       # trim the line
-       chomp $line;         # remove newline
-       $line =~ s/^\s+//;   # remove leading whitespace
-       $line =~ s/\s+$//;   # remove trailing whitespace
-       
-       next if ( $line =~ /^\s*$/ ); # empty line
-       
-       if($lineRead == 2)
-       {
-	   ($pop1Name, $pop2Name) = split /\s+/, $line;
-	   next;    
-       } # 2nd line contains population names
-       
-       if($lineRead == 3)
-       {
-	   $numLoci = $line;      
-	   next;
-       } # 3rd line contains number of loci
-       
-       if($lineRead >= 4)
-       {
-	   if($readingHeader == 1)
-	   {
-	       my @tmpLine = split /\s+/, $line;
-	       if (@tmpLine < 6) {
-		   die "ERROR: Reading the locus info of $currentFile, it".
-		       " should conatin at least 6 elements:\n$line\n";
-	       }
-	       ($locus_name, $number_pop1, $number_pop2, 
-		$sample_length, $mutation_model, $NScaler) = @tmpLine;
-	       
-	       $total = $number_pop1 + $number_pop2;
-	       $readingHeader = 0;
-	       $readingData = 1;
-	       
-	       # reset
-	       @seqDat = ();
-	       @alleleNames = ();
-	       next;
-	   } # this line contains a header
-	   
-	   if($readingData == 1)
-	   {
-	       if($allele_count < $total)
-	       {
-		   my $alleleName = substr $line, 0,10;
-		   $alleleName =~ s/^\s+//; $alleleName =~ s/\s+$//;
-		   $alleleName =~ s/\s/_/g;
-		   push (@alleleNames, $alleleName);
-		   
-		   my $alleleSeq = uc(substr($line, 10));
-		   $alleleSeq =~ s/\s+//g;
-		   $alleleSeq =~ s/U/T/g;
-		   # convert ambig. code to ?
-		   if ($alleleSeq =~ /([RYKMSWBDHVN])/) {
-		       warn "INFO: $alleleName in $currentFile contained ".
-			   "at least 1 ambiguous character (e.g. $1).  ".
-			   "These were replaced by ? in the fasta produced ".
-			   "by this script\n";
-		       $alleleSeq =~ s/[RYKMSWBDHVN]/\?/g;
-		   }
-		   
-		   if ($alleleSeq !~ /^[ATGC\?\-]*$/) {
-		       $alleleSeq =~ s/[ATGC\?\-]//g;
-		       die "ERROR: a sequence in $currentFile contains ".
-			   "non-DNA character: $alleleSeq\n$line\n";
-		   }
-
-		   push(@seqDat, $alleleSeq);
-		   
-		   $allele_count++ ;
-		   
-		   next if($allele_count < $total);
-	       } # $allele_count < $total
-	       
-	   } # $readingData
-	   
-       } # $lineRead >= 4
-       
-       # reinitialize some variables
-       $allele_count = 0;
-       $readingData = 0;
-       $readingHeader = 1;
-
        # remove gaps
        # make an array with each element = name tab DNA-sequence
        my @gapRmDat = ();
@@ -289,30 +283,36 @@ foreach my $currentFile (@fileList)
 	   foreach my $bb ('A', 'T', 'G', 'C') {
 	       $baseCnter{$bb} /= $totalSampleLength;
 	   }
+       } else {
+	   RemovePartialFiles();
+	   die "ERROR: in $currentFile, sequence length of 0 encoutered\n";
        }
        
        # construct the header for batch.masterIn file
+       # this is the seqLen after removing gaps
        my $newSeqLen = 
 	   MyRound($totalSampleLength / ($number_pop1 + $number_pop2));
-       if ($newSeqLen != $sample_length) {
-	   warn "INFO: For $currentFile, sites containing an ambiguous char ".
-	       "or a gap was found. " . ($sample_length-$newSeqLen) . 
-	       " sites are removed\n";
-       }
+#       if ($newSeqLen != $sample_length) {
+	   # this is already printed in RemoveSitesWithGaps().
+#	   warn "INFO: For $currentFile, sites containing an ambiguous char ".
+#	       "or a gap was found. " . ($sample_length-$newSeqLen) . 
+#	       " sites are removed\n";
+#       }
 
+       # removing .im and removing directory names
        my $currentFileBasename;
-       if ($currentFile =~ /(.+).im$/) {
+       if ($currentFile =~ /([^\/]+).(im|phy)$/) {
 	   $currentFileBasename = $1;
        } else {
 	   $currentFileBasename = $currentFile;
        }
-       my $fastaFileName = $currentFileBasename ."_${locus_name}.fasta";
+       my $fastaFileName = $currentFileBasename ."_${locusName}.fasta";
 
        # note the sequence length is after sites with any gaps are removed
        if ($NScaler == 0.25) {
 	   $mutScaler = $defaultMutScaler;
 	   
-	   warn "WARN: in convertIM.pl, For $currentFileBasename:$locus_name,".
+	   warn "WARN: in convertIM.pl, For $currentFileBasename:$locusName,".
 	       " theta scaler is 0.25, so assuming mutation rate ".
 	       "is $mutScaler times higher than nuclear loci.  ".
 	       "If this is not the case, correct the 4-th column ".
@@ -320,7 +320,7 @@ foreach my $currentFile (@fileList)
        } else {
 	   if ($NScaler != 1) {
 	       warn "WARN: in convertIM.pl, For ".
-		   "$currentFileBasename:$locus_name, theta scaler is ".
+		   "$currentFileBasename:$locusName, theta scaler is ".
 		   "$NScaler, but assuming mutation rate ".
 		   "is same as nuclear loci.  ".
 		   "If this is not the case, correct the 4-th column ".
@@ -334,7 +334,7 @@ foreach my $currentFile (@fileList)
 	   $baseCnter{A} = $baseCnter{C} = $baseCnter{G} = $baseCnter{T} = 0.25;
        }
        print BATCH
-	   join("\t",($currentFileBasename, $locus_name, $NScaler, $mutScaler, 
+	   join("\t",($currentFileBasename, $locusName, $NScaler, $mutScaler, 
 		      $number_pop1, $number_pop2, $tstv, $newSeqLen)) .
 		      sprintf ("\t%.3f\t%.3f\t%.3f\t", $baseCnter{A}, 
 			       $baseCnter{C}, $baseCnter{G}). 
@@ -343,19 +343,18 @@ foreach my $currentFile (@fileList)
        # create fasta file
        CheckNBackupFile("$fastaDir/$fastaFileName", 'file');
        open FASTA, ">$fastaDir/$fastaFileName" ||
-	   die "Can't open file $fastaFileName : $! \n";
-              
+	    die "Can't open file $fastaFileName : $! \n";
+       
        for (my $i = 0; $i < @seqDat; $i ++)
        {
 	   my $popName = ($i < $number_pop1) ? $pop1Name : $pop2Name;
 	   
-	   print FASTA ">${currentFileBasename}_${popName}_${locus_name}_$alleleNames[$i]\n$seqDat[$i]\n";
+	   print FASTA ">${currentFileBasename}_${popName}_${locusName}_$alleleNames[$i]\n$seqDat[$i]\n";
        }
        
        close FASTA;
        
-   } # while (still a line in the current file)
-   
+   } # for my $ll (1..$numLoci)
 } # while (still files in the file list)
 
 
@@ -604,7 +603,8 @@ sub RemoveSitesWithGaps {
     }
     
     if ($verbose && @gapSites > 0) {
-        warn ("Following sites contains gap(s), removed from analysis\n");
+        warn ("INFO: Following " . scalar(@gapSites) . 
+	      " site(s) contain gap(s), removed from analysis:\n");
         print STDERR join(" ", @gapSites);
         print STDERR "\n";
     }
@@ -772,4 +772,11 @@ sub MyRound {
     my $num = shift;
 
     return int($num + 0.5 * ($num <=> 0));
+}
+
+# When something fails, clean-up the partial files
+sub RemovePartialFiles {
+    warn "REMOVING PARTIAL FILES: $batchFileName & $fastaDir\n";
+    system ("rm -rf $fastaDir");
+    unlink $batchFileName || die "Can't delete $batchFileName: $!\n";
 }
