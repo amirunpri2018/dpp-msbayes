@@ -54,7 +54,7 @@ main (int argc, char *argv[])
   if ((argc > 1) && ((argv[1][0] == '-') && (argv[1][2] == 'h')))
     usage (0);
   tolerance = atof (argv[3]);
-  ncolumns = argc - 4;
+  ncolumns = argc - 4; // only the first three parameters are not sumStats to be used(??)
   columns = (int *) malloc ((unsigned) ncolumns * sizeof (int));
   if (columns == NULL)
     {

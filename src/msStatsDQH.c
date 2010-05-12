@@ -542,7 +542,7 @@ PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs, int n
   if (gSortPattern == 0) {
     ; /* no sorting */
   }
-  else if(gSortPattern == 1)/* default (gSortPattern == 1) */
+  else if(gSortPattern == 1)
   {
     /* Simple sorting of summary statistics without paying attention to
      * taxonPairs:genes.
@@ -740,8 +740,9 @@ PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs, int n
 	free(SumStat_kurtosis);
 
   } 
-  else if((gSortPattern >= 4) && (gSortPattern <= 7)) // moment across loci (by taxon)
+  else if((gSortPattern >= 4) && (gSortPattern <= 7)) // moment across loci (by taxon), default gSortPattern == 1
   {
+    
     int *uniqueTaxaArray =  calloc (numTaxonPairs, sizeof (int));
     int *taxaArray = calloc (numTaxonLocusPairs, sizeof(int));
 

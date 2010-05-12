@@ -76,11 +76,8 @@ static void ReadInPositionOfSegSites (const char *line,
 static void ParseCommandLine (int argc, char *argv[]);
 static void ReadInMSoutputAndCalculateSummaryStatistics (FILE * pfin);
 
-int gSortPattern = 1;
-/*
- * 0: no sort
- * 1 (default) is simple sort
- */
+int gSortPattern = 7;
+
 
 int
 main (int argc, char *argv[])
@@ -640,7 +637,7 @@ static struct option sim_opts[] = {
   {"help", 0, NULL, 'h'},	/* list options */
   {"header", 0, NULL, 'H'},
   {"name", 0, NULL, 'n'},
-  {"sort", 1, NULL, 's'},
+  {"sort", 7, NULL, 's'},
   {"nadv", 1, NULL, 'a'},
   {NULL, 0, NULL, 0}
 };
