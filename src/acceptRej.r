@@ -91,6 +91,8 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
   # The 1st column is PRI.numTauClass, which should be removed from analysis
   result <- list(prior.names=
                  params.from.priorDistn[params.from.priorDistn != "PRI.numTauClass"])
+
+  noPsiAnalysis <- F
   # The column tells the model of Psi
   if(simDat[1,"PRI.numTauClass"] != 0) { # constrained
     constrained <- T
