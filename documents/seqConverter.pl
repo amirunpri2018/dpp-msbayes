@@ -290,7 +290,7 @@ elsif (join(' ', @ARGV) =~ /\s-h/ or $ARGV[0] =~ /^-h/)# Print help screen
     print "\nOptions: -d<filename> = file containing raw sequence information; * = batch convert all specified file types in working directory\n";
     print "                        (suffixes must be .fasta, .nex, .phylip, or .seal as appropriate)\n";
     print "         -i<f|n|p|s> = format of sequence file (fasta (f), nexus (n), phylip (p), or Se-Al (s))\n";
-    print "         -o<n|pc|pe|s> = output results in fasta (f), nexus (n), classic or extended phylip (pc or pe), and/or Se-Al (s) formats\n";
+    print "         -o<f|n|pc|pe|s> = output results in fasta (f), nexus (n), classic or extended phylip (pc or pe), and/or Se-Al (s) formats\n";
     print "         -r<a|i> = order sequences in final output alphabetically by name (a; default) or in input order from file (i)\n";
     print "         -u = interactive user-input mode\n";
     print "         -h = print this message and quit\n";
@@ -325,6 +325,10 @@ else# Process switches
 	elsif ($ARGV[$i] eq "-is")
 	{
 	    $inputType = "Se-Al";
+	}
+	elsif ($ARGV[$i] eq "-of")
+	{
+	    $fastaPrint = 1;
 	}
 	elsif ($ARGV[$i] eq "-on")
 	{

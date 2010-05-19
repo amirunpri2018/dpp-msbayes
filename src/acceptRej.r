@@ -115,9 +115,14 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
   }
                            
   # divide prior.names into discrete and continuous priors
-  prior.names.cont <- result$prior.names[- grep("^PRI[.]Psi", result$prior.names)]
-  prior.names.discrete <- result$prior.names[  grep("^PRI[.]Psi", result$prior.names)]
-
+  if (noPsiAnalysis) {
+    prior.names.cont <- result$prior.names
+    prior.names.discrete <- character(0)
+  } else {
+    prior.names.cont <- result$prior.names[- grep("^PRI[.]Psi", result$prior.names)]
+    prior.names.discrete <- result$prior.names[  grep("^PRI[.]Psi", result$prior.names)]
+  }
+  
   # set min, max boundary of prior parameters, and verbose print message
   # PRI.omega >= 0, PRI.E.t >= 0, PRI.Psi > 0
   min.val <- list(PRI.Psi = 1, PRI.var.t = 0, PRI.E.t = 0, PRI.omega = 0 )
@@ -170,29 +175,31 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
 
   # deal with the discrete priors
   calmod.fail <- c()
-  for (i in 1:length(prior.names.discrete)) {
-    thisPriorName <- prior.names.discrete[i]
-    calmod.res <- try(calmod(as.vector(obsDat[1,usedColNames],mode="numeric"),
+  if(length(prior.names.discrete) > 0) {
+    for (i in 1:length(prior.names.discrete)) {
+      thisPriorName <- prior.names.discrete[i]
+      calmod.res <- try(calmod(as.vector(obsDat[1,usedColNames],mode="numeric"),
+                               simDat[,thisPriorName], simDat[,usedColNames], tol,
+                               rep(T,len=nrow(simDat)),rejmethod=rejmethod))
+      if(class(calmod.res) == "try-error") {
+        calmod.res <- calmod(as.vector(obsDat[1,usedColNames],mode="numeric"),
                              simDat[,thisPriorName], simDat[,usedColNames], tol,
-                             rep(T,len=nrow(simDat)),rejmethod=rejmethod))
-    if(class(calmod.res) == "try-error") {
-      calmod.res <- calmod(as.vector(obsDat[1,usedColNames],mode="numeric"),
-                           simDat[,thisPriorName], simDat[,usedColNames], tol,
-                           rep(T,len=nrow(simDat)),rejmethod=T)
-      calmod.fail <- c(calmod.fail, thisPriorName)
-      this.failed <- T
-    } else {
-      this.failed <- F
+                             rep(T,len=nrow(simDat)),rejmethod=T)
+        calmod.fail <- c(calmod.fail, thisPriorName)
+        this.failed <- T
+      } else {
+        this.failed <- F
+      }
+      temp <- list(calmod.res)
+      names(temp) <- thisPriorName
+      
+      if (rejmethod || this.failed) {
+        # with simple rejection, $x contains the accepted values
+        # Need to copy to $vals to make the later handling easier.
+        temp[[thisPriorName]]$vals <- temp[[thisPriorName]]$x
+      }
+      result <- c(result, temp)
     }
-    temp <- list(calmod.res)
-    names(temp) <- thisPriorName
-
-    if (rejmethod || this.failed) {
-      # with simple rejection, $x contains the accepted values
-      # Need to copy to $vals to make the later handling easier.
-      temp[[thisPriorName]]$vals <- temp[[thisPriorName]]$x
-    }
-    result <- c(result, temp)
   }
 
   # create tables for posterior_table file
@@ -399,45 +406,47 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
   }
   
   # figures for discrete
-  for (i in 1:length(prior.names.discrete)) {
-    thisPriorName <- prior.names.discrete[i]
-    name.rm.PRI <- sub("PRI[.]", "", thisPriorName)
-    if(! is.null(verbose.print[[thisPriorName]])) {
-      additional.print <- verbose.print[[thisPriorName]]
-    } else {
-      additional.print <- ""
-    }
-    
-    this.title <- paste(name.rm.PRI, additional.print, sep=" ")
-    this.legend <- c("posterior probability", "prior probability")
-
-    if(thisPriorName %in% calmod.fail) {
-      this.calmod.failed <- T
-    } else {
-      this.calmod.failed <- F
-    }
-     
-    # prior distribution
-    if(pre.rejected) {
-      this.prior.p <- table(prior.dat[,thisPriorName])
-    } else {
-      this.prior.p <- table(simDat[,thisPriorName])
-    }
-    this.prior.p <- this.prior.p / sum(this.prior.p)
-    
-    # transformed posterior prob.
-    if ((!rejmethod) && (!this.calmod.failed)) {
-      this.pp.tbl <- result[[thisPriorName]]$x2
-      # note $x2 is 1 x N matrix, and converting it to a vector (similar to table() output)
-      barplot(merge.2tbl.byName(this.pp.tbl[1,], this.prior.p),beside=T,ylab="Posterior probability",
-              legend=this.legend, main=paste(this.title,"With categorical regression", sep="\n"), space=c(0,0.05))
-    }
-
-    # posterior probability from simple rejection    
-    this.pp.tbl <- 
-      table(result[[thisPriorName]]$vals)/sum(table(result[[thisPriorName]]$vals))
-    barplot(merge.2tbl.byName(this.pp.tbl, this.prior.p),beside=T,ylab="Posterior probability",
+  if (length(prior.names.discrete) > 0) {
+    for (i in 1:length(prior.names.discrete)) {
+      thisPriorName <- prior.names.discrete[i]
+      name.rm.PRI <- sub("PRI[.]", "", thisPriorName)
+      if(! is.null(verbose.print[[thisPriorName]])) {
+        additional.print <- verbose.print[[thisPriorName]]
+      } else {
+        additional.print <- ""
+      }
+      
+      this.title <- paste(name.rm.PRI, additional.print, sep=" ")
+      this.legend <- c("posterior probability", "prior probability")
+      
+      if(thisPriorName %in% calmod.fail) {
+        this.calmod.failed <- T
+      } else {
+        this.calmod.failed <- F
+      }
+      
+      # prior distribution
+      if(pre.rejected) {
+        this.prior.p <- table(prior.dat[,thisPriorName])
+      } else {
+        this.prior.p <- table(simDat[,thisPriorName])
+      }
+      this.prior.p <- this.prior.p / sum(this.prior.p)
+      
+      # transformed posterior prob.
+      if ((!rejmethod) && (!this.calmod.failed)) {
+        this.pp.tbl <- result[[thisPriorName]]$x2
+        # note $x2 is 1 x N matrix, and converting it to a vector (similar to table() output)
+        barplot(merge.2tbl.byName(this.pp.tbl[1,], this.prior.p),beside=T,ylab="Posterior probability",
+                legend=this.legend, main=paste(this.title,"With categorical regression", sep="\n"), space=c(0,0.05))
+      }
+      
+      # posterior probability from simple rejection    
+      this.pp.tbl <- 
+        table(result[[thisPriorName]]$vals)/sum(table(result[[thisPriorName]]$vals))
+      barplot(merge.2tbl.byName(this.pp.tbl, this.prior.p),beside=T,ylab="Posterior probability",
               legend=this.legend, main=paste(this.title,"With Simple Rejection",sep="\n"), space=c(0,0.05))
+    }
   }
   
 

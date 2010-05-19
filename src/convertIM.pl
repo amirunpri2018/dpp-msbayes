@@ -401,7 +401,7 @@ open (UPDATE, "+<$batchFileName") || die "Can't open $batchFileName\n";
 
 my @sampleTblString = <UPDATE>;
 my $output = join("\n", @settings) . "\n\n" . 
-    "# taxonName\tlocusName\tNe_Scalar\tMut_Scalar\tsampleSizeA\tsampleSizeB\ttstv\tseqLen\tAfreq\tCfreq\tGfreq\n" .
+    "# taxonName\tlocusName\tNe_Scalar\tMut_Scalar\tsampleSizeA\tsampleSizeB\ttstv\tseqLen\tAfreq\tCfreq\tGfreq\tfastaFileName\n" .
     join("",@sampleTblString) . "\n" .
     "# Most users can ignore the following table\n" .
     "BEGIN CONSTRAIN\n" . join ("\n", @csData) . "\nEND CONSTRAIN\n";

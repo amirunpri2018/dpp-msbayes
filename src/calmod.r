@@ -100,6 +100,8 @@ calmod <- function(target,x,sumstat,tol,gwt,rejmethod=T)
     
     prediction1 <- predict.vglm(fit1,target.df,se.fit=T)
     prediction2 <- predict.vglm(fit1,target.df,type="response")
+
+    colnames(prediction2) <- colnames(yy) # added by Naoki
     
     l1 <- list(x1=prediction1,x2=prediction2,vals=x[wt1],wt=regwt,ss=sumstat[wt1,])
     
