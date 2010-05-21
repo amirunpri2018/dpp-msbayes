@@ -672,6 +672,10 @@ merge.2tbl.byName <- function(arr1, arr2) {
   m1 <- as.matrix(m1)
   m1[is.na(m1)] <- 0  # replacing NA with 0
   result <- as.table(t(m1[,2:3]))
+  # previous t() doesn't work if it has only 1 row, so do it here
+  if(nrow(m1) == 1) {
+    result <- t(result)
+  }
   colnames(result) <- m1[,1]
   # convert character table to numeric
   return(type.convert(result))

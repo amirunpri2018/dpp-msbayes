@@ -1,7 +1,7 @@
 %define debug_package  %{nil}
 
 %define name msbayes
-%define version 20100506
+%define version 20100519
 %define release 1
 
 %define prefix   /usr/local
@@ -81,6 +81,9 @@ rm -r %{builddir}
 %{prefix}/lib/msbayes
 
 %changelog
+* Wed May 19 2010 Naoki Takebayashi <ntakebayashi@alaska.edu> [20100519-1]
+- version update
+
 * Wed May 05 2010 Naoki Takebayashi <ffnt@uaf.edu> [20100506-1]
 - bug related to acceptRej.pl is fixed
 
