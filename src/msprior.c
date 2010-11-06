@@ -86,6 +86,7 @@
  * seqLen * [0.01/locTheta, gParam.upperAncPopSize * gParam.upperTheta/locTheta)
  *
  * spTheta:  [lowerTheta, upperTheta)       (theta per site)
+ *              spTheta <= 0 is excluded even if lowerTheta = 0 or negative.
  * locTheta: spTheta * seqLen * NScaler * mutScaler * mutVar (theta per gene)
  *
  * -- time related
@@ -407,8 +408,8 @@ main (int argc, char *argv[])
 	  /* migration rate prior */
 	  mig = gsl_ran_flat (gBaseRand, 0.0, gParam.upperMig);
 	  /* spTheta prior */
-	  spTheta = gsl_ran_flat (gBaseRand, gParam.lowerTheta,
-				gParam.upperTheta);
+	  while ((spTheta = gsl_ran_flat (gBaseRand, gParam.lowerTheta,
+					  gParam.upperTheta)) <= 0);
 
 	  /* The ratio of current population sizes.  The populations
 	     exponentially grow to these sizes after bottkleneck is done. */
