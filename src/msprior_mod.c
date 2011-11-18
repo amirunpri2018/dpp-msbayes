@@ -352,8 +352,11 @@ main (int argc, char *argv[])
 	  int counter;
 	  /* sample tau's from uniform prior dist'n */
 	  for (u = 0; u < numTauClasses; u++)
-	    uniqTauArray[u] = gsl_ran_flat (gBaseRand, 0.0, gParam.upperTau);
-	  
+// JRO - modified - 11/17/2011
+//	    uniqTauArray[u] = gsl_ran_flat (gBaseRand, 0.0, gParam.upperTau);
+	    uniqTauArray[u] = gsl_ran_flat (gBaseRand, gParam.lowerTau,
+	                                    gParam.upperTau);
+
           qsort(uniqTauArray, numTauClasses, sizeof(double),comp_nums);
 
           for (counter = 0; counter < numTauClasses; counter++) 
