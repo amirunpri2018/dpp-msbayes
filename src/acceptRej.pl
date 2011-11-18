@@ -2,9 +2,15 @@
 
 # acceptRej.pl
 #
-# Copyright (C) 2006   Naoki Takebayashi and Michael Hickerson
+# Copyright (C) 2011 Jamie R. Oaks
 #
-# This program is distributed with msBayes.
+# This program is a modified version of the 'acceptRej.pl' script distributed 
+# with msbayes version v20100519, available at http://msbayes.sourceforge.net/
+#
+# citation:
+# Huang, W., N. Takebayashi, Y. Qi, and M. J. Hickerson, 2011. MTML-msBayes:
+#   Approximate Bayesian comparative phylogeographic inference from multiple
+#   taxa and multiple loci with rate heterogeneity. BMC Bioinformatics 12:1.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -23,6 +29,7 @@
 
 
 my $pdfOut = "figs.pdf";  # default pdf output file name
+my $uncorrectedPosterior = "./uncorrected_posterior.txt";  # default pdf output file name
 my $defaultAcceptCnt = 500;  # used to set default tolerance
 my $statString = "'pi','wattTheta','pi.net','tajD.denom'";  # default stat strings
 my $defaultAcceptedFile = "posterior_table";
@@ -45,19 +52,45 @@ my $usage="Usage: $0 [-hncr] [-p outPDF] [-a acceptedOutFileName] [-s summary_st
     "      debugging.  Or these files can be used to conduct more detailed\n".
     "      analysis or to create custom figures in R.  With the manual R\n".
     "      analysis, you can source() the file pointed by \$tmpR to set up\n".
-    "      the environment.  A list object \"res\" contains relevant data.\n" 
+    "      the environment.  A list object \"res\" contains relevant data.\n".
+    "  -z: specify path for uncorrected posterior (default: './uncorrected_posterior.txt'\n"
 #    "  -a: old analysis with all R processing (nobody needs it)\n"
     ;
 
 use Getopt::Std;
-getopts('a:hindp:rt:s:') || die "$usage\n";
+getopts('a:hindp:rt:s:z:') || die "$usage\n";
 die "$usage\n" if (defined($opt_h));
 
-our($opt_a, $opt_h, $opt_i, $opt_n, $opt_d, $opt_p, $opt_r, $opt_t, $opt_s);
+our($opt_a, $opt_h, $opt_i, $opt_n, $opt_d, $opt_p, $opt_r, $opt_t, $opt_s, $opt_z);
+
+if  (defined($opt_z)) {
+    $uncorrectedPosterior=$opt_z;
+}
 
 use File::Copy;
 use IO::File;
-use POSIX qw(tmpnam);
+
+###############################################################################
+# JRO - modified
+my $rmTempFiles = 1;  # set this to 0 for debugging
+if (defined($opt_i)) {
+    $rmTempFiles = 0;
+}
+#use POSIX qw(tmpnam);
+use File::Temp qw/ :mktemp  /;
+use File::Path;
+my $tmpDir = mkdtemp("./tmpfiles_XXXXXXXXXX");
+END {                   # delete the temp dir when done
+    if ($rmTempFiles) {
+        if (defined($tmpDir)) {
+	        rmtree($tmpDir) || die "Couldn't remove $tmpDir : $!";
+	    }
+    } else {
+	    print STDERR "FILE: \$tmpDir = $tmpDir\n" if(defined($tmpDir));
+    }
+};
+
+###############################################################################
 
 # if you set this to 1, it will not use msReject, and use old way of
 # doing analysis with just R.  But R only analysis is a memory hog,
@@ -96,82 +129,96 @@ if(defined($opt_n)) {
     exit(0);
 }
 
+###############################################################################
+# JRO -modified
 ###  create a bunch of temp files
-my $rmTempFiles = 1;  # set this to 0 for debugging
-if (defined($opt_i)) {
-    $rmTempFiles = 0;
-}
+#my $rmTempFiles = 1;  # set this to 0 for debugging
+#if (defined($opt_i)) {
+#    $rmTempFiles = 0;
+#}
 
 # open a temporary file to store the dynamically created R script
-do {$tmpR = tmpnam()} until $tmpRfh = 
-    IO::File->new($tmpR, O_RDWR|O_CREAT|O_EXCL);
-END {                   # delete the temp file when done
-    if ($rmTempFiles) {
-	if (defined($tmpR) && -e $tmpR) {
-	    unlink($tmpR) || die "Couldn't unlink $tmpR : $!"
-	}
-    } else {
-	print STDERR "FILE: \$tmpR = $tmpR\n" if(defined($tmpR));
-	
-    }
-};
+#do {$tmpR = tmpnam()} until $tmpRfh = 
+#    IO::File->new($tmpR, O_RDWR|O_CREAT|O_EXCL);
+my $tmpR = join("/", $tmpDir,"tmpRfile.r");
+my $tmpRfh = IO::File->new($tmpR, O_RDWR|O_CREAT|O_EXCL);
+#END {                   # delete the temp file when done
+#    if ($rmTempFiles) {
+#	if (defined($tmpR) && -e $tmpR) {
+#	    unlink($tmpR) || die "Couldn't unlink $tmpR : $!"
+#	}
+#    } else {
+#	print STDERR "FILE: \$tmpR = $tmpR\n" if(defined($tmpR));
+#	
+#    }
+#};
 
 # open a temp file to preprocess the observed data
-do {$tmpObs = tmpnam()} until $tmpObsfh = 
-    IO::File->new($tmpObs, O_RDWR|O_CREAT|O_EXCL);
-END {                   # delete the temp file when done
-    if ($rmTempFiles) {
-	if (defined($tmpObs) && -e $tmpObs) {
-	    unlink($tmpObs) || die "Couldn't unlink $tmpObs : $!";
-	}
-    } else {
-	print STDERR "FILE: \$tmpObs = $tmpObs\n" if (defined($tmpObs));
-    }
-};
+#do {$tmpObs = tmpnam()} until $tmpObsfh = 
+#    IO::File->new($tmpObs, O_RDWR|O_CREAT|O_EXCL);
+my $tmpObs = join("/", $tmpDir,"tmpObs.txt");
+my $tmpObsfh = IO::File->new($tmpObs, O_RDWR|O_CREAT|O_EXCL);
+#END {                   # delete the temp file when done
+#    if ($rmTempFiles) {
+#	if (defined($tmpObs) && -e $tmpObs) {
+#	    unlink($tmpObs) || die "Couldn't unlink $tmpObs : $!";
+#	}
+#    } else {
+#	print STDERR "FILE: \$tmpObs = $tmpObs\n" if (defined($tmpObs));
+#    }
+#};
 $tmpObsfh->close();
 
 # open a temp file to preprocess the data with msrejection
-my $tmpSimDatfh;
-do {$tmpSimDat = tmpnam()} until $tmpSimDatfh = 
-    IO::File->new($tmpSimDat, O_RDWR|O_CREAT|O_EXCL);
-END {                   # delete the temp file when done
-    if ($rmTempFiles) {
-	if (defined($tmpSimDat) && -e $tmpSimDat) {
-	    unlink($tmpSimDat) || die "Couldn't unlink $tmpSimDat : $!";
-	}
-    } else {
-	print STDERR "FILE: \$tmpSimDat = $tmpSimDat\n" if (defined($tmpSimDat));
-    }
-};
+#my $tmpSimDatfh;
+#do {$tmpSimDat = tmpnam()} until $tmpSimDatfh = 
+#    IO::File->new($tmpSimDat, O_RDWR|O_CREAT|O_EXCL);
+# ALWAYS KEEP RAW POSTERIOR FILE!
+my $tmpSimDat = $uncorrectedPosterior;
+my $tmpSimDatfh = IO::File->new($tmpSimDat, O_RDWR|O_CREAT|O_EXCL);
+#END {                   # delete the temp file when done
+#    if ($rmTempFiles) {
+#	if (defined($tmpSimDat) && -e $tmpSimDat) {
+#	    unlink($tmpSimDat) || die "Couldn't unlink $tmpSimDat : $!";
+#	}
+#    } else {
+#	print STDERR "FILE: \$tmpSimDat = $tmpSimDat\n" if (defined($tmpSimDat));
+#    }
+#};
 
 # open a temp file to remove the header from sim dat
-my $tmpSimDat2fh;
-do {$tmpSimDat2 = tmpnam()} until $tmpSimDat2fh = 
-    IO::File->new($tmpSimDat2, O_RDWR|O_CREAT|O_EXCL);
-END {                   # delete the temp file when done
-    if ($rmTempFiles) {
-	if (defined($tmpSimDat2) && -e $tmpSimDat2) {
-	    unlink($tmpSimDat2) || die "Couldn't unlink $tmpSimDat2 : $!";
-	}
-    } else {
-	print STDERR "FILE: \$tmpSimDat2 = $tmpSimDat2\n" if (defined($tmpSimDat2));
-    }
-};
+#my $tmpSimDat2fh;
+#do {$tmpSimDat2 = tmpnam()} until $tmpSimDat2fh = 
+#    IO::File->new($tmpSimDat2, O_RDWR|O_CREAT|O_EXCL);
+my $tmpSimDat2 = join("/", $tmpDir,"tmpSimDat2.txt");
+my $tmpSimDat2fh = IO::File->new($tmpSimDat2, O_RDWR|O_CREAT|O_EXCL);
+#END {                   # delete the temp file when done
+#    if ($rmTempFiles) {
+#	if (defined($tmpSimDat2) && -e $tmpSimDat2) {
+#	    unlink($tmpSimDat2) || die "Couldn't unlink $tmpSimDat2 : $!";
+#	}
+#    } else {
+#	print STDERR "FILE: \$tmpSimDat2 = $tmpSimDat2\n" if (defined($tmpSimDat2));
+#    }
+#};
 
 # open a temp file to extract the prior columns.
-do {$tmpPrior = tmpnam()} until $tmpPriorfh = 
-    IO::File->new($tmpPrior, O_RDWR|O_CREAT|O_EXCL);
-END {                   # delete the temp file when done
-    if ($rmTempFiles) {
-	if (defined($tmpPrior) && -e $tmpPrior) {
-	    unlink($tmpPrior) || die "Couldn't unlink $tmpPrior : $!";
-	}
-    } else {
-	print STDERR "FILE: \$tmpPrior = $tmpPrior\n" if (defined($tmpPrior));
-    }
-};
+#do {$tmpPrior = tmpnam()} until $tmpPriorfh = 
+#    IO::File->new($tmpPrior, O_RDWR|O_CREAT|O_EXCL);
+my $tmpPrior = join("/", $tmpDir,"tmpPrior.txt");
+my $tmpPriorfh = IO::File->new($tmpPrior, O_RDWR|O_CREAT|O_EXCL);
+#END {                   # delete the temp file when done
+#    if ($rmTempFiles) {
+#	if (defined($tmpPrior) && -e $tmpPrior) {
+#	    unlink($tmpPrior) || die "Couldn't unlink $tmpPrior : $!";
+#	}
+#    } else {
+#	print STDERR "FILE: \$tmpPrior = $tmpPrior\n" if (defined($tmpPrior));
+#    }
+#};
 
 #### end of setting-up temp files
+###############################################################################
 
 if (defined($opt_s)) {
     $statString = MkStatString($opt_s);
