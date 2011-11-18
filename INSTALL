@@ -13,6 +13,16 @@ If this doesn't make sense, keep reading. We assume that you are not
 accustomed to unix environment and command line. So below we describe
 the blow-by-blow installation procedure.
 
+###############################################################################
+# JRO - 11/17/2011
+How I got it to compile in Mac OsX:
+
+make clean
+make Q_FINK=NO
+make install
+
+###############################################################################
+
 
 ## 1 ## REQUIREMENTS:
 
