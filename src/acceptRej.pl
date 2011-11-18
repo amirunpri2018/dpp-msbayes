@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# acceptRej_flex.pl
+# acceptRej.pl
 #
 # Copyright (C) 2011 Jamie R. Oaks
 #
@@ -53,16 +53,15 @@ my $usage="Usage: $0 [-hncr] [-p outPDF] [-a acceptedOutFileName] [-s summary_st
     "      analysis or to create custom figures in R.  With the manual R\n".
     "      analysis, you can source() the file pointed by \$tmpR to set up\n".
     "      the environment.  A list object \"res\" contains relevant data.\n".
-    "  -x: number of taxon pairs [REQUIRED!]\n".
     "  -z: specify path for uncorrected posterior (default: './uncorrected_posterior.txt'\n"
 #    "  -a: old analysis with all R processing (nobody needs it)\n"
     ;
 
 use Getopt::Std;
-getopts('a:hindp:rt:s:x:z:') || die "$usage\n";
+getopts('a:hindp:rt:s:z:') || die "$usage\n";
 die "$usage\n" if (defined($opt_h));
 
-our($opt_a, $opt_h, $opt_i, $opt_n, $opt_d, $opt_p, $opt_r, $opt_t, $opt_s, $opt_x, $opt_z);
+our($opt_a, $opt_h, $opt_i, $opt_n, $opt_d, $opt_p, $opt_r, $opt_t, $opt_s, $opt_z);
 
 if  (defined($opt_z)) {
     $uncorrectedPosterior=$opt_z;
@@ -71,9 +70,6 @@ if  (defined($opt_z)) {
 use File::Copy;
 use IO::File;
 
-unless (defined($opt_x)) {
-    die "ERROR: must specify number of taxon pairs!\n";
-}
 ###############################################################################
 # JRO - modified
 my $rmTempFiles = 1;  # set this to 0 for debugging
@@ -105,8 +101,7 @@ my $ROnlyAnalysis = 0;
 my $Rbin = "R";
 
 # The names (not paths) of 3 R scripts and a C prog required for this program.
-#my $mainRscript = "acceptRej.r";
-my $mainRscript = "acceptRej_flex.r";
+my $mainRscript = "acceptRej.r";
 my $make_pdRscript = "make_pd2005.r";
 my $loc2plotRscript = "loc2plot.r";
 my $calmodRscript = "calmod.r";
@@ -225,8 +220,9 @@ my $tmpPriorfh = IO::File->new($tmpPrior, O_RDWR|O_CREAT|O_EXCL);
 #### end of setting-up temp files
 ###############################################################################
 
-# JRO - modified ##
-# moved opt_s parsing down
+if (defined($opt_s)) {
+    $statString = MkStatString($opt_s);
+}
 
 if (@ARGV != 2) {
     warn "ERROR: This script requires two arguments";
@@ -300,18 +296,6 @@ for my $hCnt (0..$#sumStatNames) {
 	    "has $$arrRef2[$hCnt]\n";
     }
 }
-
-##########################################################################
-# jro -modified
-# if stat string is not defined, use all sum stats
-if (defined($opt_s)) {
-    $statString = MkStatString($opt_s);
-} else {
-    $sum_stats = join("','", @sumStatNames);
-    $sum_stats = "'" . $sum_stats . "'";
-    $statString = MkStatString($sum_stats);
-}
-##########################################################################
 
 # read in obsData
 open OBS, "<$obsDat" || die "Can't open $obsDat\n";
@@ -444,15 +428,10 @@ if (! $ROnlyAnalysis) {  # use the external acceptRejection C program
     my @index=();
     foreach my $ss (@usedSS) {
 	my @tmp = FindMatchingIndex($ss, @sumStatNames); # 0-offset
-##########################################################################
-	# jro-modified
-	# each sum stat should be unique
-	#if (@tmp > $numTaxonPairs) {
-	if (@tmp > 1) {
+	if (@tmp > $numTaxonPairs) {
 	    die "ERROR: More than 1 summary stat matches with $ss.  Please ".
 		"inform this bug to the developper\n";
-	#} elsif (@tmp != $numTaxonPairs) {
-	} elsif (@tmp != 1) {
+	} elsif (@tmp != $numTaxonPairs) {
 	    die "ERROR: Could not find specified summary stats $ss\n";
 	}
 	my @tmp2 = map { $_ + 1 + scalar(@priorNames)} @tmp;
@@ -614,7 +593,6 @@ sub MkStdAnalysisRScript {
       print $fh ", tol=1";
     }
     
-    print $fh ", num.pairs=$opt_x";
     print $fh ", used.stats=c($statString)";
 
     if (defined ($opt_i)) {
@@ -821,62 +799,53 @@ sub GetPriorSumStatNames {
     my $prevSS = "";
     my $prevCnt = 0;
     my $maxTaxonID = -1;
-##############################################################################
-# jro - modified
-# modifying to make summary statistics more flexible
-# and making indentations intelligible!
-#    for my $index (0..$#header) {
-#	    my $ss  = $header[$index];
-#	    #if ($ss =~ /^(.+)\.(\d+)$/) {
-#	    if ($ss =~ /^(\S+)$/) {
-#	        if ($prevSS ne $1) {
-#		        push @sumStatNames, $1;
-#		        $prevSS = $1;
-#		        if ($2 != 1) {
-#		            die "ERROR: Header of summary stats in simulated file weird.  " .
-#			        "$ss should end with '.1'\n";
-#		        } elsif (@sumStatNames > 1 && $prevCnt != $maxTaxonID) {
-#		            die "ERROR: Previous to $ss had $prevCnt, but should be $maxTaxonID\n";
-#		        } elsif ($index == $#header) {  # the very last element
-#		            if ($prevCnt != -1 && $prevCnt != 1) {
-#			            die "ERROR: Check the last element of $line1\n";
-#		            }
-#		        } else {
-#		            $prevCnt = 1;  # everything seems to be ok, so reset
-#		            $maxTaxonID = $2 if ($maxTaxonID < $2);
-#		        }
-#	        } else {
-#		        if ($maxTaxonID < $2){
-#		            # This should happen only in the first kind of summary stats.  
-#		            # If not, number of taxon pairs differ for different summayr stats.
-#		            if (@sumStatNames != 1) {
-#			        die "ERROR: Header of summary stats in simulated file weird ($ss)\n";
-#		            }
-#		            $maxTaxonID = $2;
-#		        }
-#		        if ($prevCnt + 1 != $2) {
-#		            die "ERROR: Header of summary stats in simulated file weird.  ".
-#			        "the number in $ss should be " . ($prevCnt + 1);
-#		        }
-#		        if ($index == $#header && $2 != $maxTaxonID) {  # final element
-#			        die "ERROR: check the final element of $line1, ".
-#			        "should be $maxTaxonID\n";
-#		        }
-#		        $prevCnt++;
-#	        }
-#	    } else {  # should never come here
-#	        #die "ERROR: $ss doesn't have the correct naming scheme: ss.number\n";
-#	        die "ERROR: $ss has whitespace!\n";
-#	    }
-#    }
-    $maxTaxonID = $#header;
+    for my $index (0..$#header) {
+	my $ss  = $header[$index];
+	if ($ss =~ /^(.+)\.(\d+)$/) {
+	    if ($prevSS ne $1) {
+		push @sumStatNames, $1;
+		$prevSS = $1;
+		if ($2 != 1) {
+		    die "ERROR: Header of summary stats in simulated file weird.  " .
+			"$ss should end with '.1'\n";
+		} elsif (@sumStatNames > 1 && $prevCnt != $maxTaxonID) {
+		    die "ERROR: Previous to $ss had $prevCnt, but should be $maxTaxonID\n";
+		} elsif ($index == $#header) {  # the very last element
+		    if ($prevCnt != -1 && $prevCnt != 1) {
+			die "ERROR: Check the last element of $line1\n";
+		    }
+		} else {
+		    $prevCnt = 1;  # everything seems to be ok, so reset
+		    $maxTaxonID = $2 if ($maxTaxonID < $2);
+		}
+	    } else {
+		if ($maxTaxonID < $2){
+		    # This should happen only in the first kind of summary stats.  
+		    # If not, number of taxon pairs differ for different summayr stats.
+		    if (@sumStatNames != 1) {
+			die "ERROR: Header of summary stats in simulated file weird ($ss)\n";
+		    }
+		    $maxTaxonID = $2;
+		}
+		if ($prevCnt + 1 != $2) {
+		    die "ERROR: Header of summary stats in simulated file weird.  ".
+			"the number in $ss should be " . ($prevCnt + 1);
+		}
+		if ($index == $#header && $2 != $maxTaxonID) {  # final element
+			die "ERROR: check the final element of $line1, ".
+			    "should be $maxTaxonID\n";
+		}
+		$prevCnt++;
+	    }
+	} else {  # should never come here
+	    die "ERROR: $ss doesn't have the correct naming scheme: ss.number\n";
+	}
+    }
+
     return (\@priorNames, \@header, $maxTaxonID);
 }
 
 
-##########################################################################
-# jro - modified
-# changing to match target alone (no trailing '\.\d+')
 # Find the elements in @array which matches $target.digits and return the array of index
 # Returns 0-offset index array
 #  Argument: ($target, @array)
@@ -886,12 +855,10 @@ sub FindMatchingIndex {
     $target =~ s/["']$//;
     my @result = ();
     for (my $i = 0; $i < @_; $i++) {
-	#push (@result, $i) if ($_[$i] =~ /^$target\.\d+$/);
-	push (@result, $i) if ($_[$i] =~ /^$target$/);
+	push (@result, $i) if ($_[$i] =~ /^$target\.\d+$/);
     }
     return (@result);
 }
-##########################################################################
 
 # Find the number of columns in tab delimited text file.
 sub ColNumTabDelimFile {
