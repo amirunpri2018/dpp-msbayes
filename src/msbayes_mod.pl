@@ -510,12 +510,16 @@ sub ColCatFiles {
 }
 
 
+###############################################################################
+###############################################################################
+# JRO - modified - 11/17/2011
+# modifying to parse lowerTau keyword from conf file
 sub ExtractMspriorConf {
     my $mspriorConfOut = shift;
 
     my %result =();
 
-    my @generalKwdArr = qw(lowerTheta upperTheta upperTau upperMig upperRec upperAncPopSize reps numTauClasses  constrain subParamConstrain numTaxonLocusPairs numTaxonPairs numLoci prngSeed configFile);
+    my @generalKwdArr = qw(lowerTheta upperTheta lowerTau upperTau upperMig upperRec upperAncPopSize reps numTauClasses  constrain subParamConstrain numTaxonLocusPairs numTaxonPairs numLoci prngSeed configFile);
 
     for my $kkk (@generalKwdArr) {
 	if ($mspriorConfOut =~ /\s*$kkk\s*=\s*([^\s\n]+)\s*\n/) {
@@ -553,6 +557,8 @@ sub ExtractMspriorConf {
 
     return %result;
 }
+###############################################################################
+###############################################################################
 
 # This takes a filename of a msprior config file and a hash containing
 # the msprior config parameters.  From the file, SAMPLE_TBL (and
@@ -560,12 +566,16 @@ sub ExtractMspriorConf {
 # parameters in the hash table are combined to create a new string
 # corresponding to the config file.  parameters in the config file are
 # ignored.
+###############################################################################
+###############################################################################
+# JRO - modified - 11/17/2011
+# modifying to parse lowerTau keyword from conf file
 sub MkNewMspriorBatchConf {
     my ($oldConfFileName, $mspriorConfHashRef) = @_;
     my %confHash = %$mspriorConfHashRef;
 
     # the following kwd should match with SetupParams() in setup.c
-    my @generalKwdArr = qw(lowerTheta upperTheta upperTau upperMig upperRec upperAncPopSize reps numTauClasses constrain subParamConstrain prngSeed);
+    my @generalKwdArr = qw(lowerTheta upperTheta lowerTau upperTau upperMig upperRec upperAncPopSize reps numTauClasses constrain subParamConstrain prngSeed);
 
     open CONFIN, "<$oldConfFileName" || die "Can't open $oldConfFileName\n";
     my $conf = "";
@@ -600,6 +610,8 @@ sub MkNewMspriorBatchConf {
 
     return $newConf;
 }
+###############################################################################
+###############################################################################
 
 sub SummarizeTau {
     my ($tauArrRef, $cntArrRef)  = @_;
