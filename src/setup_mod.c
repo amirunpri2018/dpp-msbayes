@@ -612,7 +612,7 @@ SetupParams (FILE * fp, runParameters * paramPtr)
 // JRO - modified - 11/17/2011
   retVal = init_globals (fp,
 			 "lowerTheta upperTheta lowerTau upperTau upperMig upperRec upperAncPopSize numTauClasses reps constrain subParamConstrain",
-			 "dddddduVus",
+			 "ddddddduVus",
 			 &paramPtr->lowerTheta, &paramPtr->upperTheta,
 			 &paramPtr->lowerTau, &paramPtr->upperTau, &paramPtr->upperMig, 
 			 &paramPtr->upperRec, &paramPtr->upperAncPopSize, 
