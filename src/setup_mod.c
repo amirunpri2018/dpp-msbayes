@@ -347,6 +347,7 @@ GetLine (char *line, int max)
  * function set gParam to the default values.  The default constants
  * are in msPriors.h
  */
+// JRO - modified - 11/17/2011
 static void
 SetDefaultParams (runParameters * paramPtr)
 {
@@ -362,7 +363,6 @@ SetDefaultParams (runParameters * paramPtr)
     {
       paramPtr->upperTau = DEFAULT_UPPER_TAU;
     }
-// JRO - modified - 11/17/2011
   if (!paramPtr->lowerTau)
     {
       paramPtr->lowerTau = DEFAULT_LOWER_TAU;
