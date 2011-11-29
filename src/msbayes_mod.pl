@@ -142,7 +142,7 @@ if (defined($opt_S) || defined($opt_d)) {  # set the msDQH use the same seeds
 }
 
 #### Find programs
-my $msprior = FindExec("msprior");
+my $msprior = FindExec("msprior_mod");
 my $msDQH = FindExec("msDQH");
 my $sumstatsvector = FindExec("sumstatsvector");
 
