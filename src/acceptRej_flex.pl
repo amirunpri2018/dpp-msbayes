@@ -32,7 +32,7 @@ my $pdfOut = "figs.pdf";  # default pdf output file name
 my $uncorrectedPosterior = "./uncorrected_posterior.txt";  # default pdf output file name
 my $defaultAcceptCnt = 500;  # used to set default tolerance
 my $statString = "'pi','wattTheta','pi.net','tajD.denom'";  # default stat strings
-my $defaultAcceptedFile = "posterior_table";
+my $defaultAcceptedFile = "posterior_table.txt";
 
 my $usage="Usage: $0 [-hncr] [-p outPDF] [-a acceptedOutFileName] [-s summary_stats]\n" .
           "                       [-t tolerance] obsData simData \n".
