@@ -16,6 +16,7 @@ the blow-by-blow installation procedure.
 ###############################################################################
 # JRO - 11/17/2011
 How I got it to compile in Mac OsX v10.6.8:
+-------------------------------------------
 
 make clean
 make Q_FINK=NO
@@ -24,6 +25,17 @@ make install
 The gsl library installed by fink (i.e., in sw/lib/) appears to have the
 wrong architecture. My gsl library not installed by fink (in /usr/local/lib)
 seems to be fine.
+
+
+How I got it to compile on cluster running Rocks 5.1:
+-----------------------------------------------------
+
+make clean
+make Q_FINK=NO STATIC_LINK=YES GSL_LIB="/home/jamie/Environment/lib/libgsl.a /home/jamie/Environment/lib/libgslcblas.a"
+make make PREFIX=/home/jamie/Environment install
+
+I had to statically link the gsl libraries and tell the compiler where
+they were.
 ###############################################################################
 
 
