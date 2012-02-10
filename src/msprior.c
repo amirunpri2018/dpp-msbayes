@@ -420,7 +420,11 @@ main (int argc, char *argv[])
 
 	  /* The upper limit of ancestral theta is defined by the product
 	     of upper Theta (e.g. 40) and upper AncPopSize (e.g. 0.5) */
-	  Nanc = gsl_ran_flat (gBaseRand, 0.01,
+	  /* JRO - changing the following hard coded lower limit on ancestral
+	     theta to the lower limit specified by user */
+	  /* Nanc = gsl_ran_flat (gBaseRand, 0.01,
+			       gParam.upperAncPopSize * gParam.upperTheta);*/
+	  Nanc = gsl_ran_flat (gBaseRand, gParam.lowerTheta,
 			       gParam.upperAncPopSize * gParam.upperTheta);
 	  
 	  /* pick a tau for every taxon-pair with replacement from the
