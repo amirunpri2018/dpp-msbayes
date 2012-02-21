@@ -377,6 +377,9 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
       cat ("### 95 % quantile\n")
       print(quantile((result[[thisPriorName]])$x,prob=c(0.025,0.975)))
 
+      cat ("### 95% Highest Postererior Density (HPD) interval\n")
+      print(emp.hpd((result[[thisPriorName]])$x,conf=0.95))
+      
       real.mode.mean.median <- append(real.mode.mean.median, c(truePRI[counter], modeToPrint, mean.median.vect),after = length(real.mode.mean.median))
     }
     cat("\n")
@@ -679,4 +682,23 @@ merge.2tbl.byName <- function(arr1, arr2) {
   colnames(result) <- m1[,1]
   # convert character table to numeric
   return(type.convert(result))
+}
+
+## This is copied from emp.hpd() of TeachingDemos by
+## Greg Snow <greg.snow@intermountainmail.org>
+
+# This function computes the highest posterior density intervals
+# (sometimes called minimum length confidence intervals) for a
+# Bayesian posterior distribution. The emp.hpd function is used when
+# you have realizations of the posterior (when you have results from
+# an MCMC run).
+emp.hpd <- function (x, conf = 0.95) {
+  conf <- min(conf, 1 - conf)
+  n <- length(x)
+  nn <- round(n * conf)
+  x <- sort(x)
+  xx <- x[(n - nn + 1):n] - x[1:nn]
+  m <- min(xx)
+  nnn <- which(xx == m)[1]
+  return(c(x[nnn], x[n - nn + nnn]))
 }

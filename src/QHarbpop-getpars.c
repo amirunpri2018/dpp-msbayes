@@ -44,7 +44,7 @@ getpars (int argc, char *argv[], struct parameters *pP)
     0;
   /* int Mpattflag=0 ; */
   int cased = 0, casem = 0, configsum;
-  double mig_rate, fsum2Dv (int, int, int, double **);
+  double mig_rate=0.0, fsum2Dv (int, int, int, double **);
   int *pDintn;
   struct Dintervalparams **pDint;
   struct QHparameters **pQH;

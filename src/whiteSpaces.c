@@ -118,7 +118,6 @@ BlankCharStringQ (char *str)
   char *cPtr;
   if (str)
     {
-      int junk;
       if (str[0] == '\0')
 	return 0;
 

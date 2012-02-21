@@ -44,6 +44,9 @@
 
 /*
  Change Log
+ * Tue Feb 21 2012 Naoki Takebayashi <ntakebayashi@alaska.edu>
+ - Revised prior range for Nanc
+
  * Fri July 26 2006 Mike Hickerson
  - Implement fixed number of tau classes.
 
@@ -81,9 +84,10 @@
  * BottStr1 & 2: [0.01, 1.0) * (N1 or N2)
  *   This assumes the pop size (during the bottleneck) was smaller than current
  * N1 and N2:   (0.01 to 1.99)  (constrained to be N1 + N2 = 2)
- * Nanc  [0.01/spTheta, gParam.upperAncPopSize * gParam.upperTheta/spTheta)
+ * Nanc  [NancLower/spTheta, gParam.upperAncPopSize * gParam.upperTheta/spTheta)
  *  When there is mut var among loci (THIS IS NOT RIGHT:), 
- * seqLen * [0.01/locTheta, gParam.upperAncPopSize * gParam.upperTheta/locTheta)
+ * seqLen * [NancLower/locTheta, gParam.upperAncPopSize * gParam.upperTheta/locTheta)
+ *     NancLower = max(0.00001 * gParam.lowerTheta, 4*10^(-11))
  *
  * spTheta:  [lowerTheta, upperTheta)       (theta per site)
  *              spTheta <= 0 is excluded even if lowerTheta = 0 or negative.
@@ -140,10 +144,12 @@ comp_nums (const void *doubleNum1, const void *doubleNum2)
     return 0;
 }
 
+int UniqueDouble (double *input, double *output, int inputSize, double smallVal);
+
 int
 main (int argc, char *argv[])
 {
-  double N1, N2, Nanc, *uniqTauArray = NULL, *taxonTauArray = NULL, spTheta, tauequalizer, gaussTime = 0.0,
+  double N1, N2, Nanc, NancLower, *uniqTauArray = NULL, *taxonTauArray = NULL, spTheta, tauequalizer, gaussTime = 0.0,
     mig, rec, BottStr1, BottStr2, BottleTime;
   double *recTbl;
   int tauClass, *PSIarray = NULL;
@@ -162,6 +168,12 @@ main (int argc, char *argv[])
 
   /* set up gParam and gMutParam, as well as gConParam if constrain */
   LoadConfiguration (argc, argv);
+
+  /* set the lower Nanc */
+  NancLower = 0.00001 * gParam.lowerTheta;
+  if (NancLower < 0.00000000004) { /* 4 * (mu=10^(-11)) * (Ne=1) */
+    NancLower = 0.00000000004;
+  }
 
   /* set b_constrain to 1 if constrain */
   if (gParam.constrain > 0)
@@ -380,12 +392,12 @@ main (int argc, char *argv[])
 	{
 	  //Check upperAncPopSize before doing anything
 	  /* ancestral population size prior */
-	  if (gParam.upperAncPopSize < 0.01)
+	  if (gParam.upperTheta * gParam.upperAncPopSize < NancLower)
 	    {
 	      fprintf (stderr,
-		       "The upper bound (%lf) of ancestral pop. size is "
-		       "smaller than the lower bound (0.01)\n",
-		       gParam.upperAncPopSize);
+		       "The upper bound (%lf * %lf) of ancestral pop. size is "
+		       "smaller than the lower bound (%lf)\n",
+		       gParam.upperAncPopSize, gParam.upperTheta, NancLower);
 	      exit (EXIT_FAILURE);
 	    }
 
@@ -421,7 +433,7 @@ main (int argc, char *argv[])
 
 	  /* The upper limit of ancestral theta is defined by the product
 	     of upper Theta (e.g. 40) and upper AncPopSize (e.g. 0.5) */
-	  Nanc = gsl_ran_flat (gBaseRand, 0.01,
+	  Nanc = gsl_ran_flat (gBaseRand, NancLower,
 			       gParam.upperAncPopSize * gParam.upperTheta);
 	  
 	  /* pick a tau for every taxon-pair with replacement from the
@@ -517,7 +529,7 @@ main (int argc, char *argv[])
 #endif
 
 	      /* thisNanc is basically a random deviate from a uniform dist'n:
-		 [0.01 / spTheta, 
+		 [NancLower / spTheta, 
 		   gParam.upperAncPopSize * gParam.upperTheta/spTheta) 
 		 For example, if upperTheta = 10 & upperAncPopSize = 0.5,
 		 upperAncTheta become 10 * 0.5 = 5.
@@ -527,7 +539,6 @@ main (int argc, char *argv[])
 	      */
 	      /* thisNanc = Nanc * taxonPairDat.seqLen / locTheta; */
 	      thisNanc = Nanc / spTheta; /* this can be done outside of locus loop */
-	      /* NAOKI, discuss this with Mike */
 
 	      /* this scaling is done inside of locus loop to accomodate 
 		 the gamma dist'n of mut rate for each locus */
@@ -649,7 +660,7 @@ UniqueDouble (double *input, double *output, int inputSize, double smallVal) {
   }
 
   if (inputSize == 0) {
-    return;
+    return 0;
   }
 
   if (input != output) {
