@@ -372,7 +372,7 @@ my @settings = (
     "upperTheta = $thetaRangeFromObs[1]",
     "lowerTheta = $thetaRangeFromObs[0]",
     "# upper limit of tau (divergence time)",
-    "upperTau = 2.0",
+    "upperTau = 1.0",
     "# number of tau classes (Psi): 0 means Psi are drawn from [1,#taxonPairs]",
     "numTauClasses = 0",
     "# upper bound of migration rate (0 disables migration)",
