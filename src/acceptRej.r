@@ -121,8 +121,8 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
     prior.names.cont <- result$prior.names
     prior.names.discrete <- character(0)
   } else {
-    prior.names.cont <- result$prior.names[- grep("^PRI[.]Psi", result$prior.names)]
-    prior.names.discrete <- result$prior.names[  grep("^PRI[.]Psi", result$prior.names)]
+    prior.names.cont <- result$prior.names[- grep("^PRI[.](Psi|model)", result$prior.names)]
+    prior.names.discrete <- result$prior.names[  grep("^PRI[.](Psi|model)", result$prior.names)]
   }
   
   # set min, max boundary of prior parameters, and verbose print message
@@ -266,7 +266,8 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
     # Error: newsplit: out of vertex space Error: Descend tree proble
     # So, simply printing the posterior mean, and mode from
     # accepted values
-    if (length(grep("^PRI\\.Psi(|\\.[0-9]+)$", thisPriorName)) == 1) {
+    if (length(grep("^PRI\\.Psi(|\\.[0-9]+)$", thisPriorName)) == 1 ||
+	thisPriorName %in% prior.names.discrete) {
       if (thisPriorName %in% calmod.fail) {
         this.calmod.failed <- T
       } else {
@@ -362,6 +363,8 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
           { modeToPrint <- 1.0 }
         else if((name.rm.PRI == "var.t")||(name.rm.PRI == "omega"))
           { modeToPrint <- 0.0 }
+	else
+	  { modeToPrint <- NA }
       } else {
         cat ("MODE:\n" )
         res.mode <- res.mode[1]

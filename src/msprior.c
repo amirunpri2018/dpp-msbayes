@@ -577,17 +577,17 @@ main (int argc, char *argv[])
 	      /* We can send some extra info to msbayes.pl here */
 	      printf ("%u %u %u ", lociTaxonPairIDcntr, taxonID+1, locus+1);
 	      lociTaxonPairIDcntr ++; /* seriral id: 1 to # taxon:locus pairs */
-	      printf ("%lf %lf %lf %lf ",
+	      printf ("%.11lf %.11lf %.11lf %.11lf ",
 		      locTheta, scaledGaussTime, mig, 
 		      recTbl[locus] * (taxonPairDat.seqLen - 1));
-	      printf ("%lf %lf %lf ", scaledBottleTime, 
+	      printf ("%.11lf %.11lf %.11lf ", scaledBottleTime, 
 		      BottStr1 * N1, BottStr2 * N2);
 	      printf ("%u %u %u %lf %lf %lf ",
 		      taxonPairDat.numPerTaxa,
 		      taxonPairDat.sample[0], taxonPairDat.sample[1],
 		      taxonPairDat.tstv[0], taxonPairDat.tstv[1],
 		      taxonPairDat.gamma);
-	      printf ("%u %lf %lf %lf ",
+	      printf ("%u %.11lf %.11lf %.17lf ",
 		      taxonPairDat.seqLen, N1, N2, thisNanc);
 	      printf ("%lf %lf %lf %lf\n",
 		      taxonPairDat.freqA, taxonPairDat.freqC,
