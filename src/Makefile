@@ -3,7 +3,7 @@
 #### We want to specify suffix rules for .c and .o
 .SUFFIXES: .c .o
 
-VERSION = 20120222
+VERSION = 20120510
 
 # downloaded from CPAN
 MATH_RANDOM_VERSION = 0.71
