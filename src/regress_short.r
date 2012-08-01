@@ -56,8 +56,12 @@ stdAnalysis <- function(obs.infile, sim.infile,
 
   noPsiAnalysis <- F
   constrained = F
-  prior.names.cont = c("PRI.omega")
-  prior.names.discrete = c("PRI.Psi")
+  prior.names.cont = result$prior.names[- grep("^PRI[.]Psi", result$prior.names)]
+  prior.names.discrete = result$prior.names[  grep("^PRI[.]Psi", result$prior.names)]
+  prior.names.pretty = list(PRI.Psi="psi",
+			    PRI.omega="omega",
+			    PRI.E.t="tau_mean",
+			    PRI.var.t="tau_var")
   # set min, max boundary of prior parameters, and verbose print message
   # PRI.omega >= 0, PRI.E.t >= 0, PRI.Psi > 0
   min.val <- list(PRI.Psi = 1, PRI.var.t = 0, PRI.E.t = 0, PRI.omega = 0 )
@@ -136,24 +140,52 @@ stdAnalysis <- function(obs.infile, sim.infile,
       result <- c(result, temp)
     }
   }
-
-  sink(out.file)
-  cat("[results]\n")
-  if ("PRI.Psi" %in% calmod.fail) {
-      cat("psi = None\n")
-  } else {
-      psi.post.probs = result[["PRI.Psi"]]$x2
-      if ("1" %in% colnames(psi.post.probs)) {
-	  psi.post.prob.one = psi.post.probs[,"1"]
+  
+  post.modes = list()
+  for (p in prior.names.cont) {
+      m = try(loc1stats(result[[p]]$x,prob=0.95),silent=T)
+      if (class(m) == "try-error") {
+          post.modes[p] = "None"
       } else {
-	  psi.post.prob.one = 0.0
+          post.modes[p] = m[1]
       }
-      cat("psi = ", psi.post.prob.one, "\n", sep="")
   }
-
-  omega.post = result[["PRI.omega"]]$x
-  omega.prob = length(omega.post[omega.post<0.01]) / length(omega.post)
-  cat("omega = ", omega.prob, "\n", sep="")
+  sink(out.file)
+  cat("[psi]\n")
+  if ("PRI.Psi" %in% calmod.fail) {
+      cat("failed = True\n")
+  } else {
+      cat("failed = False\n")
+      psi.post.probs = result[["PRI.Psi"]]$x2
+      m = as.numeric(colnames(psi.post.probs)[which.max(psi.post.probs)])
+      cat("mode = ", m, "\n", sep="")
+      cat("[psi_posterior_probabilities]\n")
+      for (i in 1:nPairs) {
+          psi.str = as.character(i)
+          if (psi.str %in% colnames(psi.post.probs)) {
+              cat(i, " = ", psi.post.probs[,psi.str], "\n", sep="")
+          } else {
+	      cat(i, " = 0.0\n", sep="")
+          }
+      }
+  }
+  for (p in prior.names.cont) {
+      cat("[", prior.names.pretty[[p]], "]\n", sep="")
+      cat("mode = ", post.modes[[p]], "\n", sep="")
+      cat("mean = ", mean(result[[p]]$x), "\n", sep="")
+      cat("median = ", median(result[[p]]$x), "\n", sep="")
+      quants = quantile(result[[p]]$x, prob=c(0.025,0.975))
+      cat("quantile_0.025 = ", quants[[1]], "\n", sep="")
+      cat("quantile_0.975 = ", quants[[2]], "\n", sep="")
+      if (p == "PRI.omega") {
+          omega.post = result[[p]]$x
+          omega.prob = length(omega.post[omega.post<0.01]) / length(omega.post)
+          cat("posterior_probability_simultaneous = ", omega.prob, "\n", sep="")
+      }
+      cat("posterior = ")
+      cat(result[[p]]$x, sep=",")
+      cat("\n")
+  }
   sink()
 
 }
