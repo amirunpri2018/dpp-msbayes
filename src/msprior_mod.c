@@ -1,5 +1,5 @@
 /*
-*  msprior_mod.c
+*  msprior.c
 *
 * Copyright (C) 2006  Michael Hickerson and Naoki Takebayashi
 *
@@ -109,8 +109,8 @@
 
 #include <gsl/gsl_rng.h>	/* for base rand num gen's */
 #include <gsl/gsl_randist.h>	/* for gsl_ran_gamma */
-#include "msprior_mod.h"
-#include "setup_mod.h"
+#include "msprior.h"
+#include "setup.h"
 
 /* This has to be Global */
 const gsl_rng *gBaseRand;	/* global rand number generator */

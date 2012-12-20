@@ -1,5 +1,5 @@
 /*
- * setup_mod.c
+ * setup.c
  *
  * Copyright (C) 2006   Naoki Takebayashi and Michael Hickerson
  *
@@ -32,8 +32,8 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "setup_mod.h"
-#include "msprior_mod.h"
+#include "setup.h"
+#include "msprior.h"
 #include "whiteSpaces.h"
 #include "initvars.h"
 #include "hashtab/hashtab.h"

@@ -1,5 +1,5 @@
-#ifndef MS_PRIOR_MOD_H
-#define MS_PRIOR_MOD_H
+#ifndef MS_PRIOR_H
+#define MS_PRIOR_H
 
 /* Default values used for interactive setup */
 // JRO - modified - 11/17/2011
