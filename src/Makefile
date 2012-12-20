@@ -54,15 +54,14 @@ CFLAGS = $(DEFS) $(INCLS) $(CCOPT)
 #### A suffix rule to make .o
 .c.o:; $(CC) -c -o $@ $(CFLAGS) $<
 
-TARGET = sumstatsvector msDQH msprior msprior_mod msReject
-PERL_SCRIPTS = acceptRej.pl acceptRej_flex.pl convertIM.pl dataSummary.pl msbayes.pl msbayes_mod.pl obsSumStats.pl
+TARGET = sumstatsvector msDQH msprior msReject
+PERL_SCRIPTS = acceptRej.pl acceptRej_flex.pl convertIM.pl dataSummary.pl msbayes.pl obsSumStats.pl
 
 LIB_EXEC_FILES = acceptRej.r acceptRej_flex.r make_pd2005.r loc2plot.r calmod.r
 # LIBEXEC files are used by acceptRej.r, these has to be installed
 # inside of ../lib/msbayes/ relative to binaries
 
 MSPRIOR_O = msprior.o setup.o initvars.o whiteSpaces.o hashtab.o stringUtils.o
-MSPRIOR_MOD_O = msprior_mod.o setup_mod.o initvars.o whiteSpaces.o hashtab.o stringUtils.o
 MSDQH_O = msQHarbpop.o QHarbpop-streec.o QHsubs.o QHarbpop-getpars.o rand2new.o
 MSREJECT_O = rejectinC.o
 SUMSTATSVECTOR = msStatsDQH.o sumStatsVector.o hashtab.o whiteSpaces.o stringUtils.o
@@ -81,9 +80,6 @@ msReject: $(MSREJECT_O)
 
 msprior: $(MSPRIOR_O)
 	$(CC) $(LDFLAGS) -o $@ $(MSPRIOR_O) $(GSL_LIB) -lm
-
-msprior_mod: $(MSPRIOR_MOD_O)
-	$(CC) $(LDFLAGS) -o $@ $(MSPRIOR_MOD_O) $(GSL_LIB) -lm
 
 Math-Random:
 	mkdir -p Math-Random
