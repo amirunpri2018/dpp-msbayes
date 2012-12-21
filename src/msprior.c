@@ -142,8 +142,10 @@ comp_nums (const void *doubleNum1, const void *doubleNum2)
 int
 main (int argc, char *argv[])
 {
-  double N1, N2, Nanc, *uniqTauArray = NULL, *taxonTauArray = NULL, spTheta, tauequalizer, gaussTime = 0.0,
-    mig, rec, BottStr1, BottStr2, BottleTime;
+  double N1, N2, Nanc, *uniqTauArray = NULL, *taxonTauArray = NULL,
+         *descendant1ThetaArray = NULL, *descendant2ThetaArray = NULL,
+         *ancestralThetaArray = NULL, spTheta, tauequalizer, gaussTime = 0.0,
+         mig, rec, BottStr1, BottStr2, BottleTime;
   double *recTbl;
   int tauClass, *PSIarray = NULL;
   unsigned int numTauClasses = -1, u, locus, taxonID, zzz;
@@ -222,11 +224,15 @@ main (int argc, char *argv[])
     PSIarray = calloc (gParam.numTaxonPairs, sizeof (int));
     taxonTauArray = calloc(gParam.numTaxonPairs, sizeof (double));
   }
+  descendant1ThetaArray = calloc (gParam.numTaxonPairs, sizeof (double));
+  descendant2ThetaArray = calloc (gParam.numTaxonPairs, sizeof (double));
+  ancestralThetaArray = calloc (gParam.numTaxonPairs, sizeof (double));
 
   recTbl = calloc (gParam.numLoci, sizeof (double));
 
-  if (uniqTauArray == NULL || PSIarray == NULL || recTbl == NULL || 
-      taxonTauArray == NULL)
+  if (uniqTauArray == NULL || PSIarray == NULL || recTbl == NULL ||
+          taxonTauArray == NULL || descendant1ThetaArray == NULL ||
+          descendant2ThetaArray == NULL || ancestralThetaArray == NULL)
     {
       fprintf (stderr, "ERROR: Not enough memory for uniqTauArray, PSIarray, or recTbl\n");
       exit (EXIT_FAILURE);
@@ -429,6 +435,10 @@ main (int argc, char *argv[])
 			       gParam.upperAncPopSize * gParam.upperTheta);*/
 	  Nanc = gsl_ran_flat (gBaseRand, gParam.lowerTheta,
 			       gParam.upperAncPopSize * gParam.upperTheta);
+
+      descendant1ThetaArray[taxonID] = spTheta * N1;
+      descendant2ThetaArray[taxonID] = spTheta * N2;
+      ancestralThetaArray[taxonID] = Nanc;
 	  
 	  /* pick a tau for every taxon-pair with replacement from the
 	     array of X taxon-pairs, where X is a uniform discrete RV
@@ -604,6 +614,15 @@ main (int argc, char *argv[])
       printf(" psiTbl:");
       for (zzz = 0; zzz < numTauClasses; zzz++)
 	printf (",%d", PSIarray[zzz]);
+      printf(" d1ThetaTbl:");
+      for (zzz = 0; zzz < gParam.numTaxonPairs; zzz++)
+          printf (",%lf", descendant1ThetaArray[zzz]);
+      printf(" d2ThetaTbl:");
+      for (zzz = 0; zzz < gParam.numTaxonPairs; zzz++)
+          printf (",%lf", descendant2ThetaArray[zzz]);
+      printf(" aThetaTbl:");
+      for (zzz = 0; zzz < gParam.numTaxonPairs; zzz++)
+          printf (",%lf", ancestralThetaArray[zzz]);
       printf("\n");
 
     }
@@ -611,6 +630,9 @@ main (int argc, char *argv[])
   free (uniqTauArray);
   free (taxonTauArray);
   free (PSIarray);
+  free (descendant1ThetaArray);
+  free (descendant2ThetaArray);
+  free (ancestralThetaArray);
   free (recTbl);
   free (subParamConstrainConfig);
   exit (0);
