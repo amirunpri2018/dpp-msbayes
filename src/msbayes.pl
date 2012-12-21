@@ -45,6 +45,7 @@ my $usage="Usage: $0 [-hd] [-b observedSummaryStatistics] [-r numSims] [-c confi
     "          7: use first 1 moment (mean) for each summary statistics (default)\n".
     "  -S: set the initial seed (but not verbose like -d)\n" .
     "      By default (without -s), unique seed is automaically set from time\n".
+    "  -p: Write parameter values of prior draws. Default is to only write tau vector summary.\n" .
     "  -d: debug (msprior and msDQH uses the same initial seed = 1)\n";
 
 use strict;
@@ -56,8 +57,8 @@ use IPC::Open2;
 
 use Getopt::Std;
 
-our ($opt_h, $opt_d, $opt_o, $opt_b, $opt_c, $opt_i, $opt_r, $opt_S, $opt_s);
-getopts('hdo:b:c:i:r:S:s:') || die "$usage\n";
+our ($opt_h, $opt_d, $opt_o, $opt_b, $opt_c, $opt_i, $opt_r, $opt_S, $opt_s, $opt_p);
+getopts('hdo:b:c:i:r:S:s:p') || die "$usage\n";
 die "$usage\n" if (defined($opt_h));
 
 my $defaultOutFile = "Prior_SumStat_Outfile";
@@ -271,11 +272,14 @@ while (<RAND>) {
     # This means one set of simulations are done.
     # Processing this line to prepare 'prior columns' for the final output
     my ($tauClassSetting, $realizedNumTauClass);
-    if (/setting:\s+(\d+)\s+realizedNumTauClasses:\s+(\d+)\s+tauTbl:,([\d\.,]+)\s+psiTbl:,([\d\.,]+)/) {
+    if (/setting:\s+(\d+)\s+realizedNumTauClasses:\s+(\d+)\s+tauTbl:,([\d\.,]+)\s+psiTbl:,([\d\.,]+)\s+d1ThetaTbl:,([\d\.,]+)\s+d2ThetaTbl:,([\d\.,]+)\s+aThetaTbl:,([\d\.,]+)/) {
 	$tauClassSetting = $1;
 	$realizedNumTauClass = $2; # this is not actually used
 	my @tauTbl = split /\s*,\s*/, $3;
 	my @psiTbl = split /\s*,\s*/, $4;
+	my @d1ThetaTbl = split /\s*,\s*/, $5;
+	my @d2ThetaTbl = split /\s*,\s*/, $6;
+	my @aThetaTbl = split /\s*,\s*/, $7;
 	
 	# prep header
 	if ($prepPriorHeader){ 
@@ -288,6 +292,20 @@ while (<RAND>) {
 		    $headString .= "\tPRI.Psi.$suffix";
 		}
 	    }
+        if (defined($opt_p)) {
+            for my $suffix (1..$mspriorConf{numTaxonPairs}){
+                $headString .= "\tPRI.t.$suffix";
+            }
+            for my $suffix (1..$mspriorConf{numTaxonPairs}){
+                $headString .= "\tPRI.d1Theta.$suffix";
+            }
+            for my $suffix (1..$mspriorConf{numTaxonPairs}){
+                $headString .= "\tPRI.d2Theta.$suffix";
+            }
+            for my $suffix (1..$mspriorConf{numTaxonPairs}){
+                $headString .= "\tPRI.aTheta.$suffix";
+            }
+        }
 	    $headString .= "\tPRI.Psi\tPRI.var.t\tPRI.E.t\tPRI.omega";
 	    push @priorCache, $headString;
 	    $prepPriorHeader = 0;  # print this only 1 time
@@ -304,6 +322,9 @@ while (<RAND>) {
 	    #PRI.Psi.1 PRi.Psi.2 ... PRI.Psi.numTauClasses
 	    push @tmpPrior, @tauTbl, @psiTbl;
 	}
+    if (defined($opt_p)) {
+        push @tmpPrior, GetTauVector(\@tauTbl, \@psiTbl), @d1ThetaTbl, @d2ThetaTbl, @aThetaTbl;
+    }
 	
 	# PRI.Psi PRI.var.t PRI.E.t PRI.omega 
 	#  (= #tauClasses, Var, Mean, weirdCV of tau)
@@ -632,6 +653,19 @@ sub SummarizeTau {
     return ($numTauClasses, $var, $mean, $dispersionIndex);
 }
 
+sub GetTauVector {
+    my ($tauArrRef, $cntArrRef)  = @_;
+
+    my $numTauClasses = scalar(@$tauArrRef); # num elements = Psi
+    
+    my @taus = ();
+    for my $i (0..($numTauClasses-1)) {
+        for my $j (1..($$cntArrRef[$i])) {
+            push @taus, $$tauArrRef[$i];
+        }
+    }
+    return @taus;
+}
 
 #### Explanation of msDQH commandline options by Eli
 #    system("$msDQH $SEED $totSampleNum 1 -t $theta -Q $tstv1 $freqA $freqC $freqG $freqT -H $gamma -r $rec $seqLen -D 6 2 $sampleNum1 $sampleNum2 0 I $mig $N1 $BottStr1 $N2 $BottStr2 $BottleTime 2 1 0 0 1 0 I $mig Nc $BottStr1 $BottStr2 $durationOfBottleneck 1 Nc $Nanc $numTauClasses 1 Nc $Nanc $seqLen 1 Nc $Nanc $taxonLocusPairID 1 Nc $Nanc $mspriorConf{numTaxonLocusPairs} | $sumstatsvector -T $mspriorConf{upperTheta} --tempFile $tmpSumStatVectScratch $headerOpt >> $tmpMainOut");
