@@ -149,8 +149,10 @@ int UniqueDouble (double *input, double *output, int inputSize, double smallVal)
 int
 main (int argc, char *argv[])
 {
-  double N1, N2, Nanc, NancLower, *uniqTauArray = NULL, *taxonTauArray = NULL, spTheta, tauequalizer, gaussTime = 0.0,
-    mig, rec, BottStr1, BottStr2, BottleTime;
+  double N1, N2, Nanc, NancLower, *uniqTauArray = NULL, *taxonTauArray = NULL,
+         *descendant1ThetaArray = NULL, *descendant2ThetaArray = NULL,
+         *ancestralThetaArray = NULL, spTheta, tauequalizer, gaussTime = 0.0,
+         mig, rec, BottStr1, BottStr2, BottleTime;
   double *recTbl;
   int tauClass, *PSIarray = NULL;
   unsigned int numTauClasses = -1, u, locus, taxonID, zzz;
