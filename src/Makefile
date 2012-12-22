@@ -55,9 +55,9 @@ CFLAGS = $(DEFS) $(INCLS) $(CCOPT)
 .c.o:; $(CC) -c -o $@ $(CFLAGS) $<
 
 TARGET = sumstatsvector msDQH msprior msReject
-PERL_SCRIPTS = acceptRej.pl convertIM.pl dataSummary.pl msbayes.pl msCombModels.pl obsSumStats.pl
+PERL_SCRIPTS = acceptRej.pl acceptRej_flex.pl convertIM.pl dataSummary.pl msbayes.pl msCombModels.pl obsSumStats.pl
 
-LIB_EXEC_FILES = acceptRej.r make_pd2005.r loc2plot.r calmod.r
+LIB_EXEC_FILES = acceptRej.r acceptRej_flex.r make_pd2005.r loc2plot.r calmod.r
 # LIBEXEC files are used by acceptRej.r, these has to be installed
 # inside of ../lib/msbayes/ relative to binaries
 

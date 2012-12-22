@@ -365,8 +365,11 @@ main (int argc, char *argv[])
 	  int counter;
 	  /* sample tau's from uniform prior dist'n */
 	  for (u = 0; u < numTauClasses; u++)
-	    uniqTauArray[u] = gsl_ran_flat (gBaseRand, 0.0, gParam.upperTau);
-	  
+// JRO - modified - 11/17/2011
+//	    uniqTauArray[u] = gsl_ran_flat (gBaseRand, 0.0, gParam.upperTau);
+	    uniqTauArray[u] = gsl_ran_flat (gBaseRand, gParam.lowerTau,
+	                                    gParam.upperTau);
+
           qsort(uniqTauArray, numTauClasses, sizeof(double),comp_nums);
 
           for (counter = 0; counter < numTauClasses; counter++) 
@@ -392,12 +395,12 @@ main (int argc, char *argv[])
 	{
 	  //Check upperAncPopSize before doing anything
 	  /* ancestral population size prior */
-	  if (gParam.upperTheta * gParam.upperAncPopSize < NancLower)
+	  if (gParam.upperAncPopSize < gParam.lowerTheta)
 	    {
 	      fprintf (stderr,
 		       "The upper bound (%lf * %lf) of ancestral pop. size is "
 		       "smaller than the lower bound (%lf)\n",
-		       gParam.upperAncPopSize, gParam.upperTheta, NancLower);
+		       gParam.upperAncPopSize, gParam.upperTheta, gParam.lowerTheta);
 	      exit (EXIT_FAILURE);
 	    }
 
@@ -433,7 +436,11 @@ main (int argc, char *argv[])
 
 	  /* The upper limit of ancestral theta is defined by the product
 	     of upper Theta (e.g. 40) and upper AncPopSize (e.g. 0.5) */
-	  Nanc = gsl_ran_flat (gBaseRand, NancLower,
+	  /* JRO - changing the following hard coded lower limit on ancestral
+	     theta to the lower limit specified by user */
+	  /* Nanc = gsl_ran_flat (gBaseRand, 0.01,
+			       gParam.upperAncPopSize * gParam.upperTheta);*/
+	  Nanc = gsl_ran_flat (gBaseRand, gParam.lowerTheta,
 			       gParam.upperAncPopSize * gParam.upperTheta);
 	  
 	  /* pick a tau for every taxon-pair with replacement from the
@@ -529,7 +536,7 @@ main (int argc, char *argv[])
 #endif
 
 	      /* thisNanc is basically a random deviate from a uniform dist'n:
-		 [NancLower / spTheta, 
+		 [gParam.lowerTheta / spTheta, 
 		   gParam.upperAncPopSize * gParam.upperTheta/spTheta) 
 		 For example, if upperTheta = 10 & upperAncPopSize = 0.5,
 		 upperAncTheta become 10 * 0.5 = 5.

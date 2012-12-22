@@ -347,6 +347,7 @@ GetLine (char *line, int max)
  * function set gParam to the default values.  The default constants
  * are in msPriors.h
  */
+// JRO - modified - 11/17/2011
 static void
 SetDefaultParams (runParameters * paramPtr)
 {
@@ -361,6 +362,10 @@ SetDefaultParams (runParameters * paramPtr)
   if (!paramPtr->upperTau)
     {
       paramPtr->upperTau = DEFAULT_UPPER_TAU;
+    }
+  if (!paramPtr->lowerTau)
+    {
+      paramPtr->lowerTau = DEFAULT_LOWER_TAU;
     }
   if (!paramPtr->numTauClasses)
     {
@@ -449,6 +454,21 @@ InteractiveSetupParams (runParameters * paramPtr)
     }
 
   /* tau */
+// JRO - modified - 11/17/2011
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+	       "Lower limit of uniform prior distribution for tau, time of divergence (tau-min) "
+	       "[%lf]: \n", paramPtr->lowerTau);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->lowerTau = tempValDouble;
+	}
+    }
   for (badInput = 1; badInput;)
     {
       fprintf (stderr,
@@ -588,11 +608,13 @@ SetupParams (FILE * fp, runParameters * paramPtr)
 
   SetDefaultParams (paramPtr);
 
+// JRO - modified - 11/29/2011
+// JRO - modified - 11/17/2011
   retVal = init_globals (fp,
-			 "lowerTheta upperTheta upperTau upperMig upperRec upperAncPopSize numTauClasses reps constrain subParamConstrain",
-			 "dddddduVus",
+			 "lowerTheta upperTheta lowerTau upperTau upperMig upperRec upperAncPopSize numTauClasses reps constrain subParamConstrain",
+			 "ddddddduVus",
 			 &paramPtr->lowerTheta, &paramPtr->upperTheta,
-			 &paramPtr->upperTau, &paramPtr->upperMig, 
+			 &paramPtr->lowerTau, &paramPtr->upperTau, &paramPtr->upperMig, 
 			 &paramPtr->upperRec, &paramPtr->upperAncPopSize, 
 			 &paramPtr->numTauClasses, &paramPtr->reps,
 			 &paramPtr->constrain, &paramPtr->subParamConstrain);
@@ -1172,6 +1194,8 @@ PrintParam (FILE *fp)
   fprintf (fp, "## gParam ##\n");
   fprintf (fp, "lowerTheta =\t%.17lf\n", gParam.lowerTheta);
   fprintf (fp, "upperTheta =\t%.17lf\n", gParam.upperTheta);
+// JRO - modified - 11/17/2011
+  fprintf (fp, "lowerTau =\t%.17lf\n", gParam.lowerTau);
   fprintf (fp, "upperTau =\t%.17lf\n", gParam.upperTau);
   fprintf (fp, "upperMig =\t%.17lf\n", gParam.upperMig);
   fprintf (fp, "upperRec =\t%.17lf\n", gParam.upperRec);
