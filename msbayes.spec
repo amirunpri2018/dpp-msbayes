@@ -1,7 +1,7 @@
 %define debug_package  %{nil}
 
 %define name msbayes
-%define version 20100519
+%define version 20120510
 %define release 1
 
 %define prefix   /usr/local
@@ -13,12 +13,12 @@ Version: %{version}
 Release: %{release}
 Group: Applications/Scientific
 License: GPL
-Packager: Naoki Takebayashi <ffnt@uaf.edu>
+Packager: Naoki Takebayashi <ntakebayashi@alaska..edu>
 URL: http://msbayes.sourceforge.net/
 Source0: http://msbayes.sourceforge.net/msbayes/%{name}-%{version}.tgz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 Requires: R
-BuildRequires: gsl-devel gsl-static
+BuildRequires: gsl-devel gsl-static glibc-static
 
 %description
 
@@ -81,6 +81,13 @@ rm -r %{builddir}
 %{prefix}/lib/msbayes
 
 %changelog
+* Wed May 10 2012 Naoki Takebayashi <ntakebayashi@alaska.edu> [20120510-1]
+- version update
+- Fixed a bug that msbayes.pl get stuck without completing all runs.
+
+* Wed Feb 22 2012 Naoki Takebayashi <ntakebayashi@alaska.edu> [20120222-1]
+- version update
+
 * Wed May 19 2010 Naoki Takebayashi <ntakebayashi@alaska.edu> [20100519-1]
 - version update
 

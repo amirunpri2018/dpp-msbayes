@@ -44,6 +44,9 @@
 
 /*
  Change Log
+ * Tue Feb 21 2012 Naoki Takebayashi <ntakebayashi@alaska.edu>
+ - Revised prior range for Nanc
+
  * Fri July 26 2006 Mike Hickerson
  - Implement fixed number of tau classes.
 
@@ -81,11 +84,13 @@
  * BottStr1 & 2: [0.01, 1.0) * (N1 or N2)
  *   This assumes the pop size (during the bottleneck) was smaller than current
  * N1 and N2:   (0.01 to 1.99)  (constrained to be N1 + N2 = 2)
- * Nanc  [0.01/spTheta, gParam.upperAncPopSize * gParam.upperTheta/spTheta)
+ * Nanc  [NancLower/spTheta, gParam.upperAncPopSize * gParam.upperTheta/spTheta)
  *  When there is mut var among loci (THIS IS NOT RIGHT:), 
- * seqLen * [0.01/locTheta, gParam.upperAncPopSize * gParam.upperTheta/locTheta)
+ * seqLen * [NancLower/locTheta, gParam.upperAncPopSize * gParam.upperTheta/locTheta)
+ *     NancLower = max(0.00001 * gParam.lowerTheta, 4*10^(-11))
  *
  * spTheta:  [lowerTheta, upperTheta)       (theta per site)
+ *              spTheta <= 0 is excluded even if lowerTheta = 0 or negative.
  * locTheta: spTheta * seqLen * NScaler * mutScaler * mutVar (theta per gene)
  *
  * -- time related
@@ -139,13 +144,13 @@ comp_nums (const void *doubleNum1, const void *doubleNum2)
     return 0;
 }
 
+int UniqueDouble (double *input, double *output, int inputSize, double smallVal);
+
 int
 main (int argc, char *argv[])
 {
-  double N1, N2, Nanc, *uniqTauArray = NULL, *taxonTauArray = NULL,
-         *descendant1ThetaArray = NULL, *descendant2ThetaArray = NULL,
-         *ancestralThetaArray = NULL, spTheta, tauequalizer, gaussTime = 0.0,
-         mig, rec, BottStr1, BottStr2, BottleTime;
+  double N1, N2, Nanc, NancLower, *uniqTauArray = NULL, *taxonTauArray = NULL, spTheta, tauequalizer, gaussTime = 0.0,
+    mig, rec, BottStr1, BottStr2, BottleTime;
   double *recTbl;
   int tauClass, *PSIarray = NULL;
   unsigned int numTauClasses = -1, u, locus, taxonID, zzz;
@@ -163,6 +168,12 @@ main (int argc, char *argv[])
 
   /* set up gParam and gMutParam, as well as gConParam if constrain */
   LoadConfiguration (argc, argv);
+
+  /* set the lower Nanc */
+  NancLower = 0.00001 * gParam.lowerTheta;
+  if (NancLower < 0.00000000004) { /* 4 * (mu=10^(-11)) * (Ne=1) */
+    NancLower = 0.00000000004;
+  }
 
   /* set b_constrain to 1 if constrain */
   if (gParam.constrain > 0)
@@ -388,12 +399,12 @@ main (int argc, char *argv[])
 	{
 	  //Check upperAncPopSize before doing anything
 	  /* ancestral population size prior */
-	  if (gParam.upperAncPopSize < 0.01)
+	  if (gParam.upperAncPopSize < gParam.lowerTheta)
 	    {
 	      fprintf (stderr,
-		       "The upper bound (%lf) of ancestral pop. size is "
-		       "smaller than the lower bound (0.01)\n",
-		       gParam.upperAncPopSize);
+		       "The upper bound (%lf * %lf) of ancestral pop. size is "
+		       "smaller than the lower bound (%lf)\n",
+		       gParam.upperAncPopSize, gParam.upperTheta, gParam.lowerTheta);
 	      exit (EXIT_FAILURE);
 	    }
 
@@ -416,8 +427,8 @@ main (int argc, char *argv[])
 	  /* migration rate prior */
 	  mig = gsl_ran_flat (gBaseRand, 0.0, gParam.upperMig);
 	  /* spTheta prior */
-	  spTheta = gsl_ran_flat (gBaseRand, gParam.lowerTheta,
-				gParam.upperTheta);
+	  while ((spTheta = gsl_ran_flat (gBaseRand, gParam.lowerTheta,
+					  gParam.upperTheta)) <= 0);
 
 	  /* The ratio of current population sizes.  The populations
 	     exponentially grow to these sizes after bottkleneck is done. */
@@ -533,7 +544,7 @@ main (int argc, char *argv[])
 #endif
 
 	      /* thisNanc is basically a random deviate from a uniform dist'n:
-		 [0.01 / spTheta, 
+		 [gParam.lowerTheta / spTheta, 
 		   gParam.upperAncPopSize * gParam.upperTheta/spTheta) 
 		 For example, if upperTheta = 10 & upperAncPopSize = 0.5,
 		 upperAncTheta become 10 * 0.5 = 5.
@@ -543,7 +554,6 @@ main (int argc, char *argv[])
 	      */
 	      /* thisNanc = Nanc * taxonPairDat.seqLen / locTheta; */
 	      thisNanc = Nanc / spTheta; /* this can be done outside of locus loop */
-	      /* NAOKI, discuss this with Mike */
 
 	      /* this scaling is done inside of locus loop to accomodate 
 		 the gamma dist'n of mut rate for each locus */
@@ -582,17 +592,17 @@ main (int argc, char *argv[])
 	      /* We can send some extra info to msbayes.pl here */
 	      printf ("%u %u %u ", lociTaxonPairIDcntr, taxonID+1, locus+1);
 	      lociTaxonPairIDcntr ++; /* seriral id: 1 to # taxon:locus pairs */
-	      printf ("%lf %lf %lf %lf ",
+	      printf ("%.11lf %.11lf %.11lf %.11lf ",
 		      locTheta, scaledGaussTime, mig, 
 		      recTbl[locus] * (taxonPairDat.seqLen - 1));
-	      printf ("%lf %lf %lf ", scaledBottleTime, 
+	      printf ("%.11lf %.11lf %.11lf ", scaledBottleTime, 
 		      BottStr1 * N1, BottStr2 * N2);
 	      printf ("%u %u %u %lf %lf %lf ",
 		      taxonPairDat.numPerTaxa,
 		      taxonPairDat.sample[0], taxonPairDat.sample[1],
 		      taxonPairDat.tstv[0], taxonPairDat.tstv[1],
 		      taxonPairDat.gamma);
-	      printf ("%u %lf %lf %lf ",
+	      printf ("%u %.11lf %.11lf %.17lf ",
 		      taxonPairDat.seqLen, N1, N2, thisNanc);
 	      printf ("%lf %lf %lf %lf\n",
 		      taxonPairDat.freqA, taxonPairDat.freqC,
@@ -677,7 +687,7 @@ UniqueDouble (double *input, double *output, int inputSize, double smallVal) {
   }
 
   if (inputSize == 0) {
-    return;
+    return 0;
   }
 
   if (input != output) {

@@ -121,8 +121,8 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
     prior.names.cont <- result$prior.names
     prior.names.discrete <- character(0)
   } else {
-    prior.names.cont <- result$prior.names[- grep("^PRI[.]Psi", result$prior.names)]
-    prior.names.discrete <- result$prior.names[  grep("^PRI[.]Psi", result$prior.names)]
+    prior.names.cont <- result$prior.names[- grep("^PRI[.](Psi|model)", result$prior.names)]
+    prior.names.discrete <- result$prior.names[  grep("^PRI[.](Psi|model)", result$prior.names)]
   }
   
   # set min, max boundary of prior parameters, and verbose print message
@@ -266,7 +266,8 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
     # Error: newsplit: out of vertex space Error: Descend tree proble
     # So, simply printing the posterior mean, and mode from
     # accepted values
-    if (length(grep("^PRI\\.Psi(|\\.[0-9]+)$", thisPriorName)) == 1) {
+    if (length(grep("^PRI\\.Psi(|\\.[0-9]+)$", thisPriorName)) == 1 ||
+	thisPriorName %in% prior.names.discrete) {
       if (thisPriorName %in% calmod.fail) {
         this.calmod.failed <- T
       } else {
@@ -362,6 +363,8 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
           { modeToPrint <- 1.0 }
         else if((name.rm.PRI == "var.t")||(name.rm.PRI == "omega"))
           { modeToPrint <- 0.0 }
+	else
+	  { modeToPrint <- NA }
       } else {
         cat ("MODE:\n" )
         res.mode <- res.mode[1]
@@ -377,6 +380,9 @@ stdAnalysis <- function(obs.infile, sim.infile, prior.infile,
       cat ("### 95 % quantile\n")
       print(quantile((result[[thisPriorName]])$x,prob=c(0.025,0.975)))
 
+      cat ("### 95% Highest Postererior Density (HPD) interval\n")
+      print(emp.hpd((result[[thisPriorName]])$x,conf=0.95))
+      
       real.mode.mean.median <- append(real.mode.mean.median, c(truePRI[counter], modeToPrint, mean.median.vect),after = length(real.mode.mean.median))
     }
     cat("\n")
@@ -672,7 +678,30 @@ merge.2tbl.byName <- function(arr1, arr2) {
   m1 <- as.matrix(m1)
   m1[is.na(m1)] <- 0  # replacing NA with 0
   result <- as.table(t(m1[,2:3]))
+  # previous t() doesn't work if it has only 1 row, so do it here
+  if(nrow(m1) == 1) {
+    result <- t(result)
+  }
   colnames(result) <- m1[,1]
   # convert character table to numeric
   return(type.convert(result))
+}
+
+## This is copied from emp.hpd() of TeachingDemos by
+## Greg Snow <greg.snow@intermountainmail.org>
+
+# This function computes the highest posterior density intervals
+# (sometimes called minimum length confidence intervals) for a
+# Bayesian posterior distribution. The emp.hpd function is used when
+# you have realizations of the posterior (when you have results from
+# an MCMC run).
+emp.hpd <- function (x, conf = 0.95) {
+  conf <- min(conf, 1 - conf)
+  n <- length(x)
+  nn <- round(n * conf)
+  x <- sort(x)
+  xx <- x[(n - nn + 1):n] - x[1:nn]
+  m <- min(xx)
+  nnn <- which(xx == m)[1]
+  return(c(x[nnn], x[n - nn + nnn]))
 }

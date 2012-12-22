@@ -372,7 +372,7 @@ my @settings = (
     "upperTheta = $thetaRangeFromObs[1]",
     "lowerTheta = $thetaRangeFromObs[0]",
     "# upper limit of tau (divergence time)",
-    "upperTau = 2.0",
+    "upperTau = 1.0",
     "# number of tau classes (Psi): 0 means Psi are drawn from [1,#taxonPairs]",
     "numTauClasses = 0",
     "# upper bound of migration rate (0 disables migration)",
@@ -380,7 +380,7 @@ my @settings = (
     "upperRec = 0.0",
     "# Ancestral theta multiplier:",
     "#  product of this and upperTheta is the upper bound of ancestral theta",
-    "upperAncPopSize = 0.5",
+    "upperAncPopSize = 0.25",
     "reps = 1000000",
     "# Most users don't want to constrain the subparameters",
     "constrain = 0",
@@ -437,12 +437,11 @@ sub EstimateRangeOfThetaPerSite {
 	push @thetaPerSite, ($piw1 / $thetaScaler, $piw2 / $thetaScaler);
     }
 
-    # These padding for the lower and upper bound is pretty arbitrary
     my $minT = Min(@thetaPerSite);
-    $minT = Max($minT * 0.0001, 0.00000004);
-    # larger of the two values are taken. 4*10^-8 is from mu = 10^(-9), Ne=10
+    $minT = Max($minT * 0.0001, 0.00000000004);
+    # larger of the two values are taken. 4*10^-11 is from mu = 10^(-11), Ne=1
 
-    return ($minT, Max(@thetaPerSite) * 2);
+    return ($minT, Max(@thetaPerSite) * 4);
 }
 
 # The argument of this function is the filename of msbayes

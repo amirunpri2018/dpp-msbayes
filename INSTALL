@@ -38,7 +38,6 @@ I had to statically link the gsl libraries and tell the compiler where
 they were.
 ###############################################################################
 
-
 ## 1 ## REQUIREMENTS:
 
 C compiler:
