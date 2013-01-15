@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#! /usr/bin/env perl -w
 
 use IO::File;
 use locale;

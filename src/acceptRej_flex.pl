@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#! /usr/bin/env perl -w
 
 # acceptRej_flex.pl
 #
