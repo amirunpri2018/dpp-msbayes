@@ -1,5 +1,6 @@
-#! /usr/bin/env perl -w
+#! /usr/bin/env perl
 
+use warnings;
 use strict;
 
 my $usage = "\nUsage: $0 [-h] [-l 'model0,model1,...'] file1 [file2...]\n\n".

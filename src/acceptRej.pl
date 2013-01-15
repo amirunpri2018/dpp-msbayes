@@ -1,4 +1,4 @@
-#! /usr/bin/env perl -w
+#! /usr/bin/env perl
 
 # acceptRej.pl
 #
@@ -21,6 +21,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA
 
+use warnings;
 
 my $pdfOut = "figs.pdf";  # default pdf output file name
 my $uncorrectedPosterior = "./uncorrected_posterior.txt";  # default pdf output file name

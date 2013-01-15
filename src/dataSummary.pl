@@ -1,7 +1,8 @@
-#! /usr/bin/env perl -w
+#! /usr/bin/env perl
 
 use IO::File;
 use locale;
+use warnings;
 
 my @ssNameVect=
   ( "pi.b", "pi.w", "pi", "wattTheta", "pi.net", "tajD", "tajD.denom",

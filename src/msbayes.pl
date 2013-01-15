@@ -1,4 +1,4 @@
-#! /usr/bin/env perl -w
+#!/usr/bin/env perl
 
 # msbayes.pl
 #
@@ -20,6 +20,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA
+
+use warnings;
 
 my $usage="Usage: $0 [-hd] [-b observedSummaryStatistics] [-r numSims] [-c config] [-i IMconfig] [-o outputFileName] [-s sumStatsSortPattern] [-S seed]\n".
     "  -h: help\n".

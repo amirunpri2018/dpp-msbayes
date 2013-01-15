@@ -1,4 +1,4 @@
-#! /usr/bin/env perl -w
+#! /usr/bin/env perl
 
 # obsSumStats.pl
 #
@@ -31,6 +31,8 @@
 # influence the output.  Thre of them (-t, 12.0 and 3.1) influence the
 # 3rd column of summary stat vector, but this value is not used in later 
 # analysis.
+
+use warnings;
 
 my $headerTmpl = <<HEADER_TEMPLATE;
 ./msDQH 1 DUM_TotSampleSize 1 -t 4.0 -Q 2.0 0.25 0.25 0.25 0.25 -H 999.0 -r 0 DUM_SeqLen -D 5 2 DUM_SampleSize1 DUM_SampleSize2 0 I 0.0 1.0 1.0 0.9 0.9 3.1 2 1 0 0 1 0 I 0.0 Nc 0.4 0.09 12.0 1 Nc 0.03 DUM_SeqLen 1 Nc 0.03 DUM_TaxonPairID 1 Nc 0.03 DUM_NumTaxonPairs
