@@ -45,6 +45,7 @@ my $usage="Usage: $0 [-hd] [-b observedSummaryStatistics] [-r numSims] [-c confi
     "          7: use first 1 moment (mean) for each summary statistics (default)\n".
     "  -S: set the initial seed (but not verbose like -d)\n" .
     "      By default (without -s), unique seed is automaically set from time\n".
+    "  -m: Model index.\n" .
     "  -p: Write parameter values of prior draws. Default is to only write tau vector summary.\n" .
     "  -d: debug (msprior and msDQH uses the same initial seed = 1)\n";
 
@@ -57,8 +58,8 @@ use IPC::Open2;
 
 use Getopt::Std;
 
-our ($opt_h, $opt_d, $opt_o, $opt_b, $opt_c, $opt_i, $opt_r, $opt_S, $opt_s, $opt_p);
-getopts('hdo:b:c:i:r:S:s:p') || die "$usage\n";
+our ($opt_h, $opt_d, $opt_o, $opt_b, $opt_c, $opt_i, $opt_r, $opt_S, $opt_s, $opt_m, $opt_p);
+getopts('hdo:b:c:i:r:S:s:m:p') || die "$usage\n";
 die "$usage\n" if (defined($opt_h));
 
 my $defaultOutFile = "Prior_SumStat_Outfile";
@@ -140,6 +141,11 @@ if (defined($opt_S) || defined($opt_d)) {  # set the msDQH use the same seeds
     } else {
 	srand(1);
     }
+}
+
+if (defined($opt_m)) {
+    die "$usage\nError: Model index (-m) must be non-negative integer"
+    if ($opt_m !~ /^\d+$/ || $opt_m < 0);
 }
 
 #### Find programs
@@ -306,6 +312,9 @@ while (<RAND>) {
                 $headString .= "\tPRI.aTheta.$suffix";
             }
         }
+        if (defined($opt_m)) {
+            $headString .= "\tPRI.model";
+        }
 	    $headString .= "\tPRI.Psi\tPRI.var.t\tPRI.E.t\tPRI.omega";
 	    push @priorCache, $headString;
 	    $prepPriorHeader = 0;  # print this only 1 time
@@ -324,6 +333,9 @@ while (<RAND>) {
 	}
     if (defined($opt_p)) {
         push @tmpPrior, GetTauVector(\@tauTbl, \@psiTbl), @d1ThetaTbl, @d2ThetaTbl, @aThetaTbl;
+    }
+    if (defined($opt_m)){
+        push @tmpPrior, $opt_m;
     }
 	
 	# PRI.Psi PRI.var.t PRI.E.t PRI.omega 
