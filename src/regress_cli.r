@@ -5,7 +5,8 @@
 
 stdAnalysis <- function(obs.infile,
                         sim.infile,
-                        out.file="results.txt",
+                        out.file="posterior-summary.txt",
+                        adjusted_path="adjusted-posterior-samples.txt",
                         tol=1,
                         used.stats=c("pi","wattTheta","pi.net","tajD.denom"),
                         rejmethod=F,
@@ -166,6 +167,7 @@ stdAnalysis <- function(obs.infile,
             post.modes[p] = m[1]
         }
     }
+    adjusted_samples = list()
     sink(out.file)
     for (p in prior.names.discrete) {
         pname = sub("[.]", "_", sub("PRI[.]", "", p))
@@ -184,18 +186,20 @@ stdAnalysis <- function(obs.infile,
             post.prob.matrix = result[[p]]$x2
             post.prob.vector = as.vector(post.prob.matrix)
             names(post.prob.vector) = colnames(post.prob.matrix)
-            cat("[", pname, "_posterior_probabilities]\n", sep="")
             m = as.numeric(names(post.prob.vector)[which.max(post.prob.vector)])
-            cat("mode = ", m, "\n", sep="")
+            cat("\t[[adjusted_results]]\n")
+            cat("\tmode = ", m, "\n", sep="")
+            cat("\t\t[[[post_probs]]]\n")
             write_probabilites(post.prob.vector, values)
         }
         # m = as.numeric(colnames(post.probs)[which.max(post.probs)])
         # cat("mode = ", m, "\n", sep="")
         raw.post.counts = table(simDat[,p])
         raw.post.prob.table = raw.post.counts / sum(raw.post.counts)
-        cat("[", pname, "_unadjusted_posterior_probabilities]\n", sep="")
         m = as.numeric(names(raw.post.prob.table)[which.max(raw.post.prob.table)])
-        cat("mode = ", m, "\n", sep="")
+        cat("\t[[unadjusted_results]]\n")
+        cat("\tmode = ", m, "\n", sep="")
+        cat("\t\t[[[post_probs]]]\n")
         write_probabilites(raw.post.prob.table, values)
     }
     for (p in prior.names.cont) {
@@ -205,26 +209,32 @@ stdAnalysis <- function(obs.infile,
         cat("mean = ", mean(result[[p]]$x), "\n", sep="")
         cat("median = ", median(result[[p]]$x), "\n", sep="")
         quants = quantile(result[[p]]$x, prob=c(0.025,0.975))
-        cat("quantile_0.025 = ", quants[[1]], "\n", sep="")
-        cat("quantile_0.975 = ", quants[[2]], "\n", sep="")
+        cat("\t[[quantiles]]\n")
+        cat("\t'0.025' = ", quants[[1]], "\n", sep="")
+        cat("\t'0.975' = ", quants[[2]], "\n", sep="")
         if (p == "PRI.omega") {
             omega.post = result[[p]]$x
             omega.prob = length(omega.post[omega.post<0.01]) / length(omega.post)
-            cat("posterior_probability_simultaneous = ", omega.prob, "\n", sep="")
+            cat("post_prob_zero = ", omega.prob, "\n", sep="")
         }
-        cat("posterior = ")
-        cat(result[[p]]$x, sep=",")
-        cat("\n")
+        adjusted_samples[[p]] = result[[p]]$x
     }
     sink()
-
+    adj_samples = data.frame(adjusted_samples)
+    write.table(adj_samples,
+            adjusted_path,
+            sep='\t',
+            row.names=F,
+            col.names=T,
+            quote=F,
+            fileEncoding='UTF-8')
 }
 
 write_probabilites = function(probs, n) {
     for (i in n) {
         val.str = as.character(i)
         if (val.str %in% names(probs)) {
-            cat(i, " = ", probs[val.str], "\n", sep="")
+            cat("\t\t", i, " = ", probs[val.str], "\n", sep="")
         } else {
         cat(i, " = 0.0\n", sep="")
         }
@@ -779,10 +789,32 @@ option_list = list(
     make_option("--observed-path", type="character", dest="observed_path",
             help="Path to file with observed summary statistics."),
     make_option("--posterior-path", type="character", dest="posterior_path",
-            help="Path to file with uncorrected posterior samples."),
-    make_option(c("-o", "--output-path"), type="character",
-            dest="output_path", default="results.txt",
-            help="Path to desired output file (default: './results.txt')."),
+            help="Path to file with unadjusted posterior samples."),
+    make_option("--summary-path", type="character",
+            dest="summary_path", default="posterior-summary.txt",
+            help=paste(
+                "Path to posterior summary output file. This file will",
+                "contain summary statistics (i.e., mean, median, mode,",
+                "CIs) for the regression-adjusted posterior samples of",
+                "each continuous parameter specified by",
+                "`--continuous-prefixes'. It will also contain the posterior",
+                "probabilities for discrete parameters specified by the",
+                "'--discrete-prefixes' option. It will also indicate whether",
+                "the multinomial logistic regression of each discrete",
+                "parameter failed. The unadjusted probabilities are always",
+                "reported, and the adjusted values are reported if the",
+                "regression worked. This file is formatted as a Python",
+                "config file for easy parsing.",
+                sep = '\n\t\t')),
+    make_option(c("--adjusted-path"), type="character",
+            dest="adjusted_path", default="adjusted-posterior-samples.txt",
+            help=paste(
+                "Path to output file for the regression-adjusted",
+                "posterior samples. This will contain the adjusted values",
+                "for continuous parameters specified with the",
+                "'--continuous-prefixes' option. The default is",
+                "'./adjusted-posterior-samples.txt'.",
+                sep = '\n\t\t')),
     make_option(c("-c", "--continuous-prefixes"), type="character",
             default="PRI.omega,PRI.E.t",
             dest="continuous_prefixes",
@@ -805,7 +837,7 @@ option_list = list(
             default="pi,wattTheta,pi.net,tajD.denom",
             dest="stat_prefixes",
             help=paste(
-                "The comma-separated prefixes of summary statistcs",
+                "The comma-separated prefixes of summary statistics",
                 "to use in the analysis. The default is",
                 "'pi,wattTheta,pi.net,tajD.denom'.",
                 sep = '\n\t\t')))
@@ -827,7 +859,8 @@ if (options$tolerance < 1.0) {
 
 res = stdAnalysis(obs.infile=options$observed_path,
 		  sim.infile=options$posterior_path,
-		  out.file=options$output_path,
+		  out.file=options$summary_path,
+          adjusted_path=options$adjusted_path,
           tol=options$tolerance,
           used.stats=stats,
           rejmethod=rejmethod,
