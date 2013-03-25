@@ -1,220 +1,268 @@
 #!/usr/bin/env Rscript
 
-suppressPackageStartupMessages(library("optparse"))
-option_list <- list(
-    make_option("--observed_path", type="character", dest="observed_path",
-        help="Path to file with observed sumstats."),
-    make_option("--posterior_path", type="character", dest="posterior_path",
-        help="Path to file with uncorrected posterior samples."),
-    make_option(c("-o", "--output_path"), type="character",
-        dest="output_path", default="results.txt",
-        help="Path to desired output file.")
-)
-options <- parse_args(OptionParser(option_list=option_list))
+##############################################################################
+## Functions
 
-library(VGAM, warn.conflicts=F)
-library(KernSmooth)
-library(locfit) 
-
-stdAnalysis <- function(obs.infile, sim.infile,
+stdAnalysis <- function(obs.infile,
+                        sim.infile,
                         out.file="results.txt",
                         tol=1,
                         used.stats=c("pi","wattTheta","pi.net","tajD.denom"),
-                        rejmethod=F, pre.rejected=T,
-                        return.res=F
+                        rejmethod=F,
+                        continuous_prefixes=c("PRI.E.t", "PRI.omega"),
+                        discrete_prefixes=c("PRI.Psi", "PRI.model")
                         ) {
-  simDat <- getData(sim.infile)
-  
-  nPairs <- simDat[["numTaxonPairs"]]
-  params.from.priorDistn <- simDat[["prior.names"]]
-  summary.stat.names <- simDat[["summary.stats"]]
-  simDat <- simDat[["dat"]]
+    header = parse_header(sim.infile)
+    simDat <- getData(sim.infile)
 
-  # if tol is NA, set default tol to get 1000 best matches.
-  if (is.na(tol)) {
-    tol <- 1000/nrow(simDat)
-  }
+    nPairs <- simDat[["numTaxonPairs"]]
+    params.from.priorDistn <- simDat[["prior.names"]]
+    summary.stat.names <- simDat[["summary.stats"]]
+    simDat <- simDat[["dat"]]
 
-  # construct the column names
-  usedColNames <- as.vector(sapply(used.stats, paste,
-                                   1:nPairs, sep="."))
-
-  #load OBSERVED summary stat vector
-  obsDat <-getData(obs.infile)
-  if (obsDat[["numTaxonPairs"]] != nPairs) {
-    cat("ERROR: The number of taxon pairs are not same between the\n      ",
-        "observed data,", obsDat$numTaxonPairs, "pairs, and simulated data,",
-        nPairs, "pairs.\n")
-    return(NA)
-  }
-  obsDat <- obsDat[["dat"]]
-
-  # acceptance/regression, .... ie  the meat
-  # The 1st column is PRI.numTauClass, which should be removed from analysis
-  result <- list(prior.names=
-                 params.from.priorDistn[params.from.priorDistn != "PRI.numTauClass"])
-
-  noPsiAnalysis <- F
-  constrained = F
-  prior.names.cont = result$prior.names[- grep("^PRI[.]Psi", result$prior.names)]
-  prior.names.discrete = result$prior.names[  grep("^PRI[.]Psi", result$prior.names)]
-  prior.names.pretty = list(PRI.Psi="psi",
-			    PRI.omega="omega",
-			    PRI.E.t="tau_mean",
-			    PRI.var.t="tau_var")
-  # set min, max boundary of prior parameters, and verbose print message
-  # PRI.omega >= 0, PRI.E.t >= 0, PRI.Psi > 0
-  min.val <- list(PRI.Psi = 1, PRI.var.t = 0, PRI.E.t = 0, PRI.omega = 0 )
-  max.val <- list(PRI.Psi = nPairs)
-  verbose.print <- list(PRI.omega = "(=Var(t)/E(t))",
-                        PRI.Psi="(= number of possible divtimes)",
-                        PRI.E.t="(= E(t))")
-  # PRI.Tau* >= 0
-  tauNames <- params.from.priorDistn[grep("^PRI[.]Tau", params.from.priorDistn)]
-  if(length(tauNames) > 0) {
-    temp.val <- sapply(rep(0, length(tauNames)), list)
-    names(temp.val) <- tauNames
-    min.val <- c(min.val, temp.val)
-  }
-  # 1 <= PRI.Psi.* <= nPairs - (numTauClasss - 1)
-  if(constrained) {
-    psiNames <- params.from.priorDistn[grep("^PRI[.]Psi[.]", params.from.priorDistn)]
-    temp.val <- sapply(rep(1, length(psiNames)), list)
-    names(temp.val) <- psiNames
-    min.val <- c(min.val, temp.val)
-    # I could use length of psiNames below, instead of simDat[1,1] to get numTauClass
-    temp.val <- sapply(rep(nPairs - (simDat[1,"PRI.numTauClass"]-1), length(psiNames)), list)
-    names(temp.val) <- psiNames
-    max.val <- c(max.val, temp.val)
-    
-    temp.val <- sapply(rep("(= number of taxon pairs that divergence at corresponding tau)", length(psiNames)), list)
-    names(temp.val) <- psiNames
-    verbose.print <- c(verbose.print, temp.val)
-  }
-  
-  # run makepdANY for each para for continuous
-  for (i in 1:length(prior.names.cont)) {
-    thisPriorName <- prior.names.cont[i]
-    # might need to work on constrained vs unconstrained here
-    temp <- list(makepdANY(as.vector(obsDat[1,usedColNames],mode="numeric"),
-                           simDat[,thisPriorName], simDat[,usedColNames], tol,
-                           rep(T,len=nrow(simDat)),rejmethod=rejmethod))
-    names(temp) <- thisPriorName
-    
-    # absorbing boundary
-    if ( !  is.null(min.val[[thisPriorName]])) {
-      temp[[thisPriorName]]$x[which(temp[[thisPriorName]]$x<min.val[[thisPriorName]])] <- min.val[[thisPriorName]]
+    nModels = NULL
+    model_idx = grep('PRI.model', names(simDat), ignore.case=TRUE)
+    if (length(model_idx) == 1) {
+        models = unique(simDat[,model_idx])
     }
-    if ( !  is.null(max.val[[thisPriorName]])) {
-      temp[[thisPriorName]]$x[which(temp[[thisPriorName]]$x>max.val[[thisPriorName]])] <- max.val[[thisPriorName]]
+    if (length(models) < 2) {
+        discrete_prefixes = discrete_prefixes[grep(
+                'model',
+                discrete_prefixes,
+                invert=T,
+                ignore.case=T)]
     }
 
-    result <- c(result, temp)
-  }
+    # if tol is NA, set default tol to get 1000 best matches.
+    if (is.na(tol)) {
+      tol <- 1000/nrow(simDat)
+    }
 
-  # deal with the discrete priors
-  calmod.fail <- c()
-  if(length(prior.names.discrete) > 0) {
-    for (i in 1:length(prior.names.discrete)) {
-      thisPriorName <- prior.names.discrete[i]
-      calmod.res <- try(calmod(as.vector(obsDat[1,usedColNames],mode="numeric"),
-                               simDat[,thisPriorName], simDat[,usedColNames], tol,
-                               rep(T,len=nrow(simDat)),rejmethod=rejmethod))
-      if(class(calmod.res) == "try-error") {
-        calmod.res <- calmod(as.vector(obsDat[1,usedColNames],mode="numeric"),
+    # construct the column names
+    usedColNames <- as.vector(sapply(used.stats, paste,
+                                     1:nPairs, sep="."))
+
+    #load OBSERVED summary stat vector
+    obsDat <-getData(obs.infile, header=header)
+    if (obsDat[["numTaxonPairs"]] != nPairs) {
+      cat("ERROR: The number of taxon pairs are not same between the\n      ",
+          "observed data,", obsDat$numTaxonPairs, "pairs, and simulated data,",
+          nPairs, "pairs.\n")
+      return(NA)
+    }
+    obsDat <- obsDat[["dat"]]
+
+    # acceptance/regression, .... ie  the meat
+    # The 1st column is PRI.numTauClass, which should be removed from analysis
+    result <- list(prior.names=
+                   params.from.priorDistn[params.from.priorDistn != "PRI.numTauClass"])
+
+    noPsiAnalysis <- F
+    constrained = F
+    prior.names = result$prior.names
+    continuous_patterns = gsub('[.]', '[.]', continuous_prefixes)
+    discrete_patterns = gsub('[.]', '[.]', discrete_prefixes)
+    continuous_indices = get_indices_of_patterns(
+            target_vector = prior.names,
+            patterns = continuous_patterns,
+            ignore_case = TRUE,
+            sort_indices = TRUE)
+    discrete_indices = get_indices_of_patterns(
+            target_vector = prior.names,
+            patterns = discrete_patterns,
+            ignore_case = TRUE,
+            sort_indices = TRUE)
+    prior.names.cont = prior.names[continuous_indices]
+    prior.names.discrete = prior.names[discrete_indices]
+    # prior.names.pretty = list(PRI.Psi="psi",
+    #   		    PRI.omega="omega",
+    #   		    PRI.E.t="tau_mean",
+    #   		    PRI.var.t="tau_var")
+    # set min, max boundary of prior parameters, and verbose print message
+    # PRI.omega >= 0, PRI.E.t >= 0, PRI.Psi > 0
+    min.val <- list(PRI.Psi = 1, PRI.var.t = 0, PRI.E.t = 0, PRI.omega = 0 )
+    max.val <- list(PRI.Psi = nPairs)
+    verbose.print <- list(PRI.omega = "(=Var(t)/E(t))",
+                          PRI.Psi="(= number of possible divtimes)",
+                          PRI.E.t="(= E(t))")
+    # PRI.Tau* >= 0
+    tauNames <- params.from.priorDistn[grep("^PRI[.]Tau", params.from.priorDistn)]
+    if(length(tauNames) > 0) {
+      temp.val <- sapply(rep(0, length(tauNames)), list)
+      names(temp.val) <- tauNames
+      min.val <- c(min.val, temp.val)
+    }
+    # 1 <= PRI.Psi.* <= nPairs - (numTauClasss - 1)
+    if(constrained) {
+      psiNames <- params.from.priorDistn[grep("^PRI[.]Psi[.]", params.from.priorDistn)]
+      temp.val <- sapply(rep(1, length(psiNames)), list)
+      names(temp.val) <- psiNames
+      min.val <- c(min.val, temp.val)
+      # I could use length of psiNames below, instead of simDat[1,1] to get numTauClass
+      temp.val <- sapply(rep(nPairs - (simDat[1,"PRI.numTauClass"]-1), length(psiNames)), list)
+      names(temp.val) <- psiNames
+      max.val <- c(max.val, temp.val)
+      
+      temp.val <- sapply(rep("(= number of taxon pairs that divergence at corresponding tau)", length(psiNames)), list)
+      names(temp.val) <- psiNames
+      verbose.print <- c(verbose.print, temp.val)
+    }
+    
+    # run makepdANY for each para for continuous
+    for (i in 1:length(prior.names.cont)) {
+      thisPriorName <- prior.names.cont[i]
+      # might need to work on constrained vs unconstrained here
+      temp <- list(makepdANY(as.vector(obsDat[1,usedColNames],mode="numeric"),
                              simDat[,thisPriorName], simDat[,usedColNames], tol,
-                             rep(T,len=nrow(simDat)),rejmethod=T)
-        calmod.fail <- c(calmod.fail, thisPriorName)
-        this.failed <- T
-      } else {
-        this.failed <- F
-      }
-      temp <- list(calmod.res)
+                             rep(T,len=nrow(simDat)),rejmethod=rejmethod))
       names(temp) <- thisPriorName
       
-      if (rejmethod || this.failed) {
-        # with simple rejection, $x contains the accepted values
-        # Need to copy to $vals to make the later handling easier.
-        temp[[thisPriorName]]$vals <- temp[[thisPriorName]]$x
+      # absorbing boundary
+      if ( !  is.null(min.val[[thisPriorName]])) {
+        temp[[thisPriorName]]$x[which(temp[[thisPriorName]]$x<min.val[[thisPriorName]])] <- min.val[[thisPriorName]]
       }
+      if ( !  is.null(max.val[[thisPriorName]])) {
+        temp[[thisPriorName]]$x[which(temp[[thisPriorName]]$x>max.val[[thisPriorName]])] <- max.val[[thisPriorName]]
+      }
+
       result <- c(result, temp)
     }
-  }
-  
-  post.modes = list()
-  for (p in prior.names.cont) {
-      m = try(loc1stats(result[[p]]$x,prob=0.95),silent=T)
-      if (class(m) == "try-error") {
-          post.modes[p] = "None"
-      } else {
-          post.modes[p] = m[1]
+
+    # deal with the discrete priors
+    calmod.fail <- c()
+    if(length(prior.names.discrete) > 0) {
+      for (i in 1:length(prior.names.discrete)) {
+        thisPriorName <- prior.names.discrete[i]
+        calmod.res <- try(calmod(as.vector(obsDat[1,usedColNames],mode="numeric"),
+                                 simDat[,thisPriorName], simDat[,usedColNames], tol,
+                                 rep(T,len=nrow(simDat)),rejmethod=rejmethod))
+        if(class(calmod.res) == "try-error") {
+          calmod.res <- calmod(as.vector(obsDat[1,usedColNames],mode="numeric"),
+                               simDat[,thisPriorName], simDat[,usedColNames], tol,
+                               rep(T,len=nrow(simDat)),rejmethod=T)
+          calmod.fail <- c(calmod.fail, thisPriorName)
+          this.failed <- T
+        } else {
+          this.failed <- F
+        }
+        temp <- list(calmod.res)
+        names(temp) <- thisPriorName
+        
+        # if (rejmethod || this.failed) {
+          # with simple rejection, $x contains the accepted values
+          # Need to copy to $vals to make the later handling easier.
+          temp[[thisPriorName]]$vals <- temp[[thisPriorName]]$x
+        # }
+        result <- c(result, temp)
       }
-  }
-  sink(out.file)
-  cat("[psi]\n")
-  if ("PRI.Psi" %in% calmod.fail) {
-      cat("failed = True\n")
-  } else {
-      cat("failed = False\n")
-      psi.post.probs = result[["PRI.Psi"]]$x2
-      m = as.numeric(colnames(psi.post.probs)[which.max(psi.post.probs)])
-      cat("mode = ", m, "\n", sep="")
-      cat("[psi_posterior_probabilities]\n")
-      for (i in 1:nPairs) {
-          psi.str = as.character(i)
-          if (psi.str %in% colnames(psi.post.probs)) {
-              cat(i, " = ", psi.post.probs[,psi.str], "\n", sep="")
-          } else {
-	      cat(i, " = 0.0\n", sep="")
-          }
-      }
-  }
-  for (p in prior.names.cont) {
-      cat("[", prior.names.pretty[[p]], "]\n", sep="")
-      cat("mode = ", post.modes[[p]], "\n", sep="")
-      cat("mean = ", mean(result[[p]]$x), "\n", sep="")
-      cat("median = ", median(result[[p]]$x), "\n", sep="")
-      quants = quantile(result[[p]]$x, prob=c(0.025,0.975))
-      cat("quantile_0.025 = ", quants[[1]], "\n", sep="")
-      cat("quantile_0.975 = ", quants[[2]], "\n", sep="")
-      if (p == "PRI.omega") {
-          omega.post = result[[p]]$x
-          omega.prob = length(omega.post[omega.post<0.01]) / length(omega.post)
-          cat("posterior_probability_simultaneous = ", omega.prob, "\n", sep="")
-      }
-      cat("posterior = ")
-      cat(result[[p]]$x, sep=",")
-      cat("\n")
-  }
-  sink()
+    }
+    
+    post.modes = list()
+    for (p in prior.names.cont) {
+        m = try(loc1stats(result[[p]]$x,prob=0.95),silent=T)
+        if (class(m) == "try-error") {
+            post.modes[p] = "None"
+        } else {
+            post.modes[p] = m[1]
+        }
+    }
+    sink(out.file)
+    for (p in prior.names.discrete) {
+        pname = sub("[.]", "_", sub("PRI[.]", "", p))
+        values = c(1:100)
+        if (regexpr('psi', p, ignore.case=TRUE)[1] != -1) {
+            values = c(1:nPairs)
+        }
+        if (regexpr('model', p, ignore.case=TRUE)[1] != -1) {
+            values = models
+        }
+        cat("[", pname, "]\n", sep="")
+        if (p %in% calmod.fail) {
+            cat("failed = True\n")
+        } else {
+            cat("failed = False\n")
+            post.prob.matrix = result[[p]]$x2
+            post.prob.vector = as.vector(post.prob.matrix)
+            names(post.prob.vector) = colnames(post.prob.matrix)
+            cat("[", pname, "_posterior_probabilities]\n", sep="")
+            m = as.numeric(names(post.prob.vector)[which.max(post.prob.vector)])
+            cat("mode = ", m, "\n", sep="")
+            write_probabilites(post.prob.vector, values)
+        }
+        # m = as.numeric(colnames(post.probs)[which.max(post.probs)])
+        # cat("mode = ", m, "\n", sep="")
+        raw.post.counts = table(simDat[,p])
+        raw.post.prob.table = raw.post.counts / sum(raw.post.counts)
+        cat("[", pname, "_unadjusted_posterior_probabilities]\n", sep="")
+        m = as.numeric(names(raw.post.prob.table)[which.max(raw.post.prob.table)])
+        cat("mode = ", m, "\n", sep="")
+        write_probabilites(raw.post.prob.table, values)
+    }
+    for (p in prior.names.cont) {
+        pname = sub("[.]", "_", sub("PRI[.]", "", p))
+        cat("[", pname, "]\n", sep="")
+        cat("mode = ", post.modes[[p]], "\n", sep="")
+        cat("mean = ", mean(result[[p]]$x), "\n", sep="")
+        cat("median = ", median(result[[p]]$x), "\n", sep="")
+        quants = quantile(result[[p]]$x, prob=c(0.025,0.975))
+        cat("quantile_0.025 = ", quants[[1]], "\n", sep="")
+        cat("quantile_0.975 = ", quants[[2]], "\n", sep="")
+        if (p == "PRI.omega") {
+            omega.post = result[[p]]$x
+            omega.prob = length(omega.post[omega.post<0.01]) / length(omega.post)
+            cat("posterior_probability_simultaneous = ", omega.prob, "\n", sep="")
+        }
+        cat("posterior = ")
+        cat(result[[p]]$x, sep=",")
+        cat("\n")
+    }
+    sink()
 
 }
 
-
+write_probabilites = function(probs, n) {
+    for (i in n) {
+        val.str = as.character(i)
+        if (val.str %in% names(probs)) {
+            cat(i, " = ", probs[val.str], "\n", sep="")
+        } else {
+        cat(i, " = 0.0\n", sep="")
+        }
+    }
+}
 # This function takes an file name as an argument, read in the data
 # from the file, and assign appropriate names.
 # Returns a list(dat, numTaxonPairs)
 # dat is the data.frame, numTaxonPairs is an integer indicating the number
 # of taxon pairs.
 
-getData <- function (infile) {
-  first.line <- scan(infile, what="character", nlines=1, quiet=T) #header
-  dat <- scan(infile, skip=1, quiet=T)
-  dat <- data.frame(matrix(dat, ncol=length(first.line), byrow=T))
-  names(dat) <- first.line  # assign the column names to the data.frame
+parse_header = function(infile) {
+    header = scan(infile, what="character", nlines=1, quiet=T)
+    return(header)
+}
 
-  prior.names <- first.line[grep("^PRI[.]", first.line)]
-  num.prior <- length(prior.names)
-  # sum stats column-names (header) have the following form
-  #   c("pi.b.1", "pi.b.2", "pi.b.3", "pi.w.1", "pi.w.2", "pi.w.3", ...)
-  # Here, I'm getting rid of .digits part and taking unique names.
-  sum.stat.names <- unique(sub("[.][0-9]+$", "", first.line[(num.prior+1):length(first.line)],fixed=F))  
+getData <- function (infile, header=NULL) {
+    first.line = header
+    skip = 0
+    if (is.null(header)) {
+        first.line <- scan(infile, what="character", nlines=1, quiet=T) #header
+        skip = 1
+    }
+    dat <- scan(infile, skip=skip, quiet=T)
+    dat <- data.frame(matrix(dat, ncol=length(first.line), byrow=T))
+    names(dat) <- first.line  # assign the column names to the data.frame
 
-  # number of taxon pairs can be calculated from
-  nTaxPairs <-
-    (ncol(dat) - num.prior) / (length(sum.stat.names))
+    prior.names <- first.line[grep("^PRI[.]", first.line)]
+    num.prior <- length(prior.names)
+    # sum stats column-names (header) have the following form
+    #   c("pi.b.1", "pi.b.2", "pi.b.3", "pi.w.1", "pi.w.2", "pi.w.3", ...)
+    # Here, I'm getting rid of .digits part and taking unique names.
+    sum.stat.names <- unique(sub("[.][0-9]+$", "", first.line[(num.prior+1):length(first.line)],fixed=F))  
 
-  return (list(dat=dat, numTaxonPairs=nTaxPairs, prior.names=prior.names, summary.stats=sum.stat.names))
+    # number of taxon pairs can be calculated from
+    nTaxPairs = (ncol(dat) - num.prior) / (length(sum.stat.names))
+
+    return (list(dat=dat, numTaxonPairs=nTaxPairs, prior.names=prior.names, summary.stats=sum.stat.names))
 }
 
 
@@ -223,79 +271,78 @@ getData <- function (infile) {
 # -----------------------------------------------------------------------
 # horizontal view
 plotKernDensity <- function (res1, res2, title="q1 and q2", xlab="q1", ylab="q2") {
-  bwq1 <- try(dpik(res1$x),silent=T)
-  bwq2 <- try(dpik(res2$x),silent=T)
-  # I think bandwidth choice by dpik may fail if there aren't enough unique
-  # values (e.g. mostly 0), I'm not sure following is ok or not, but
-  # bw.nrd0 seems to be more robust
-  if(class(bwq1) == "try-error") {
-    cat("INFO: In plotKernDensity(), simpler bandwidth selection used for ",
-            xlab, "\n", file=stderr())
-    bwq1 <- bw.nrd0(res1$x)
-  }
-  if(class(bwq2) == "try-error") {
-    cat("INFO: In plotKernDensity(), simpler bandwidth selection used for ",
-            ylab, "\n", file=stderr())
-    bwq2 <- bw.nrd0(res1$x)
-  }  
-  x <- cbind(res1$x, res2$x)
-  est <- bkde2D(x, bandwidth=c(bwq1,bwq2))
-  par(ask = FALSE)
-  persp(est$x1, est$x2, est$fhat, theta = 145, phi = 25, col = "lightblue1",
-        xlab=xlab, ylab =ylab,
-        zlab = paste("Pr(", xlab, ", ", ylab, "| X)",sep=""),
-        main = paste("Joint Density of", title), axes = TRUE, nticks = 5,
-        ticktype = "detailed", ltheta = -135, lphi = 145, shade = TRUE)
+    bwq1 <- try(dpik(res1$x),silent=T)
+    bwq2 <- try(dpik(res2$x),silent=T)
+    # I think bandwidth choice by dpik may fail if there aren't enough unique
+    # values (e.g. mostly 0), I'm not sure following is ok or not, but
+    # bw.nrd0 seems to be more robust
+    if(class(bwq1) == "try-error") {
+      cat("INFO: In plotKernDensity(), simpler bandwidth selection used for ",
+              xlab, "\n", file=stderr())
+      bwq1 <- bw.nrd0(res1$x)
+    }
+    if(class(bwq2) == "try-error") {
+      cat("INFO: In plotKernDensity(), simpler bandwidth selection used for ",
+              ylab, "\n", file=stderr())
+      bwq2 <- bw.nrd0(res1$x)
+    }  
+    x <- cbind(res1$x, res2$x)
+    est <- bkde2D(x, bandwidth=c(bwq1,bwq2))
+    par(ask = FALSE)
+    persp(est$x1, est$x2, est$fhat, theta = 145, phi = 25, col = "lightblue1",
+          xlab=xlab, ylab =ylab,
+          zlab = paste("Pr(", xlab, ", ", ylab, "| X)",sep=""),
+          main = paste("Joint Density of", title), axes = TRUE, nticks = 5,
+          ticktype = "detailed", ltheta = -135, lphi = 145, shade = TRUE)
 }
 
 
 make.hist <-function(vect, res.makepd, title="", xlim, ...) {
-  #old.mfcol <- par()$mfcol
-#  par(mfcol=c(3,1))
-bw_vect<-max(vect)/100
-bw_res.makepd<-max(res.makepd$x)/50
-  hist.col = "white"
-  if(missing(xlim)) {
-    hist(vect,col=hist.col,border ="white",xlim=c(0,max(vect)),ylim=c(0,max(density(vect,bw=bw_vect)$y,density(res.makepd$x,bw=bw_res.makepd)$y)),prob=TRUE,main=paste(title),xlab=title, ...)
-  } else {
-    hist(vect,col=hist.col,freq=F,xlim=xlim,prob=TRUE,main=paste(title),
-       xlab=title, ...)
-  }
-  lines(density(vect,bw=bw_vect),lty=2,col="red",pch=3)
-#  if(missing(xlim)) {
-#    hist(res.makepd$x,col="blue",prob=TRUE,freq=F,xlim=c(0,max(vect)),
-#         main=paste(title, ": Posterior Dist'n "), xlab=title, ...)
-#  } else {
-#    hist(res.makepd$x,col=hist.col,xlim=xlim,freq=F,prob=TRUE,
-#         main=paste(title, ": Posterior Dist'n "), xlab=title, ...)
-#  
-  lines(density(res.makepd$x,bw=bw_res.makepd),lty=1,col="blue",pch=3)
-  #par(mfcol=old.mfcol)
-legend("topright",c("Prior","Posterior"),text.col=c("red","blue"),lty=c(2,1),col=c("red","blue"))
-
+      #old.mfcol <- par()$mfcol
+    #  par(mfcol=c(3,1))
+    bw_vect<-max(vect)/100
+    bw_res.makepd<-max(res.makepd$x)/50
+      hist.col = "white"
+      if(missing(xlim)) {
+        hist(vect,col=hist.col,border ="white",xlim=c(0,max(vect)),ylim=c(0,max(density(vect,bw=bw_vect)$y,density(res.makepd$x,bw=bw_res.makepd)$y)),prob=TRUE,main=paste(title),xlab=title, ...)
+      } else {
+        hist(vect,col=hist.col,freq=F,xlim=xlim,prob=TRUE,main=paste(title),
+           xlab=title, ...)
+      }
+      lines(density(vect,bw=bw_vect),lty=2,col="red",pch=3)
+    #  if(missing(xlim)) {
+    #    hist(res.makepd$x,col="blue",prob=TRUE,freq=F,xlim=c(0,max(vect)),
+    #         main=paste(title, ": Posterior Dist'n "), xlab=title, ...)
+    #  } else {
+    #    hist(res.makepd$x,col=hist.col,xlim=xlim,freq=F,prob=TRUE,
+    #         main=paste(title, ": Posterior Dist'n "), xlab=title, ...)
+    #  
+      lines(density(res.makepd$x,bw=bw_res.makepd),lty=1,col="blue",pch=3)
+      #par(mfcol=old.mfcol)
+    legend("topright",c("Prior","Posterior"),text.col=c("red","blue"),lty=c(2,1),col=c("red","blue"))
 }
 
 plot.bf <- function(prior,posterior,...) {
-  bf.out <- make.bf.vect(prior,posterior)
-  if (is.null(bf.out)) {
-    return(NULL);
-  }
-  # finding some reasonable y.lim for the plot, all values here are arbitrary
-  y.max <- 40
-  if (max(bf.out$bf) * 1.1 < 40) {
-    y.max <- max(bf.out$bf)* 1.1
-  } else if (mean(bf.out$bf > 40) > 0.6) {
-    y.max <- sort(bf.out$bf)[ceiling(length(bf.out$bf) * 0.4)] * 1.1
-  }
-  plot(bf.out$crit.vals, bf.out$bf, type="l",
-       ylim=c(0,y.max), 
-       xlab="Hyper Parameter Thresholds",ylab="Bayes Factor",...)
-  line.type = 3
-  abline (1, 0, lty=2)
-  abline(3, 0, lty=line.type)
-  abline(10, 0, lty=line.type)
-  abline(1/3, 0, lty=line.type)
-  abline(1/10, 0, lty=line.type)
+    bf.out <- make.bf.vect(prior,posterior)
+    if (is.null(bf.out)) {
+      return(NULL);
+    }
+    # finding some reasonable y.lim for the plot, all values here are arbitrary
+    y.max <- 40
+    if (max(bf.out$bf) * 1.1 < 40) {
+      y.max <- max(bf.out$bf)* 1.1
+    } else if (mean(bf.out$bf > 40) > 0.6) {
+      y.max <- sort(bf.out$bf)[ceiling(length(bf.out$bf) * 0.4)] * 1.1
+    }
+    plot(bf.out$crit.vals, bf.out$bf, type="l",
+         ylim=c(0,y.max), 
+         xlab="Hyper Parameter Thresholds",ylab="Bayes Factor",...)
+    line.type = 3
+    abline (1, 0, lty=2)
+    abline(3, 0, lty=line.type)
+    abline(10, 0, lty=line.type)
+    abline(1/3, 0, lty=line.type)
+    abline(1/10, 0, lty=line.type)
 }
 
 # Compares two Model of x < crit.val and x >= crit.val, and
@@ -683,8 +730,14 @@ calmod <- function(target,x,sumstat,tol,gwt,rejmethod=T)
     }
     names(target.df) <- xvar.names
     
-    prediction1 <- predict.vglm(fit1,target.df,se.fit=T)
-    prediction2 <- predict.vglm(fit1,target.df,type="response")
+    # predict.vglm renamed to predictvglm in VGAM version 0.8-4
+    if (exists('predict.vglm')) {
+        prediction1 <- predict.vglm(fit1,target.df,se.fit=T)
+        prediction2 <- predict.vglm(fit1,target.df,type="response")
+    } else {
+        prediction1 <- predictvglm(fit1,target.df,se.fit=T)
+        prediction2 <- predictvglm(fit1,target.df,type="response")
+    }
 
     colnames(prediction2) <- colnames(yy) # added by Naoki
     
@@ -694,14 +747,90 @@ calmod <- function(target,x,sumstat,tol,gwt,rejmethod=T)
   l1
 }
 
-
 normalise <- function(x,y){
   if(var(y) == 0)return (x - mean(y))
   (x-(mean(y)))/sqrt(var(y))
 }
 
+get_indices_of_patterns = function(target_vector, patterns,
+        ignore_case=FALSE,
+        sort_indices=TRUE) {
+    indices = c()
+    for (p in patterns) {
+        indices = c(indices,
+                    grep(p, target_vector, ignore.case=ignore_case))
+    }
+    if (sort_indices) {
+        return(sort(indices))
+    }
+    return(indices)
+}
+
+
+##############################################################################
+## Main CLI
+
+## Option parsing
+suppressPackageStartupMessages(library("optparse"))
+option_list = list(
+    make_option(c("-t", "--tolerance"), type="double", default=1.0,
+            dest="tolerance",
+            help="Proportion of samples to be accepted (default: 1.0)."),
+    make_option("--observed-path", type="character", dest="observed_path",
+            help="Path to file with observed summary statistics."),
+    make_option("--posterior-path", type="character", dest="posterior_path",
+            help="Path to file with uncorrected posterior samples."),
+    make_option(c("-o", "--output-path"), type="character",
+            dest="output_path", default="results.txt",
+            help="Path to desired output file (default: './results.txt')."),
+    make_option(c("-c", "--continuous-prefixes"), type="character",
+            default="PRI.omega,PRI.E.t",
+            dest="continuous_prefixes",
+            help=paste(
+                "The comma-separated prefixes of continuous parameters",
+                "to analyze. The default is 'PRI.omega,PRI.E.t'. If you",
+                "specify an empty string or 'none', no continuous",
+                "parameters will be analyzed.",
+                sep = '\n\t\t')),
+    make_option(c("-d", "--discrete-prefixes"), type="character",
+            default="PRI.Psi,PRI.model",
+            dest="discrete_prefixes",
+            help=paste(
+                "The comma-separated prefixes of discrete parameters",
+                "to analyze. The default is 'PRI.Psi,PRI.model'. If you",
+                "specify an empty string or 'none', no discrete",
+                "parameters will be analyzed.",
+                sep = '\n\t\t')),
+    make_option(c("-s", "--stat-prefixes"), type="character",
+            default="pi,wattTheta,pi.net,tajD.denom",
+            dest="stat_prefixes",
+            help=paste(
+                "The comma-separated prefixes of summary statistcs",
+                "to use in the analysis. The default is",
+                "'pi,wattTheta,pi.net,tajD.denom'.",
+                sep = '\n\t\t')))
+
+options = parse_args(OptionParser(option_list=option_list))
+
+library(VGAM, warn.conflicts=F)
+library(KernSmooth)
+library(locfit) 
+
+stats = strsplit(options$stat_prefixes, ",")[[1]]
+continuous_prefixes = strsplit(options$continuous_prefixes, ",")[[1]]
+discrete_prefixes = strsplit(options$discrete_prefixes, ",")[[1]]
+
+rejmethod = FALSE
+if (options$tolerance < 1.0) {
+    rejmethod = TRUE
+}
 
 res = stdAnalysis(obs.infile=options$observed_path,
 		  sim.infile=options$posterior_path,
-		  out.file=options$output_path)
+		  out.file=options$output_path,
+          tol=options$tolerance,
+          used.stats=stats,
+          rejmethod=rejmethod,
+          continuous_prefixes=continuous_prefixes,
+          discrete_prefixes=discrete_prefixes)
 
