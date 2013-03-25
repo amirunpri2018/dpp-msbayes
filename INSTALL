@@ -32,7 +32,7 @@ How I got it to compile on cluster running Rocks 5.1:
 
 make clean
 make Q_FINK=NO STATIC_LINK=YES GSL_LIB="/home/jamie/Environment/lib/libgsl.a /home/jamie/Environment/lib/libgslcblas.a"
-make make PREFIX=/home/jamie/Environment install
+make PREFIX=/home/jamie/Environment install
 
 I had to statically link the gsl libraries and tell the compiler where
 they were.
