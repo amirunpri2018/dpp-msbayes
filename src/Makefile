@@ -56,6 +56,7 @@ CFLAGS = $(DEFS) $(INCLS) $(CCOPT)
 
 TARGET = sumstatsvector msDQH msprior msReject
 PERL_SCRIPTS = acceptRej.pl acceptRej_flex.pl convertIM.pl dataSummary.pl msbayes.pl msCombModels.pl obsSumStats.pl
+R_SCRIPTS = regress_cli.r
 
 LIB_EXEC_FILES = acceptRej.r acceptRej_flex.r make_pd2005.r loc2plot.r calmod.r
 # LIBEXEC files are used by acceptRej.r, these has to be installed
@@ -91,6 +92,7 @@ Math-Random:
 install: all
 	mkdir -p $(PREFIX)/bin
 	install -m 755 $(TARGET) $(PERL_SCRIPTS) $(PREFIX)/bin
+	install -m 755 $(TARGET) $(R_SCRIPTS) $(PREFIX)/bin
 	mkdir -p $(LIB_DIR)
 	install -m 644 $(LIB_EXEC_FILES) $(LIB_DIR)
 #	cp -rp Math-Random $(LIB_DIR)
