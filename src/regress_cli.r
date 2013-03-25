@@ -20,7 +20,7 @@ stdAnalysis <- function(obs.infile,
     summary.stat.names <- simDat[["summary.stats"]]
     simDat <- simDat[["dat"]]
 
-    nModels = NULL
+    models = NULL
     model_idx = grep('PRI.model', names(simDat), ignore.case=TRUE)
     if (length(model_idx) == 1) {
         models = unique(simDat[,model_idx])
