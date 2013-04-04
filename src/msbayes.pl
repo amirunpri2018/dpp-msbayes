@@ -554,7 +554,7 @@ sub ExtractMspriorConf {
 
     my %result =();
 
-    my @generalKwdArr = qw(thetaShape thetaScale lowerTau upperTau upperMig upperRec ancestralThetaMultiplier reps numTauClasses  constrain subParamConstrain numTaxonLocusPairs numTaxonPairs numLoci prngSeed configFile);
+    my @generalKwdArr = qw(thetaShape thetaScale tauShape tauScale upperMig upperRec ancestralThetaMultiplier reps numTauClasses  constrain subParamConstrain numTaxonLocusPairs numTaxonPairs numLoci prngSeed configFile);
 
     for my $kkk (@generalKwdArr) {
 	if ($mspriorConfOut =~ /\s*$kkk\s*=\s*([^\s\n]+)\s*\n/) {
@@ -610,7 +610,7 @@ sub MkNewMspriorBatchConf {
     my %confHash = %$mspriorConfHashRef;
 
     # the following kwd should match with SetupParams() in setup.c
-    my @generalKwdArr = qw(thetaShape thetaScale lowerTau upperTau upperMig upperRec ancestralThetaMultiplier reps numTauClasses constrain subParamConstrain prngSeed);
+    my @generalKwdArr = qw(thetaShape thetaScale tauShape tauScale upperMig upperRec ancestralThetaMultiplier reps numTauClasses constrain subParamConstrain prngSeed);
 
     open CONFIN, "<$oldConfFileName" || die "Can't open $oldConfFileName\n";
     my $conf = "";
