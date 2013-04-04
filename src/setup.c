@@ -379,9 +379,13 @@ SetDefaultParams (runParameters * paramPtr)
     {
       paramPtr->numTauClasses = 0;
     }
-  if (!paramPtr->upperMig)
+  if (!paramPtr->migrationShape)
     {
-      paramPtr->upperMig = DEFAULT_UPPER_MIG;
+      paramPtr->migrationShape = DEFAULT_MIGRATION_SHAPE;
+    }
+  if (!paramPtr->migrationScale)
+    {
+      paramPtr->migrationScale = DEFAULT_MIGRATION_SCALE;
     }
   if (!paramPtr->upperRec)
     {
@@ -541,15 +545,29 @@ InteractiveSetupParams (runParameters * paramPtr)
   for (badInput = 1; badInput;)
     {
       fprintf (stderr,
-	       "Upper limit of uniform prior distribution for migration rate [%lf]: \n",
-	       paramPtr->upperMig);
+	       "Shape parameter of gamma distribution on migration rate [%lf]: \n",
+	       paramPtr->migrationShape);
       lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
       if (lineLen == 1)
 	badInput = 0;		/* use default value */
       else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
 	{
 	  badInput = 0;
-	  paramPtr->upperMig = tempValDouble;
+	  paramPtr->migrationShape = tempValDouble;
+	}
+    }
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+	       "Scale parameter of gamma distribution on migration rate [%lf]: \n",
+	       paramPtr->migrationScale);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->migrationScale = tempValDouble;
 	}
     }
 
@@ -645,13 +663,14 @@ SetupParams (FILE * fp, runParameters * paramPtr)
 // JRO - modified - 11/29/2011
 // JRO - modified - 11/17/2011
   retVal = init_globals (fp,
-			 "thetaShape thetaScale tauShape tauScale bottleProportionShapeA bottleProportionShapeB upperMig upperRec ancestralThetaMultiplier numTauClasses reps constrain subParamConstrain",
-			 "ddddddddduVus",
+			 "thetaShape thetaScale tauShape tauScale bottleProportionShapeA bottleProportionShapeB migrationShape migrationScale upperRec ancestralThetaMultiplier numTauClasses reps constrain subParamConstrain",
+			 "dddddddddduVus",
              &paramPtr->thetaShape, &paramPtr->thetaScale, &paramPtr->tauShape,
              &paramPtr->tauScale, &paramPtr->bottleProportionShapeA,
-             &paramPtr->bottleProportionShapeB, &paramPtr->upperMig,
-             &paramPtr->upperRec, &paramPtr->ancestralThetaMultiplier,
-             &paramPtr->numTauClasses, &paramPtr->reps, &paramPtr->constrain,
+             &paramPtr->bottleProportionShapeB, &paramPtr->migrationShape,
+             &paramPtr->migrationScale, &paramPtr->upperRec,
+             &paramPtr->ancestralThetaMultiplier, &paramPtr->numTauClasses,
+             &paramPtr->reps, &paramPtr->constrain,
              &paramPtr->subParamConstrain);
 
   if (retVal != 0)
@@ -1234,7 +1253,8 @@ PrintParam (FILE *fp)
   fprintf (fp, "tauScale =\t%.17lf\n", gParam.tauScale);
   fprintf (fp, "bottleProportionShapeA =\t%.17lf\n", gParam.bottleProportionShapeA);
   fprintf (fp, "bottleProportionShapeB =\t%.17lf\n", gParam.bottleProportionShapeB);
-  fprintf (fp, "upperMig =\t%.17lf\n", gParam.upperMig);
+  fprintf (fp, "migrationShape =\t%.17lf\n", gParam.migrationShape);
+  fprintf (fp, "migrationScale =\t%.17lf\n", gParam.migrationScale);
   fprintf (fp, "upperRec =\t%.17lf\n", gParam.upperRec);
   fprintf (fp, "ancestralThetaMultiplier =\t%.17lf\n", gParam.ancestralThetaMultiplier);
   fprintf (fp, "reps =\t%llu\n", gParam.reps);
