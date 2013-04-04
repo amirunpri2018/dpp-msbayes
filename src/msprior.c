@@ -151,7 +151,7 @@ main (int argc, char *argv[])
 {
   double N1, N2, Nanc, NancLower, *uniqTauArray = NULL, *taxonTauArray = NULL,
          *descendant1ThetaArray = NULL, *descendant2ThetaArray = NULL,
-         *ancestralThetaArray = NULL, spTheta, thetaMean, descendent1Theta,
+         *ancestralThetaArray = NULL, spTheta, thetaMean, descendant1Theta,
          descendant2Theta, tauequalizer, gaussTime = 0.0, mig, rec, BottStr1,
          BottStr2, BottleTime;
   double *recTbl;
@@ -433,19 +433,19 @@ main (int argc, char *argv[])
 	  mig = gsl_ran_flat (gBaseRand, 0.0, gParam.upperMig);
 	  /* spTheta prior */
 
-      descendent1Theta = gsl_ran_gamma(gBaseRand, gParam.thetaShape,
+      descendant1Theta = gsl_ran_gamma(gBaseRand, gParam.thetaShape,
               gParam.thetaScale);
-      descendent2Theta = gsl_ran_gamma(gBaseRand, gParam.thetaShape,
+      descendant2Theta = gsl_ran_gamma(gBaseRand, gParam.thetaShape,
               gParam.thetaScale);
-      spTheta = (descendent1Theta + descendent2Theta) / 2;
+      spTheta = (descendant1Theta + descendant2Theta) / 2;
 	  /* while ((spTheta = gsl_ran_flat (gBaseRand, gParam.lowerTheta, */
 					  /* gParam.upperTheta)) <= 0); */
 
 	  /* The ratio of current population sizes.  The populations
 	     exponentially grow to these sizes after bottkleneck is done. */
 	  /* both ends excluded for symmetry */
-      N1 = descendent1Theta / spTheta;
-      N2 = descendent2Theta / spTheta;
+      N1 = descendant1Theta / spTheta;
+      N2 = descendant2Theta / spTheta;
 	  /* while ((N1 = gsl_ran_flat (gBaseRand, 0.01, 1.99)) == 0.01) */
 	  /*   ; */
 	  
@@ -463,7 +463,7 @@ main (int argc, char *argv[])
                 gParam.ancestralThetaMultiplier;
 
       descendant1ThetaArray[taxonID] = descendant1Theta;
-      descendant2ThetaArray[taxonID] = descendent2Theta;
+      descendant2ThetaArray[taxonID] = descendant2Theta;
       ancestralThetaArray[taxonID] = Nanc;
 	  
 	  /* pick a tau for every taxon-pair with replacement from the
