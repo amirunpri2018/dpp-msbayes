@@ -387,9 +387,13 @@ SetDefaultParams (runParameters * paramPtr)
     {
       paramPtr->migrationScale = DEFAULT_MIGRATION_SCALE;
     }
-  if (!paramPtr->upperRec)
+  if (!paramPtr->recombinationShape)
     {
-      paramPtr->upperRec = DEFAULT_UPPER_REC;
+      paramPtr->recombinationShape = DEFAULT_REC_SHAPE;
+    }
+  if (!paramPtr->recombinationScale)
+    {
+      paramPtr->recombinationScale = DEFAULT_REC_SCALE;
     }
   if (!paramPtr->ancestralThetaMultiplier)
     {
@@ -575,8 +579,8 @@ InteractiveSetupParams (runParameters * paramPtr)
   for (badInput = 1; badInput;)
     {
       fprintf (stderr,
-	       "Upper limit of uniform prior distribution for recombination rate: "
-	       "[%lf]: \n", paramPtr->upperRec);
+	       "Shape parameter of gamma distribution on intra-locus recombination rate [%lf]: \n",
+	       paramPtr->recombinationShape);
 
       lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
       if (lineLen == 1)
@@ -584,7 +588,22 @@ InteractiveSetupParams (runParameters * paramPtr)
       else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
 	{
 	  badInput = 0;
-	  paramPtr->upperRec = tempValDouble;
+	  paramPtr->recombinationShape = tempValDouble;
+	}
+    }
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+	       "Scale parameter of gamma distribution on intra-locus recombination rate [%lf]: \n",
+	       paramPtr->recombinationScale);
+
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->recombinationScale = tempValDouble;
 	}
     }
 
@@ -663,12 +682,13 @@ SetupParams (FILE * fp, runParameters * paramPtr)
 // JRO - modified - 11/29/2011
 // JRO - modified - 11/17/2011
   retVal = init_globals (fp,
-			 "thetaShape thetaScale tauShape tauScale bottleProportionShapeA bottleProportionShapeB migrationShape migrationScale upperRec ancestralThetaMultiplier numTauClasses reps constrain subParamConstrain",
-			 "dddddddddduVus",
+			 "thetaShape thetaScale tauShape tauScale bottleProportionShapeA bottleProportionShapeB migrationShape migrationScale recombinationShape recombinationScale ancestralThetaMultiplier numTauClasses reps constrain subParamConstrain",
+			 "ddddddddddduVus",
              &paramPtr->thetaShape, &paramPtr->thetaScale, &paramPtr->tauShape,
              &paramPtr->tauScale, &paramPtr->bottleProportionShapeA,
              &paramPtr->bottleProportionShapeB, &paramPtr->migrationShape,
-             &paramPtr->migrationScale, &paramPtr->upperRec,
+             &paramPtr->migrationScale, &paramPtr->recombinationShape,
+             &paramPtr->recombinationScale,
              &paramPtr->ancestralThetaMultiplier, &paramPtr->numTauClasses,
              &paramPtr->reps, &paramPtr->constrain,
              &paramPtr->subParamConstrain);
@@ -1255,7 +1275,8 @@ PrintParam (FILE *fp)
   fprintf (fp, "bottleProportionShapeB =\t%.17lf\n", gParam.bottleProportionShapeB);
   fprintf (fp, "migrationShape =\t%.17lf\n", gParam.migrationShape);
   fprintf (fp, "migrationScale =\t%.17lf\n", gParam.migrationScale);
-  fprintf (fp, "upperRec =\t%.17lf\n", gParam.upperRec);
+  fprintf (fp, "recombinationShape =\t%.17lf\n", gParam.recombinationShape);
+  fprintf (fp, "recombinationScale =\t%.17lf\n", gParam.recombinationScale);
   fprintf (fp, "ancestralThetaMultiplier =\t%.17lf\n", gParam.ancestralThetaMultiplier);
   fprintf (fp, "reps =\t%llu\n", gParam.reps);
   fprintf (fp, "numTaxonLocusPairs =\t%u\n", gParam.numTaxonLocusPairs);
