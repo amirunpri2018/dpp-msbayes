@@ -420,8 +420,17 @@ main (int argc, char *argv[])
 	  /* Population sizes during the bottleneck after the divergence of 2 
 	     pops. This is same as the population sizes, immediately after the 
 	     divergence/separation of the 2 pops. These are relative sizes. */
-	  BottStr1 = gsl_ran_flat (gBaseRand, 0.01, 1.0);
-	  BottStr2 = gsl_ran_flat (gBaseRand, 0.01, 1.0);
+	  /* BottStr1 = gsl_ran_flat (gBaseRand, 0.01, 1.0); */
+	  /* BottStr2 = gsl_ran_flat (gBaseRand, 0.01, 1.0); */
+      BottStr1 = 1.0;
+      BottStr2 = 1.0;
+      if ((gParam.bottleProportionShapeA > 0) && (gParam.bottleProportionShapeB > 0))
+      {
+          BottStr1 = gsl_ran_beta(gBaseRand, gParam.bottleProportionShapeA,
+                  gParam.bottleProportionShapeB);
+          BottStr2 = gsl_ran_beta(gBaseRand, gParam.bottleProportionShapeA,
+                  gParam.bottleProportionShapeB);
+      }
 
 	  /* After the populations diverge, they experience pop. bottleneck.
 	     Then the population size exponentially grows until current size.
