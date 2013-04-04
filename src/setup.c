@@ -367,6 +367,14 @@ SetDefaultParams (runParameters * paramPtr)
     {
       paramPtr->tauShape = DEFAULT_TAU_SHAPE;
     }
+  if (!paramPtr->bottleProportionShapeA)
+    {
+      paramPtr->bottleProportionShapeA = DEFAULT_BOTTLE_A;
+    }
+  if (!paramPtr->bottleProportionShapeB)
+    {
+      paramPtr->bottleProportionShapeB = DEFAULT_BOTTLE_B;
+    }
   if (!paramPtr->numTauClasses)
     {
       paramPtr->numTauClasses = 0;
@@ -472,7 +480,7 @@ InteractiveSetupParams (runParameters * paramPtr)
   for (badInput = 1; badInput;)
     {
       fprintf (stderr,
-	       "Upper limit of uniform prior distribution for tau, time of divergence (tau-max) "
+	       "Scale parameter for gamma prior distribution for tau, time of divergence "
 	       "[%lf]: \n", paramPtr->tauScale);
       lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
       if (lineLen == 1)
@@ -481,6 +489,36 @@ InteractiveSetupParams (runParameters * paramPtr)
 	{
 	  badInput = 0;
 	  paramPtr->tauScale = tempValDouble;
+	}
+    }
+
+  /* bottle neck proportion */
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+           "First shape parameter (alpha) for beta prior on the bottleneck proportion "
+	       "[%lf]: \n", paramPtr->bottleProportionShapeA);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->bottleProportionShapeA = tempValDouble;
+	}
+    }
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+           "Second shape parameter (beta) for beta prior on the bottleneck proportion "
+	       "[%lf]: \n", paramPtr->bottleProportionShapeB);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->bottleProportionShapeB = tempValDouble;
 	}
     }
 
@@ -607,13 +645,14 @@ SetupParams (FILE * fp, runParameters * paramPtr)
 // JRO - modified - 11/29/2011
 // JRO - modified - 11/17/2011
   retVal = init_globals (fp,
-			 "thetaShape thetaScale tauShape tauScale upperMig upperRec ancestralThetaMultiplier numTauClasses reps constrain subParamConstrain",
-			 "ddddddduVus",
-			 &paramPtr->thetaShape, &paramPtr->thetaScale,
-			 &paramPtr->tauShape, &paramPtr->tauScale, &paramPtr->upperMig, 
-			 &paramPtr->upperRec, &paramPtr->ancestralThetaMultiplier, 
-			 &paramPtr->numTauClasses, &paramPtr->reps,
-			 &paramPtr->constrain, &paramPtr->subParamConstrain);
+			 "thetaShape thetaScale tauShape tauScale bottleProportionShapeA bottleProportionShapeB upperMig upperRec ancestralThetaMultiplier numTauClasses reps constrain subParamConstrain",
+			 "ddddddddduVus",
+             &paramPtr->thetaShape, &paramPtr->thetaScale, &paramPtr->tauShape,
+             &paramPtr->tauScale, &paramPtr->bottleProportionShapeA,
+             &paramPtr->bottleProportionShapeB, &paramPtr->upperMig,
+             &paramPtr->upperRec, &paramPtr->ancestralThetaMultiplier,
+             &paramPtr->numTauClasses, &paramPtr->reps, &paramPtr->constrain,
+             &paramPtr->subParamConstrain);
 
   if (retVal != 0)
     {
@@ -1193,6 +1232,8 @@ PrintParam (FILE *fp)
 // JRO - modified - 11/17/2011
   fprintf (fp, "tauShape =\t%.17lf\n", gParam.tauShape);
   fprintf (fp, "tauScale =\t%.17lf\n", gParam.tauScale);
+  fprintf (fp, "bottleProportionShapeA =\t%.17lf\n", gParam.bottleProportionShapeA);
+  fprintf (fp, "bottleProportionShapeB =\t%.17lf\n", gParam.bottleProportionShapeB);
   fprintf (fp, "upperMig =\t%.17lf\n", gParam.upperMig);
   fprintf (fp, "upperRec =\t%.17lf\n", gParam.upperRec);
   fprintf (fp, "ancestralThetaMultiplier =\t%.17lf\n", gParam.ancestralThetaMultiplier);
