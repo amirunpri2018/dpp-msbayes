@@ -8,7 +8,8 @@
 #define DEFAULT_TAU_SCALE  2.0
 #define DEFAULT_BOTTLE_A 5.0
 #define DEFAULT_BOTTLE_B 1.0
-#define DEFAULT_UPPER_MIG  0.0	/* when set 0, it is a constant */
+#define DEFAULT_MIGRATION_SHAPE -1.0
+#define DEFAULT_MIGRATION_SCALE -1.0
 #define DEFAULT_UPPER_REC  0.0
 #define DEFAULT_ANCESTRAL_THETA_MULTIPLIER 1.0
 #define DEFAULT_REPS  1000000
@@ -30,7 +31,8 @@ typedef struct
   double tauShape;
   double bottleProportionShapeA;
   double bottleProportionShapeB;
-  double upperMig;		/* upper limit of prior dist'n for migration rate */
+  double migrationShape;
+  double migrationScale;
   double upperRec;		/* upper limit of prior dist'n for recombination rate */
   double ancestralThetaMultiplier;
   unsigned long long reps;

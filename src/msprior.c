@@ -441,7 +441,14 @@ main (int argc, char *argv[])
 	  BottleTime = gsl_ran_flat (gBaseRand, 0.000001, 1.0);
 
 	  /* migration rate prior */
-	  mig = gsl_ran_flat (gBaseRand, 0.0, gParam.upperMig);
+      mig = 0.0;
+      if ((gParam.migrationShape > 0) && (gParam.migrationScale > 0))
+      {
+          mig = gsl_ran_gamma(gBaseRand, gParam.migrationShape,
+                  gParam.migrationScale);
+      }
+	  /* mig = gsl_ran_flat (gBaseRand, 0.0, gParam.upperMig); */
+
 	  /* spTheta prior */
 
       descendant1Theta = gsl_ran_gamma(gBaseRand, gParam.thetaShape,
