@@ -151,8 +151,9 @@ main (int argc, char *argv[])
 {
   double N1, N2, Nanc, NancLower, *uniqTauArray = NULL, *taxonTauArray = NULL,
          *descendant1ThetaArray = NULL, *descendant2ThetaArray = NULL,
-         *ancestralThetaArray = NULL, spTheta, tauequalizer, gaussTime = 0.0,
-         mig, rec, BottStr1, BottStr2, BottleTime;
+         *ancestralThetaArray = NULL, spTheta, thetaMean, descendent1Theta,
+         descendant2Theta, tauequalizer, gaussTime = 0.0, mig, rec, BottStr1,
+         BottStr2, BottleTime;
   double *recTbl;
   int tauClass, *PSIarray = NULL;
   unsigned int numTauClasses = -1, u, locus, taxonID, zzz;
@@ -172,10 +173,10 @@ main (int argc, char *argv[])
   LoadConfiguration (argc, argv);
 
   /* set the lower Nanc */
-  NancLower = 0.00001 * gParam.lowerTheta;
-  if (NancLower < 0.00000000004) { /* 4 * (mu=10^(-11)) * (Ne=1) */
-    NancLower = 0.00000000004;
-  }
+  /* NancLower = 0.00001 * gParam.lowerTheta; */
+  /* if (NancLower < 0.00000000004) { /1* 4 * (mu=10^(-11)) * (Ne=1) *1/ */
+  /*   NancLower = 0.00000000004; */
+  /* } */
 
   /* set b_constrain to 1 if constrain */
   if (gParam.constrain > 0)
@@ -315,6 +316,8 @@ main (int argc, char *argv[])
   }
 #endif
 
+  thetaMean = gParam.thetaShape * gParam.thetaScale;
+
   /* Beginning of the main loop */
   for (rep = 0; rep < gParam.reps; rep++)
     {
@@ -401,14 +404,14 @@ main (int argc, char *argv[])
 	{
 	  //Check upperAncPopSize before doing anything
 	  /* ancestral population size prior */
-	  if (gParam.upperAncPopSize < gParam.lowerTheta)
-	    {
-	      fprintf (stderr,
-		       "The upper bound (%lf * %lf) of ancestral pop. size is "
-		       "smaller than the lower bound (%lf)\n",
-		       gParam.upperAncPopSize, gParam.upperTheta, gParam.lowerTheta);
-	      exit (EXIT_FAILURE);
-	    }
+	  /* if (gParam.upperAncPopSize < gParam.lowerTheta) */
+	  /*   { */
+	  /*     fprintf (stderr, */
+		       /* "The upper bound (%lf * %lf) of ancestral pop. size is " */
+		       /* "smaller than the lower bound (%lf)\n", */
+		       /* gParam.upperAncPopSize, gParam.upperTheta, gParam.lowerTheta); */
+	  /*     exit (EXIT_FAILURE); */
+	  /*   } */
 
 	  constrainedParameter conTaxonPairDat;
 
@@ -429,16 +432,24 @@ main (int argc, char *argv[])
 	  /* migration rate prior */
 	  mig = gsl_ran_flat (gBaseRand, 0.0, gParam.upperMig);
 	  /* spTheta prior */
-	  while ((spTheta = gsl_ran_flat (gBaseRand, gParam.lowerTheta,
-					  gParam.upperTheta)) <= 0);
+
+      descendent1Theta = gsl_ran_gamma(gBaseRand, gParam.thetaShape,
+              gParam.thetaScale);
+      descendent2Theta = gsl_ran_gamma(gBaseRand, gParam.thetaShape,
+              gParam.thetaScale);
+      spTheta = (descendent1Theta + descendent2Theta) / 2;
+	  /* while ((spTheta = gsl_ran_flat (gBaseRand, gParam.lowerTheta, */
+					  /* gParam.upperTheta)) <= 0); */
 
 	  /* The ratio of current population sizes.  The populations
 	     exponentially grow to these sizes after bottkleneck is done. */
 	  /* both ends excluded for symmetry */
-	  while ((N1 = gsl_ran_flat (gBaseRand, 0.01, 1.99)) == 0.01)
-	    ;
+      N1 = descendent1Theta / spTheta;
+      N2 = descendent2Theta / spTheta;
+	  /* while ((N1 = gsl_ran_flat (gBaseRand, 0.01, 1.99)) == 0.01) */
+	  /*   ; */
 	  
-	  N2 = 2.0 - N1;
+	  /* N2 = 2.0 - N1; */
 
 	  /* The upper limit of ancestral theta is defined by the product
 	     of upper Theta (e.g. 40) and upper AncPopSize (e.g. 0.5) */
@@ -446,11 +457,13 @@ main (int argc, char *argv[])
 	     theta to the lower limit specified by user */
 	  /* Nanc = gsl_ran_flat (gBaseRand, 0.01,
 			       gParam.upperAncPopSize * gParam.upperTheta);*/
-	  Nanc = gsl_ran_flat (gBaseRand, gParam.lowerTheta,
-			       gParam.upperAncPopSize * gParam.upperTheta);
+	  /* Nanc = gsl_ran_flat (gBaseRand, gParam.lowerTheta, */
+			       /* gParam.upperAncPopSize * gParam.upperTheta); */
+      Nanc = gsl_ran_gamma(gBaseRand, gParam.thetaShape, gParam.thetaScale) *
+                gParam.ancestralThetaMultiplier;
 
-      descendant1ThetaArray[taxonID] = spTheta * N1;
-      descendant2ThetaArray[taxonID] = spTheta * N2;
+      descendant1ThetaArray[taxonID] = descendant1Theta;
+      descendant2ThetaArray[taxonID] = descendent2Theta;
       ancestralThetaArray[taxonID] = Nanc;
 	  
 	  /* pick a tau for every taxon-pair with replacement from the
@@ -523,7 +536,10 @@ main (int argc, char *argv[])
 		     AncPopSize (e.g. 0.5), then converted to relative size 
 		     to spTheta */
 		  if (subParamConstrainConfig[7] == 1)
-		    Nanc = conTaxonPairDat.conNanc * gParam.upperTheta;
+		    /* Nanc = conTaxonPairDat.conNanc * gParam.upperTheta; */
+            /* Constrained values of ancestral theta will now have to be
+             * specified in absolute terms */
+		    Nanc = conTaxonPairDat.conNanc;
 		  
 		  /* recombination rate per neighboring site */
 		  if (subParamConstrainConfig[8] == 1)
@@ -560,8 +576,9 @@ main (int argc, char *argv[])
 	      /* this scaling is done inside of locus loop to accomodate 
 		 the gamma dist'n of mut rate for each locus */
 
-	      tauequalizer = gParam.upperTheta / 
-		2 / (spTheta * taxonPairDat.NScaler);
+	      /* tauequalizer = gParam.upperTheta / */ 
+		/* 2 / (spTheta * taxonPairDat.NScaler); */
+          tauequalizer = thetaMean / (spTheta * taxonPairDat.NScaler);
 	      /* WORK, CONFIRM THIS. Naoki Nov 2, 2009.  IT USED TO BE
 		 tauequalizer = gParam.upperTheta * taxonPairDat.seqLen / 
 		 2 / locTheta;
