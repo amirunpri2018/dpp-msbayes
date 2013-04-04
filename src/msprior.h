@@ -10,7 +10,8 @@
 #define DEFAULT_BOTTLE_B 1.0
 #define DEFAULT_MIGRATION_SHAPE -1.0
 #define DEFAULT_MIGRATION_SCALE -1.0
-#define DEFAULT_UPPER_REC  0.0
+#define DEFAULT_REC_SHAPE -1.0
+#define DEFAULT_REC_SCALE -1.0
 #define DEFAULT_ANCESTRAL_THETA_MULTIPLIER 1.0
 #define DEFAULT_REPS  1000000
 #define DEFAULT_MUT_FILE "SampleSize_MuModel_Vector"
@@ -33,7 +34,8 @@ typedef struct
   double bottleProportionShapeB;
   double migrationShape;
   double migrationScale;
-  double upperRec;		/* upper limit of prior dist'n for recombination rate */
+  double recombinationShape;
+  double recombinationScale;
   double ancestralThetaMultiplier;
   unsigned long long reps;
   unsigned int numTaxonLocusPairs; /* total number of taxon:locus pairs */

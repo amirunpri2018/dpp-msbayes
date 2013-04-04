@@ -338,7 +338,13 @@ main (int argc, char *argv[])
 	}
       
       /* create the recombination rate table for each gene */
-      rec = gsl_ran_flat (gBaseRand, 0.0, gParam.upperRec);
+      rec = 0.0;
+      if ((gParam.recombinationShape > 0) && (gParam.recombinationScale > 0))
+      {
+          rec = gsl_ran_gamma(gBaseRand, gParam.recombinationShape,
+                  gParam.recombinationScale);
+      }
+      /* rec = gsl_ran_flat (gBaseRand, 0.0, gParam.upperRec); */
       for (u=0; u < gParam.numLoci; u++)
 	{
 	  /* all loci shares same recombination rate */
