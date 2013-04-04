@@ -351,13 +351,13 @@ GetLine (char *line, int max)
 static void
 SetDefaultParams (runParameters * paramPtr)
 {
-  if (!paramPtr->upperTheta)
+  if (!paramPtr->thetaScale)
     {
-      paramPtr->upperTheta = DEFAULT_UPPER_THETA;
+      paramPtr->thetaScale = DEFAULT_THETA_SCALE;
     }
-  if (!paramPtr->lowerTheta)
+  if (!paramPtr->thetaShape)
     {
-      paramPtr->lowerTheta = DEFAULT_LOWER_THETA;
+      paramPtr->thetaShape = DEFAULT_THETA_SHAPE;
     }
   if (!paramPtr->upperTau)
     {
@@ -379,9 +379,9 @@ SetDefaultParams (runParameters * paramPtr)
     {
       paramPtr->upperRec = DEFAULT_UPPER_REC;
     }
-  if (!paramPtr->upperAncPopSize)
+  if (!paramPtr->ancestralThetaMultiplier)
     {
-      paramPtr->upperAncPopSize = DEFAULT_UPPER_ANC_POPSIZE;
+      paramPtr->ancestralThetaMultiplier = DEFAULT_ANCESTRAL_THETA_MULTIPLIER;
     }
   if (!paramPtr->reps)
     {
@@ -427,29 +427,29 @@ InteractiveSetupParams (runParameters * paramPtr)
   for (badInput = 1; badInput;)
     {
       fprintf (stderr,
-	       "Lower limit of uniform prior distribution for theta "
-	       "[%lf]: \n", paramPtr->lowerTheta);
+	       "Shape parameter for gamma prior distribution for theta "
+	       "[%lf]: \n", paramPtr->thetaShape);
       lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
       if (lineLen == 1)
 	badInput = 0;		/* use default value */
       else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
 	{
 	  badInput = 0;
-	  paramPtr->lowerTheta = tempValDouble;
+	  paramPtr->thetaShape = tempValDouble;
 	}
     }
   for (badInput = 1; badInput;)
     {
       fprintf (stderr,
-	       "Upper limit of uniform prior distribution for theta "
-	       "[%lf]: \n", paramPtr->upperTheta);
+	       "Scale parameter for gamma prior distribution for theta "
+	       "[%lf]: \n", paramPtr->thetaScale);
       lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
       if (lineLen == 1)
 	badInput = 0;		/* use default value */
       else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
 	{
 	  badInput = 0;
-	  paramPtr->upperTheta = tempValDouble;
+	  paramPtr->thetaScale = tempValDouble;
 	}
     }
 
@@ -536,19 +536,15 @@ InteractiveSetupParams (runParameters * paramPtr)
   for (badInput = 1; badInput;)
     {
       fprintf (stderr,
-	       "Coefficient for the upper limit of uniform prior distribution for ancestral theta "
-	       ": [%lf]\n", paramPtr->upperAncPopSize);
-      fprintf (stderr,
-	       "  The upper limit for ancestral theta is determined by "
-	       "this coefficient\n  multiplied by the upper limit for (current) theta (%lf) : \n",
-	       paramPtr->upperTheta);
+           "Mulitplier for the ancestral theta parameter "
+	       ": [%lf]\n", paramPtr->ancestralThetaMultiplier);
       lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
       if (lineLen == 1)
 	badInput = 0;		/* use default value */
       else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
 	{
 	  badInput = 0;
-	  paramPtr->upperAncPopSize = tempValDouble;
+	  paramPtr->ancestralThetaMultiplier = tempValDouble;
 	}
     }
 
@@ -611,11 +607,11 @@ SetupParams (FILE * fp, runParameters * paramPtr)
 // JRO - modified - 11/29/2011
 // JRO - modified - 11/17/2011
   retVal = init_globals (fp,
-			 "lowerTheta upperTheta lowerTau upperTau upperMig upperRec upperAncPopSize numTauClasses reps constrain subParamConstrain",
+			 "thetaShape thetaScale lowerTau upperTau upperMig upperRec ancestralThetaMultiplier numTauClasses reps constrain subParamConstrain",
 			 "ddddddduVus",
-			 &paramPtr->lowerTheta, &paramPtr->upperTheta,
+			 &paramPtr->thetaShape, &paramPtr->thetaScale,
 			 &paramPtr->lowerTau, &paramPtr->upperTau, &paramPtr->upperMig, 
-			 &paramPtr->upperRec, &paramPtr->upperAncPopSize, 
+			 &paramPtr->upperRec, &paramPtr->ancestralThetaMultiplier, 
 			 &paramPtr->numTauClasses, &paramPtr->reps,
 			 &paramPtr->constrain, &paramPtr->subParamConstrain);
 
@@ -1192,14 +1188,14 @@ PrintParam (FILE *fp)
   int i;
 
   fprintf (fp, "## gParam ##\n");
-  fprintf (fp, "lowerTheta =\t%.17lf\n", gParam.lowerTheta);
-  fprintf (fp, "upperTheta =\t%.17lf\n", gParam.upperTheta);
+  fprintf (fp, "thetaShape =\t%.17lf\n", gParam.thetaShape);
+  fprintf (fp, "thetaScale =\t%.17lf\n", gParam.thetaScale);
 // JRO - modified - 11/17/2011
   fprintf (fp, "lowerTau =\t%.17lf\n", gParam.lowerTau);
   fprintf (fp, "upperTau =\t%.17lf\n", gParam.upperTau);
   fprintf (fp, "upperMig =\t%.17lf\n", gParam.upperMig);
   fprintf (fp, "upperRec =\t%.17lf\n", gParam.upperRec);
-  fprintf (fp, "upperAncPopSize =\t%.17lf\n", gParam.upperAncPopSize);
+  fprintf (fp, "ancestralThetaMultiplier =\t%.17lf\n", gParam.ancestralThetaMultiplier);
   fprintf (fp, "reps =\t%llu\n", gParam.reps);
   fprintf (fp, "numTaxonLocusPairs =\t%u\n", gParam.numTaxonLocusPairs);
   fprintf (fp, "numTaxonPairs =\t%u\n", gParam.numTaxonPairs);
