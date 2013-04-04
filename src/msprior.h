@@ -2,13 +2,13 @@
 #define MS_PRIOR_H
 
 /* Default values used for interactive setup */
-#define DEFAULT_LOWER_THETA 0.00000000004 /* mu = 10^(-11), N = 1 */
-#define DEFAULT_UPPER_THETA 0.04 /* mu = 10^(-8), N=10^6 */
+#define DEFAULT_THETA_SHAPE 1.0
+#define DEFAULT_THETA_SCALE 0.001
 #define DEFAULT_LOWER_TAU  0.0
 #define DEFAULT_UPPER_TAU  1.0
 #define DEFAULT_UPPER_MIG  0.0	/* when set 0, it is a constant */
 #define DEFAULT_UPPER_REC  0.0
-#define DEFAULT_UPPER_ANC_POPSIZE 0.25
+#define DEFAULT_ANCESTRAL_THETA_MULTIPLIER 1.0
 #define DEFAULT_REPS  1000000
 #define DEFAULT_MUT_FILE "SampleSize_MuModel_Vector"
 #define DEFAULT_SUBPARAMCONSTRAIN "000000000"
@@ -22,13 +22,13 @@
 // JRO - modified - 11/17/2011
 typedef struct
 {
-  double upperTheta;		/* upper limit of prior dist'n for theta */
-  double lowerTheta;		/* lower limit of prior dist'n for theta */
+  double thetaScale;
+  double thetaShape;
   double upperTau;		/* upper limit of prior dist'n for time of separation */
   double lowerTau;		/* lower limit of prior dist'n for time of separation */
   double upperMig;		/* upper limit of prior dist'n for migration rate */
   double upperRec;		/* upper limit of prior dist'n for recombination rate */
-  double upperAncPopSize;	/* upper limit of prior dist'n for ancestral pop size */
+  double ancestralThetaMultiplier;
   unsigned long long reps;
   unsigned int numTaxonLocusPairs; /* total number of taxon:locus pairs */
   unsigned int numTaxonPairs;     /* number of unique taxon pairs */ 
