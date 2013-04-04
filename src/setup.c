@@ -359,13 +359,13 @@ SetDefaultParams (runParameters * paramPtr)
     {
       paramPtr->thetaShape = DEFAULT_THETA_SHAPE;
     }
-  if (!paramPtr->upperTau)
+  if (!paramPtr->tauScale)
     {
-      paramPtr->upperTau = DEFAULT_UPPER_TAU;
+      paramPtr->tauScale = DEFAULT_TAU_SCALE;
     }
-  if (!paramPtr->lowerTau)
+  if (!paramPtr->tauShape)
     {
-      paramPtr->lowerTau = DEFAULT_LOWER_TAU;
+      paramPtr->tauShape = DEFAULT_TAU_SHAPE;
     }
   if (!paramPtr->numTauClasses)
     {
@@ -458,29 +458,29 @@ InteractiveSetupParams (runParameters * paramPtr)
   for (badInput = 1; badInput;)
     {
       fprintf (stderr,
-	       "Lower limit of uniform prior distribution for tau, time of divergence (tau-min) "
-	       "[%lf]: \n", paramPtr->lowerTau);
+	       "Shape parameter for gamma prior distribution for tau, time of divergence "
+	       "[%lf]: \n", paramPtr->tauShape);
       lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
       if (lineLen == 1)
 	badInput = 0;		/* use default value */
       else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
 	{
 	  badInput = 0;
-	  paramPtr->lowerTau = tempValDouble;
+	  paramPtr->tauShape = tempValDouble;
 	}
     }
   for (badInput = 1; badInput;)
     {
       fprintf (stderr,
 	       "Upper limit of uniform prior distribution for tau, time of divergence (tau-max) "
-	       "[%lf]: \n", paramPtr->upperTau);
+	       "[%lf]: \n", paramPtr->tauScale);
       lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
       if (lineLen == 1)
 	badInput = 0;		/* use default value */
       else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
 	{
 	  badInput = 0;
-	  paramPtr->upperTau = tempValDouble;
+	  paramPtr->tauScale = tempValDouble;
 	}
     }
 
@@ -607,10 +607,10 @@ SetupParams (FILE * fp, runParameters * paramPtr)
 // JRO - modified - 11/29/2011
 // JRO - modified - 11/17/2011
   retVal = init_globals (fp,
-			 "thetaShape thetaScale lowerTau upperTau upperMig upperRec ancestralThetaMultiplier numTauClasses reps constrain subParamConstrain",
+			 "thetaShape thetaScale tauShape tauScale upperMig upperRec ancestralThetaMultiplier numTauClasses reps constrain subParamConstrain",
 			 "ddddddduVus",
 			 &paramPtr->thetaShape, &paramPtr->thetaScale,
-			 &paramPtr->lowerTau, &paramPtr->upperTau, &paramPtr->upperMig, 
+			 &paramPtr->tauShape, &paramPtr->tauScale, &paramPtr->upperMig, 
 			 &paramPtr->upperRec, &paramPtr->ancestralThetaMultiplier, 
 			 &paramPtr->numTauClasses, &paramPtr->reps,
 			 &paramPtr->constrain, &paramPtr->subParamConstrain);
@@ -1191,8 +1191,8 @@ PrintParam (FILE *fp)
   fprintf (fp, "thetaShape =\t%.17lf\n", gParam.thetaShape);
   fprintf (fp, "thetaScale =\t%.17lf\n", gParam.thetaScale);
 // JRO - modified - 11/17/2011
-  fprintf (fp, "lowerTau =\t%.17lf\n", gParam.lowerTau);
-  fprintf (fp, "upperTau =\t%.17lf\n", gParam.upperTau);
+  fprintf (fp, "tauShape =\t%.17lf\n", gParam.tauShape);
+  fprintf (fp, "tauScale =\t%.17lf\n", gParam.tauScale);
   fprintf (fp, "upperMig =\t%.17lf\n", gParam.upperMig);
   fprintf (fp, "upperRec =\t%.17lf\n", gParam.upperRec);
   fprintf (fp, "ancestralThetaMultiplier =\t%.17lf\n", gParam.ancestralThetaMultiplier);
