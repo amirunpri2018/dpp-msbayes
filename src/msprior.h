@@ -4,8 +4,8 @@
 /* Default values used for interactive setup */
 #define DEFAULT_THETA_SHAPE 1.0
 #define DEFAULT_THETA_SCALE 0.001
-#define DEFAULT_LOWER_TAU  0.0
-#define DEFAULT_UPPER_TAU  1.0
+#define DEFAULT_TAU_SHAPE  1.0
+#define DEFAULT_TAU_SCALE  2.0
 #define DEFAULT_UPPER_MIG  0.0	/* when set 0, it is a constant */
 #define DEFAULT_UPPER_REC  0.0
 #define DEFAULT_ANCESTRAL_THETA_MULTIPLIER 1.0
@@ -24,8 +24,8 @@ typedef struct
 {
   double thetaScale;
   double thetaShape;
-  double upperTau;		/* upper limit of prior dist'n for time of separation */
-  double lowerTau;		/* lower limit of prior dist'n for time of separation */
+  double tauScale;
+  double tauShape;
   double upperMig;		/* upper limit of prior dist'n for migration rate */
   double upperRec;		/* upper limit of prior dist'n for recombination rate */
   double ancestralThetaMultiplier;

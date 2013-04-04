@@ -376,8 +376,10 @@ main (int argc, char *argv[])
 	  for (u = 0; u < numTauClasses; u++)
 // JRO - modified - 11/17/2011
 //	    uniqTauArray[u] = gsl_ran_flat (gBaseRand, 0.0, gParam.upperTau);
-	    uniqTauArray[u] = gsl_ran_flat (gBaseRand, gParam.lowerTau,
-	                                    gParam.upperTau);
+	    /* uniqTauArray[u] = gsl_ran_flat (gBaseRand, gParam.lowerTau, */
+	    /*                                 gParam.upperTau); */
+        uniqTauArray[u] = gsl_ran_gamma(gBaseRand, gParam.tauShape,
+                gParam.tauScale);
 
           qsort(uniqTauArray, numTauClasses, sizeof(double),comp_nums);
 
