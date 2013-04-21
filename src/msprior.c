@@ -483,9 +483,15 @@ main (int argc, char *argv[])
 			       gParam.upperAncPopSize * gParam.upperTheta);*/
 	  /* Nanc = gsl_ran_flat (gBaseRand, gParam.lowerTheta, */
 			       /* gParam.upperAncPopSize * gParam.upperTheta); */
-      Nanc = gsl_ran_gamma(gBaseRand, gParam.thetaShape, gParam.thetaScale) *
-                gParam.ancestralThetaMultiplier;
-
+      if ((gParam.ancestralThetaShape > 0) && (gParam.ancestralThetaScale > 0))
+      {
+          Nanc = gsl_ran_gamma(gBaseRand, gParam.ancestralThetaShape,
+                  gParam.ancestralThetaScale);
+      } else
+      {
+          Nanc = gsl_ran_gamma(gBaseRand, gParam.thetaShape,
+                  gParam.thetaScale);
+      }
       descendant1ThetaArray[taxonID] = descendant1Theta;
       descendant2ThetaArray[taxonID] = descendant2Theta;
       ancestralThetaArray[taxonID] = Nanc;

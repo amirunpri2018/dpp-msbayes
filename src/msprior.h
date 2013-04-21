@@ -12,7 +12,8 @@
 #define DEFAULT_MIGRATION_SCALE -1.0
 #define DEFAULT_REC_SHAPE -1.0
 #define DEFAULT_REC_SCALE -1.0
-#define DEFAULT_ANCESTRAL_THETA_MULTIPLIER 1.0
+#define DEFAULT_ANC_THETA_SHAPE -1.0
+#define DEFAULT_ANC_THETA_SCALE -1.0
 #define DEFAULT_REPS  1000000
 #define DEFAULT_MUT_FILE "SampleSize_MuModel_Vector"
 #define DEFAULT_SUBPARAMCONSTRAIN "000000000"
@@ -36,7 +37,8 @@ typedef struct
   double migrationScale;
   double recombinationShape;
   double recombinationScale;
-  double ancestralThetaMultiplier;
+  double ancestralThetaScale;
+  double ancestralThetaShape;
   unsigned long long reps;
   unsigned int numTaxonLocusPairs; /* total number of taxon:locus pairs */
   unsigned int numTaxonPairs;     /* number of unique taxon pairs */ 
