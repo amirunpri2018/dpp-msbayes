@@ -459,8 +459,16 @@ main (int argc, char *argv[])
 
       descendant1Theta = gsl_ran_gamma(gBaseRand, gParam.thetaShape,
               gParam.thetaScale);
-      descendant2Theta = gsl_ran_gamma(gBaseRand, gParam.thetaShape,
-              gParam.thetaScale);
+      if (gParam.thetaParameters[1] == '1') {
+          descendant2Theta = gsl_ran_gamma(gBaseRand, gParam.thetaShape,
+                  gParam.thetaScale);
+      } else if (gParam.thetaParameters[1] == '0') {
+          descendant2Theta = descendant1Theta;
+      } else {
+          fprintf(stderr, "ERROR: second character of `thetaParameters` "
+                "in the config file should be either 0 or 1\n");
+	      exit (EXIT_FAILURE);
+	  }
       spTheta = (descendant1Theta + descendant2Theta) / 2;
 	  /* while ((spTheta = gsl_ran_flat (gBaseRand, gParam.lowerTheta, */
 					  /* gParam.upperTheta)) <= 0); */
@@ -483,15 +491,35 @@ main (int argc, char *argv[])
 			       gParam.upperAncPopSize * gParam.upperTheta);*/
 	  /* Nanc = gsl_ran_flat (gBaseRand, gParam.lowerTheta, */
 			       /* gParam.upperAncPopSize * gParam.upperTheta); */
-      if ((gParam.ancestralThetaShape > 0) && (gParam.ancestralThetaScale > 0))
+      if ((gParam.thetaParameters[2] == '2') ||
+              ((gParam.thetaParameters[2] == '1') &&
+                      (gParam.thetaParameters[1] == '0')))
       {
-          Nanc = gsl_ran_gamma(gBaseRand, gParam.ancestralThetaShape,
-                  gParam.ancestralThetaScale);
-      } else
-      {
-          Nanc = gsl_ran_gamma(gBaseRand, gParam.thetaShape,
-                  gParam.thetaScale);
+          if ((gParam.ancestralThetaShape > 0) && (gParam.ancestralThetaScale > 0))
+          {
+              Nanc = gsl_ran_gamma(gBaseRand, gParam.ancestralThetaShape,
+                      gParam.ancestralThetaScale);
+          } else
+          {
+              Nanc = gsl_ran_gamma(gBaseRand, gParam.thetaShape,
+                      gParam.thetaScale);
+          }
       }
+      else if ((gParam.thetaParameters[2] == '1') && 
+              (gParam.thetaParameters[1] == '1'))
+      {
+          Nanc = descendant2Theta;
+      }
+      else if (gParam.thetaParameters[2] == '0')
+      {
+          Nanc = descendant1Theta;
+      }
+      else
+      {
+          fprintf(stderr, "ERROR: third character of `thetaParameters` "
+                "in the config file should be either 0, 1, or 2\n");
+	      exit (EXIT_FAILURE);
+	  }
       descendant1ThetaArray[taxonID] = descendant1Theta;
       descendant2ThetaArray[taxonID] = descendant2Theta;
       ancestralThetaArray[taxonID] = Nanc;

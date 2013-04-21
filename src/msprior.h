@@ -14,6 +14,7 @@
 #define DEFAULT_REC_SCALE -1.0
 #define DEFAULT_ANC_THETA_SHAPE -1.0
 #define DEFAULT_ANC_THETA_SCALE -1.0
+#define DEFAULT_THETA_PARAMETERS "012"
 #define DEFAULT_REPS  1000000
 #define DEFAULT_MUT_FILE "SampleSize_MuModel_Vector"
 #define DEFAULT_SUBPARAMCONSTRAIN "000000000"
@@ -21,6 +22,7 @@
 #define MAX_FILENAME_LEN 1024
 #define MAX_NAME_CHAR_LEN 1024
 #define NUMBER_OF_CONPARAM 9
+#define NUMBER_OF_THETA_PARAMETERS 3
 
 #include "hashtab.h"
 
@@ -39,6 +41,7 @@ typedef struct
   double recombinationScale;
   double ancestralThetaScale;
   double ancestralThetaShape;
+  char thetaParameters[NUMBER_OF_THETA_PARAMETERS];
   unsigned long long reps;
   unsigned int numTaxonLocusPairs; /* total number of taxon:locus pairs */
   unsigned int numTaxonPairs;     /* number of unique taxon pairs */ 
