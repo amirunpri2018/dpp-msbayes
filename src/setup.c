@@ -403,6 +403,11 @@ SetDefaultParams (runParameters * paramPtr)
     {
       paramPtr->ancestralThetaShape = DEFAULT_ANC_THETA_SHAPE;
     }
+  if (!paramPtr->thetaParameters || !paramPtr->thetaParameters[0])
+    {
+      strncpy (paramPtr->thetaParameters, DEFAULT_THETA_PARAMETERS,
+	       NUMBER_OF_THETA_PARAMETERS);
+    }
   if (!paramPtr->reps)
     {
       paramPtr->reps = DEFAULT_REPS;
@@ -700,15 +705,15 @@ SetupParams (FILE * fp, runParameters * paramPtr)
 // JRO - modified - 11/29/2011
 // JRO - modified - 11/17/2011
   retVal = init_globals (fp,
-			 "thetaShape thetaScale tauShape tauScale bottleProportionShapeA bottleProportionShapeB migrationShape migrationScale recombinationShape recombinationScale ancestralThetaShape ancestralThetaScale numTauClasses reps constrain subParamConstrain",
-			 "dddddddddddduVus",
+			 "thetaShape thetaScale tauShape tauScale bottleProportionShapeA bottleProportionShapeB migrationShape migrationScale recombinationShape recombinationScale ancestralThetaShape ancestralThetaScale thetaParameters numTauClasses reps constrain subParamConstrain",
+			 "ddddddddddddsuVus",
              &paramPtr->thetaShape, &paramPtr->thetaScale, &paramPtr->tauShape,
              &paramPtr->tauScale, &paramPtr->bottleProportionShapeA,
              &paramPtr->bottleProportionShapeB, &paramPtr->migrationShape,
              &paramPtr->migrationScale, &paramPtr->recombinationShape,
              &paramPtr->recombinationScale, &paramPtr->ancestralThetaShape,
-             &paramPtr->ancestralThetaScale, &paramPtr->numTauClasses,
-             &paramPtr->reps, &paramPtr->constrain,
+             &paramPtr->ancestralThetaScale, &paramPtr->thetaParameters,
+             &paramPtr->numTauClasses, &paramPtr->reps, &paramPtr->constrain,
              &paramPtr->subParamConstrain);
 
   if (retVal != 0)
@@ -1297,6 +1302,7 @@ PrintParam (FILE *fp)
   fprintf (fp, "recombinationScale =\t%.17lf\n", gParam.recombinationScale);
   fprintf (fp, "ancestralThetaShape =\t%.17lf\n", gParam.ancestralThetaShape);
   fprintf (fp, "ancestralThetaScale =\t%.17lf\n", gParam.ancestralThetaScale);
+  fprintf (fp, "thetaParameters =\t%s\n", gParam.thetaParameters);
   fprintf (fp, "reps =\t%llu\n", gParam.reps);
   fprintf (fp, "numTaxonLocusPairs =\t%u\n", gParam.numTaxonLocusPairs);
   fprintf (fp, "numTaxonPairs =\t%u\n", gParam.numTaxonPairs);
