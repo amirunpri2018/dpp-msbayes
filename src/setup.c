@@ -369,11 +369,15 @@ SetDefaultParams (runParameters * paramPtr)
     }
   if (!paramPtr->bottleProportionShapeA)
     {
-      paramPtr->bottleProportionShapeA = DEFAULT_BOTTLE_A;
+      paramPtr->bottleProportionShapeA = DEFAULT_BOTTLE_PROP_A;
     }
   if (!paramPtr->bottleProportionShapeB)
     {
-      paramPtr->bottleProportionShapeB = DEFAULT_BOTTLE_B;
+      paramPtr->bottleProportionShapeB = DEFAULT_BOTTLE_PROP_B;
+    }
+  if (!paramPtr->bottleProportionShared)
+    {
+      paramPtr->bottleProportionShared = DEFAULT_BOTTLE_PROP_SHARED;
     }
   if (!paramPtr->numTauClasses)
     {
@@ -536,6 +540,20 @@ InteractiveSetupParams (runParameters * paramPtr)
 	{
 	  badInput = 0;
 	  paramPtr->bottleProportionShapeB = tempValDouble;
+	}
+    }
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+           "Bottleneck proportion shared between descendant populations (0: False, 1: True) "
+	       "[%u]: \n", paramPtr->bottleProportionShared);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%u", &tempValUI) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->bottleProportionShared = tempValUI;
 	}
     }
 
@@ -705,11 +723,12 @@ SetupParams (FILE * fp, runParameters * paramPtr)
 // JRO - modified - 11/29/2011
 // JRO - modified - 11/17/2011
   retVal = init_globals (fp,
-			 "thetaShape thetaScale tauShape tauScale bottleProportionShapeA bottleProportionShapeB migrationShape migrationScale recombinationShape recombinationScale ancestralThetaShape ancestralThetaScale thetaParameters numTauClasses reps constrain subParamConstrain",
-			 "ddddddddddddsuVus",
+			 "thetaShape thetaScale tauShape tauScale bottleProportionShapeA bottleProportionShapeB bottleProportionShared migrationShape migrationScale recombinationShape recombinationScale ancestralThetaShape ancestralThetaScale thetaParameters numTauClasses reps constrain subParamConstrain",
+			 "dddddduddddddsuVus",
              &paramPtr->thetaShape, &paramPtr->thetaScale, &paramPtr->tauShape,
              &paramPtr->tauScale, &paramPtr->bottleProportionShapeA,
-             &paramPtr->bottleProportionShapeB, &paramPtr->migrationShape,
+             &paramPtr->bottleProportionShapeB,
+             &paramPtr->bottleProportionShared, &paramPtr->migrationShape,
              &paramPtr->migrationScale, &paramPtr->recombinationShape,
              &paramPtr->recombinationScale, &paramPtr->ancestralThetaShape,
              &paramPtr->ancestralThetaScale, &paramPtr->thetaParameters,
@@ -1296,6 +1315,7 @@ PrintParam (FILE *fp)
   fprintf (fp, "tauScale =\t%.17lf\n", gParam.tauScale);
   fprintf (fp, "bottleProportionShapeA =\t%.17lf\n", gParam.bottleProportionShapeA);
   fprintf (fp, "bottleProportionShapeB =\t%.17lf\n", gParam.bottleProportionShapeB);
+  fprintf (fp, "bottleProportionShared =\t%u\n", gParam.bottleProportionShared);
   fprintf (fp, "migrationShape =\t%.17lf\n", gParam.migrationShape);
   fprintf (fp, "migrationScale =\t%.17lf\n", gParam.migrationScale);
   fprintf (fp, "recombinationShape =\t%.17lf\n", gParam.recombinationShape);
