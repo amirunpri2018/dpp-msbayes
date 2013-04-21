@@ -434,8 +434,11 @@ main (int argc, char *argv[])
       {
           BottStr1 = gsl_ran_beta(gBaseRand, gParam.bottleProportionShapeA,
                   gParam.bottleProportionShapeB);
-          BottStr2 = gsl_ran_beta(gBaseRand, gParam.bottleProportionShapeA,
-                  gParam.bottleProportionShapeB);
+          BottStr2 = BottStr1;
+          if (gParam.bottleProportionShared == 0) {
+              BottStr2 = gsl_ran_beta(gBaseRand, gParam.bottleProportionShapeA,
+                      gParam.bottleProportionShapeB);
+          }
       }
 
 	  /* After the populations diverge, they experience pop. bottleneck.

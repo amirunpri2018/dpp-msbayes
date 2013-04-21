@@ -6,8 +6,9 @@
 #define DEFAULT_THETA_SCALE 0.001
 #define DEFAULT_TAU_SHAPE  1.0
 #define DEFAULT_TAU_SCALE  2.0
-#define DEFAULT_BOTTLE_A 5.0
-#define DEFAULT_BOTTLE_B 1.0
+#define DEFAULT_BOTTLE_PROP_A 5.0
+#define DEFAULT_BOTTLE_PROP_B 1.0
+#define DEFAULT_BOTTLE_PROP_SHARED 0
 #define DEFAULT_MIGRATION_SHAPE -1.0
 #define DEFAULT_MIGRATION_SCALE -1.0
 #define DEFAULT_REC_SHAPE -1.0
@@ -35,6 +36,7 @@ typedef struct
   double tauShape;
   double bottleProportionShapeA;
   double bottleProportionShapeB;
+  unsigned int bottleProportionShared;
   double migrationShape;
   double migrationScale;
   double recombinationShape;
