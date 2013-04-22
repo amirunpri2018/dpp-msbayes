@@ -116,6 +116,7 @@
 #include <gsl/gsl_randist.h>	/* for gsl_ran_gamma */
 #include "msprior.h"
 #include "setup.h"
+#include "partitionCombinatorics.c"
 
 /* This has to be Global */
 const gsl_rng *gBaseRand;	/* global rand number generator */
@@ -153,9 +154,9 @@ main (int argc, char *argv[])
          *descendant1ThetaArray = NULL, *descendant2ThetaArray = NULL,
          *ancestralThetaArray = NULL, spTheta, thetaMean, descendant1Theta,
          descendant2Theta, tauequalizer, gaussTime = 0.0, mig, rec, BottStr1,
-         BottStr2, BottleTime;
+         BottStr2, BottleTime, concentrationParameter;
   double *recTbl;
-  int tauClass, *PSIarray = NULL;
+  int tauClass, *PSIarray = NULL, *partition = NULL;
   unsigned int numTauClasses = -1, u, locus, taxonID, zzz;
   unsigned long randSeed;
   unsigned long long rep;
@@ -241,12 +242,14 @@ main (int argc, char *argv[])
   descendant1ThetaArray = calloc (gParam.numTaxonPairs, sizeof (double));
   descendant2ThetaArray = calloc (gParam.numTaxonPairs, sizeof (double));
   ancestralThetaArray = calloc (gParam.numTaxonPairs, sizeof (double));
+  partition = calloc(gParam.numTaxonPairs, sizeof(int));
 
   recTbl = calloc (gParam.numLoci, sizeof (double));
 
   if (uniqTauArray == NULL || PSIarray == NULL || recTbl == NULL ||
           taxonTauArray == NULL || descendant1ThetaArray == NULL ||
-          descendant2ThetaArray == NULL || ancestralThetaArray == NULL)
+          descendant2ThetaArray == NULL || ancestralThetaArray == NULL ||
+          partition == NULL)
     {
       fprintf (stderr, "ERROR: Not enough memory for uniqTauArray, PSIarray, or recTbl\n");
       exit (EXIT_FAILURE);
@@ -331,11 +334,28 @@ main (int argc, char *argv[])
        * If gParam.numTauClasses is not set, we are sampling
        * numTauClasses from a uniform prior dist'n.
        */
-      if (gParam.numTauClasses == 0)
-	{			/* numTauClasses is NOT fixed */
-	  numTauClasses =
-	    1 + gsl_rng_uniform_int (gBaseRand, gParam.numTaxonPairs);
-	}
+        if (gParam.numTauClasses == 0)
+        {			/* numTauClasses is NOT fixed */
+            if ((gParam.concentrationShape > 0) &&
+                    (gParam.concentrationScale > 0))
+            {
+                concentrationParameter = gsl_ran_gamma(gBaseRand,
+                        gParam.concentrationShape, gParam.concentrationScale);
+                numTauClasses = dirichletProcessDraw(gBaseRand, gParam.numTaxonPairs,
+                        concentrationParamter, partition);
+            }
+            else if ((gParam.concentrationShape > -1.0) &&
+                    (gParam.concentrationScale > -1.0))
+            {
+                numTauClasses = drawIntegerPartitionCategory(gBaseRand,
+                        gParam.numTaxonPairs);
+            }
+            else
+            {
+            numTauClasses = 1 + gsl_rng_uniform_int (gBaseRand,
+                    gParam.numTaxonPairs);
+            }
+        }
       
       /* create the recombination rate table for each gene */
       rec = 0.0;
@@ -375,38 +395,51 @@ main (int argc, char *argv[])
 #endif
 
       // Randomly generate TauArray only when NOT constrain
-      if ((b_constrain == 0) || (subParamConstrainConfig[0] != 1))
-	{
-	  int counter;
-	  /* sample tau's from uniform prior dist'n */
-	  for (u = 0; u < numTauClasses; u++)
-// JRO - modified - 11/17/2011
-//	    uniqTauArray[u] = gsl_ran_flat (gBaseRand, 0.0, gParam.upperTau);
+    if ((b_constrain == 0) || (subParamConstrainConfig[0] != 1))
+    {
+        int counter;
+	    /* sample tau's from uniform prior dist'n */
+        for (u = 0; u < numTauClasses; u++)
+        {
+        // JRO - modified - 11/17/2011
+        // uniqTauArray[u] = gsl_ran_flat (gBaseRand, 0.0, gParam.upperTau);
 	    /* uniqTauArray[u] = gsl_ran_flat (gBaseRand, gParam.lowerTau, */
 	    /*                                 gParam.upperTau); */
-        uniqTauArray[u] = gsl_ran_gamma(gBaseRand, gParam.tauShape,
-                gParam.tauScale);
+            uniqTauArray[u] = gsl_ran_gamma(gBaseRand, gParam.tauShape,
+                    gParam.tauScale);
+        }
 
-          qsort(uniqTauArray, numTauClasses, sizeof(double),comp_nums);
+        if ((gParam.concentrationShape > 0) && (gParam.concentrationScale > 0))
+        {
+            memset(PSIarray, 0, sizeof(PSIarray));
+            for (counter = 0; counter < gParam.numTaxonPairs; counter++)
+            {
+                tauClass = partition[counter];
+                taxonTauArray[counter] = uniqTauArray[tauClass];
+                PSIarray[counter] += 1;
+            }
+        }
+        else 
+        {
+            qsort(uniqTauArray, numTauClasses, sizeof(double),comp_nums);
+            for (counter = 0; counter < numTauClasses; counter++) 
+            {
+                taxonTauArray[counter] = uniqTauArray[counter];
+                PSIarray[counter] = 1;
+            }
 
-          for (counter = 0; counter < numTauClasses; counter++) 
-	    {
-	      taxonTauArray[counter] = uniqTauArray[counter];
-	      PSIarray[counter] = 1;
-	    }
+            for (counter = numTauClasses; counter < gParam.numTaxonPairs; counter++)
+            {
+                tauClass = gsl_rng_uniform_int(gBaseRand, numTauClasses);
+                taxonTauArray[counter] = uniqTauArray[tauClass];
+                PSIarray[tauClass] = PSIarray[tauClass] + 1;
+            }
 
-          for (counter = numTauClasses; 
-	       counter < gParam.numTaxonPairs; counter++)
-	    {
-	      tauClass = gsl_rng_uniform_int(gBaseRand, numTauClasses);
-	      taxonTauArray[counter] = uniqTauArray[tauClass];
-	      PSIarray[tauClass] = PSIarray[tauClass] + 1;
-	    }
-
-	  /* randomly shuflling the order of taxonTauArray */
-	  gsl_ran_shuffle(gBaseRand, taxonTauArray, 
-			  gParam.numTaxonPairs, sizeof (double));
-	}
+            /* randomly shuflling the order of taxonTauArray */
+            gsl_ran_shuffle(gBaseRand, taxonTauArray, 
+                    gParam.numTaxonPairs, sizeof (double));
+        }
+    }
       
       for (taxonID = 0; taxonID < gParam.numTaxonPairs; taxonID++)
 	{
@@ -720,6 +753,7 @@ main (int argc, char *argv[])
   free (uniqTauArray);
   free (taxonTauArray);
   free (PSIarray);
+  free (partition);
   free (descendant1ThetaArray);
   free (descendant2ThetaArray);
   free (ancestralThetaArray);
