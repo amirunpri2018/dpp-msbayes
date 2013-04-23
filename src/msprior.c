@@ -258,7 +258,7 @@ main (int argc, char *argv[])
   {
       numDivModels = integerPartition(gParam.numTaxonPairs);
       divModels = (int **) calloc(numDivModels, sizeof(int*));
-      for (i = 0; i < gParam.numTaxonPairs; i++) {
+      for (i = 0; i < numDivModels; i++) {
           divModels[i] = (int *) calloc(gParam.numTaxonPairs, sizeof(int));
           if (divModels[i] == NULL)
           {
@@ -448,11 +448,15 @@ main (int argc, char *argv[])
 
         if ((gParam.concentrationShape > 0) && (gParam.concentrationScale > 0))
         {
-            memset(PSIarray, 0, sizeof(PSIarray));
-            for (counter = 0; counter < gParam.numTaxonPairs; counter++)
+            /* memset(PSIarray, 0, sizeof(PSIarray)); */
+            for (i = 0; i < gParam.numTaxonPairs; i++)
             {
-                tauClass = divIndices[counter];
-                taxonTauArray[counter] = uniqTauArray[tauClass];
+                PSIarray[i] = 0;
+            }
+            for (i = 0; i < gParam.numTaxonPairs; i++)
+            {
+                tauClass = divIndices[i];
+                taxonTauArray[i] = uniqTauArray[tauClass];
                 PSIarray[tauClass] += 1;
             }
         }
