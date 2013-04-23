@@ -148,9 +148,14 @@ int dirichletProcessDraw(const gsl_rng * rng, int n, double alpha, int elements[
  * generated partitions will be stored.
  */ 
 void generateIntegerPartitions(int n, int ip, int **partitions) {
-    memset(partitions, 0, sizeof(partitions[0][0]) * ip * n);
+    /* memset(partitions, 0, sizeof(partitions[0][0]) * ip * n); */
+    int i, j;
+    for (i = 0; i < ip; i++) {
+        for (j = 0; j < n; j++) {
+            partitions[i][j] = 0;
+        }
+    }
     int x[n];
-    int i;
     for (i = 0; i < n; i++) {
         x[i] = 1;
     }
