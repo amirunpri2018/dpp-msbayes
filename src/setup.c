@@ -351,6 +351,14 @@ GetLine (char *line, int max)
 static void
 SetDefaultParams (runParameters * paramPtr)
 {
+  if (!paramPtr->concentrationShape)
+    {
+      paramPtr->concentrationShape = DEFAULT_CONCENTRATION_SHAPE;
+    }
+  if (!paramPtr->concentrationScale)
+    {
+      paramPtr->concentrationScale = DEFAULT_CONCENTRATION_SCALE;
+    }
   if (!paramPtr->thetaScale)
     {
       paramPtr->thetaScale = DEFAULT_THETA_SCALE;
@@ -451,6 +459,38 @@ InteractiveSetupParams (runParameters * paramPtr)
   fprintf (stderr, "\nPress [return] to accept the default value in [ ]\n\n");
 
   SetDefaultParams (paramPtr);
+
+  /* Concentration parameter of Dirichlet process */
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+	       "Shape parameter for gamma prior distribution on the concentration "
+           "parameter of the Dirichlet process "
+	       "[%lf]: \n", paramPtr->concentrationShape);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->concentrationShape = tempValDouble;
+	}
+    }
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+	       "Scale parameter for gamma prior distribution on the concentration "
+           "parameter of the Dirichlet process "
+	       "[%lf]: \n", paramPtr->concentrationScale);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->concentrationScale = tempValDouble;
+	}
+    }
 
   /* theta */
   for (badInput = 1; badInput;)
@@ -723,8 +763,9 @@ SetupParams (FILE * fp, runParameters * paramPtr)
 // JRO - modified - 11/29/2011
 // JRO - modified - 11/17/2011
   retVal = init_globals (fp,
-			 "thetaShape thetaScale tauShape tauScale bottleProportionShapeA bottleProportionShapeB bottleProportionShared migrationShape migrationScale recombinationShape recombinationScale ancestralThetaShape ancestralThetaScale thetaParameters numTauClasses reps constrain subParamConstrain",
-			 "dddddduddddddsuVus",
+			 "concentrationShape concentrationScale thetaShape thetaScale tauShape tauScale bottleProportionShapeA bottleProportionShapeB bottleProportionShared migrationShape migrationScale recombinationShape recombinationScale ancestralThetaShape ancestralThetaScale thetaParameters numTauClasses reps constrain subParamConstrain",
+			 "dddddddduddddddsuVus",
+             &paramPtr->concentrationShape, &paramPtr->concentrationScale,
              &paramPtr->thetaShape, &paramPtr->thetaScale, &paramPtr->tauShape,
              &paramPtr->tauScale, &paramPtr->bottleProportionShapeA,
              &paramPtr->bottleProportionShapeB,
@@ -1308,6 +1349,8 @@ PrintParam (FILE *fp)
   int i;
 
   fprintf (fp, "## gParam ##\n");
+  fprintf (fp, "concentrationShape =\t%.17lf\n", gParam.concentrationShape);
+  fprintf (fp, "concentrationScale =\t%.17lf\n", gParam.concentrationScale);
   fprintf (fp, "thetaShape =\t%.17lf\n", gParam.thetaShape);
   fprintf (fp, "thetaScale =\t%.17lf\n", gParam.thetaScale);
 // JRO - modified - 11/17/2011
