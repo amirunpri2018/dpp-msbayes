@@ -2,6 +2,8 @@
 #define MS_PRIOR_H
 
 /* Default values used for interactive setup */
+#define DEFAULT_CONCENTRATION_SHAPE 0.0
+#define DEFAULT_CONCENTRATION_SCALE 0.0
 #define DEFAULT_THETA_SHAPE 1.0
 #define DEFAULT_THETA_SCALE 0.001
 #define DEFAULT_TAU_SHAPE  1.0
@@ -9,12 +11,12 @@
 #define DEFAULT_BOTTLE_PROP_A 5.0
 #define DEFAULT_BOTTLE_PROP_B 1.0
 #define DEFAULT_BOTTLE_PROP_SHARED 0
-#define DEFAULT_MIGRATION_SHAPE -1.0
-#define DEFAULT_MIGRATION_SCALE -1.0
-#define DEFAULT_REC_SHAPE -1.0
-#define DEFAULT_REC_SCALE -1.0
-#define DEFAULT_ANC_THETA_SHAPE -1.0
-#define DEFAULT_ANC_THETA_SCALE -1.0
+#define DEFAULT_MIGRATION_SHAPE 0.0
+#define DEFAULT_MIGRATION_SCALE 0.0
+#define DEFAULT_REC_SHAPE 0.0
+#define DEFAULT_REC_SCALE 0.0
+#define DEFAULT_ANC_THETA_SHAPE 0.0
+#define DEFAULT_ANC_THETA_SCALE 0.0
 #define DEFAULT_THETA_PARAMETERS "012"
 #define DEFAULT_REPS  1000000
 #define DEFAULT_MUT_FILE "SampleSize_MuModel_Vector"
@@ -30,6 +32,8 @@
 // JRO - modified - 11/17/2011
 typedef struct
 {
+  double concentrationScale;
+  double concentrationShape;
   double thetaScale;
   double thetaShape;
   double tauScale;

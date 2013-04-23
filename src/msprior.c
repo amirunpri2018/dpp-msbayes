@@ -156,7 +156,9 @@ main (int argc, char *argv[])
          descendant2Theta, tauequalizer, gaussTime = 0.0, mig, rec, BottStr1,
          BottStr2, BottleTime, concentrationParameter;
   double *recTbl;
-  int tauClass, *PSIarray = NULL, *partition = NULL;
+  int tauClass, numDivModels, *PSIarray = NULL, *divIndices = NULL,
+          **divModels = NULL, i, j;
+  int divModelIndex = 0; 
   unsigned int numTauClasses = -1, u, locus, taxonID, zzz;
   unsigned long randSeed;
   unsigned long long rep;
@@ -194,7 +196,6 @@ main (int argc, char *argv[])
 	  exit (EXIT_FAILURE);
 	}
 
-      int i;
       for (i = 0; i < strlen (gParam.subParamConstrain); i++)
 	{
 	  char a = (gParam.subParamConstrain)[i];
@@ -242,14 +243,43 @@ main (int argc, char *argv[])
   descendant1ThetaArray = calloc (gParam.numTaxonPairs, sizeof (double));
   descendant2ThetaArray = calloc (gParam.numTaxonPairs, sizeof (double));
   ancestralThetaArray = calloc (gParam.numTaxonPairs, sizeof (double));
-  partition = calloc(gParam.numTaxonPairs, sizeof(int));
-
+  if ((gParam.concentrationShape > 0) && (gParam.concentrationScale > 0))
+  {
+      divIndices = calloc(gParam.numTaxonPairs, sizeof(int));
+      if (divIndices == NULL)
+      {
+          fprintf(stderr, "ERROR: Not enough memory for array of divergence "
+                  "indices\n");
+          exit (EXIT_FAILURE);
+      }
+  }
+  else if ((gParam.concentrationShape > -1.0) &&
+          (gParam.concentrationScale > -1.0))
+  {
+      numDivModels = integerPartition(gParam.numTaxonPairs);
+      divModels = (int **) calloc(numDivModels, sizeof(int*));
+      for (i = 0; i < gParam.numTaxonPairs; i++) {
+          divModels[i] = (int *) calloc(gParam.numTaxonPairs, sizeof(int));
+          if (divModels[i] == NULL)
+          {
+              fprintf(stderr, "ERROR: Not enough memory for 2-D array of "
+                      " divergence models\n");
+              exit (EXIT_FAILURE);
+          }
+      }
+      if (divModels == NULL)
+      {
+          fprintf(stderr, "ERROR: Not enough memory for 2-D array of "
+                  " divergence models\n");
+          exit (EXIT_FAILURE);
+      }
+      generateIntegerPartitions(gParam.numTaxonPairs, numDivModels, divModels);
+  }
   recTbl = calloc (gParam.numLoci, sizeof (double));
 
   if (uniqTauArray == NULL || PSIarray == NULL || recTbl == NULL ||
           taxonTauArray == NULL || descendant1ThetaArray == NULL ||
-          descendant2ThetaArray == NULL || ancestralThetaArray == NULL ||
-          partition == NULL)
+          descendant2ThetaArray == NULL || ancestralThetaArray == NULL)
     {
       fprintf (stderr, "ERROR: Not enough memory for uniqTauArray, PSIarray, or recTbl\n");
       exit (EXIT_FAILURE);
@@ -342,13 +372,20 @@ main (int argc, char *argv[])
                 concentrationParameter = gsl_ran_gamma(gBaseRand,
                         gParam.concentrationShape, gParam.concentrationScale);
                 numTauClasses = dirichletProcessDraw(gBaseRand, gParam.numTaxonPairs,
-                        concentrationParamter, partition);
+                        concentrationParameter, divIndices);
             }
             else if ((gParam.concentrationShape > -1.0) &&
                     (gParam.concentrationScale > -1.0))
             {
-                numTauClasses = drawIntegerPartitionCategory(gBaseRand,
-                        gParam.numTaxonPairs);
+                divModelIndex = gsl_rng_uniform_int(gBaseRand, numDivModels);
+                PSIarray = divModels[divModelIndex];
+                numTauClasses = 0;
+                for (i = 0; i < gParam.numTaxonPairs; i++) {
+                    if (PSIarray[i] < 1) {
+                        break;
+                    }
+                    numTauClasses += 1;
+                }
             }
             else
             {
@@ -414,10 +451,25 @@ main (int argc, char *argv[])
             memset(PSIarray, 0, sizeof(PSIarray));
             for (counter = 0; counter < gParam.numTaxonPairs; counter++)
             {
-                tauClass = partition[counter];
+                tauClass = divIndices[counter];
                 taxonTauArray[counter] = uniqTauArray[tauClass];
-                PSIarray[counter] += 1;
+                PSIarray[tauClass] += 1;
             }
+        }
+        else if ((gParam.concentrationShape > -1.0) &&
+                    (gParam.concentrationScale > -1.0))
+        {
+            counter = 0;
+            for (i = 0; i < numTauClasses; i++)
+            {
+                for (j = 0; j < PSIarray[i]; j++)
+                {
+                    taxonTauArray[counter] = uniqTauArray[i];
+                    counter += 1;
+                }
+            }
+            gsl_ran_shuffle(gBaseRand, taxonTauArray, 
+                    gParam.numTaxonPairs, sizeof (double));
         }
         else 
         {
@@ -753,12 +805,23 @@ main (int argc, char *argv[])
   free (uniqTauArray);
   free (taxonTauArray);
   free (PSIarray);
-  free (partition);
   free (descendant1ThetaArray);
   free (descendant2ThetaArray);
   free (ancestralThetaArray);
   free (recTbl);
   free (subParamConstrainConfig);
+  if ((gParam.concentrationShape > 0) && (gParam.concentrationScale > 0))
+  {
+      free (divIndices);
+  }
+  else if ((gParam.concentrationShape > -1.0) &&
+          (gParam.concentrationScale > -1.0))
+  {
+      for (i = 0; i < gParam.numTaxonPairs; i++) {
+          free(divModels[i]);
+      }
+      free(divModels);
+  }
   exit (0);
 }
 
