@@ -286,7 +286,7 @@ main (int argc, char *argv[])
 		break;
 	    }
 
-	  for (lii = (linecount < tolerated ? linecount : tolerated) - 1;
+	  for (lii = (linecount < tolerated ? linecount : (tolerated - 1));
 	       lii > li; lii--)
 	    {
 	      besteuclid[lii] = besteuclid[lii - 1];
