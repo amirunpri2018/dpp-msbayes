@@ -60,6 +60,88 @@ typedef struct config_ {
     d_array std_devs;
 } config;
 
+typedef struct sample_ {
+    char * file_path;
+    int line_num;
+    double distance;
+    s_array line_array;
+} sample;
+
+typedef struct sample_array_ {
+    sample * a;
+    int length;
+} sample_array;
+
+typedef struct best_samples_ {
+    int length;
+    int sample_size;
+    sample_array samples;
+} best_samples;
+
+sample_sum init_sample_sum();
+d_array init_d_array(int length);
+void free_d_array(d_array * v);
+void append_d_array(d_array * v, double x);
+i_array init_i_array(int length);
+void free_i_array(i_array * v);
+void append_i_array(i_array * v, int x);
+c_array init_c_array(int length);
+void free_c_array(c_array * v);
+void append_c_array(c_array * v, char x);
+c_array_2d init_c_array_2d(int width, int length);
+void free_c_array_2d(c_array_2d * v);
+void append_c_array_2d(c_array_2d * v, c_array * x);
+s_array init_s_array(int length);
+void free_s_array(s_array * v);
+void append_s_array(s_array * v, char * x);
+config init_config();
+void free_config(config * c);
+sample init_sample(
+        char * file_path,
+        const int line_num,
+        const s_array * line_array,
+        const i_array * stat_indices,
+        const d_array * std_observed_stats,
+        const d_array * means,
+        const d_array * std_devs);
+void free_sample(sample * s);
+sample_sum_array init_sample_sum_array(int length);
+void free_sample_sum_array(sample_sum_array * v);
+void update_sample_sum(sample_sum * s, double x);
+double get_mean(const sample_sum * s);
+double get_sample_variance(const sample_sum * s);
+double get_std_dev(const sample_sum * s);
+void update_sample_sum_array(sample_sum_array * s, const d_array * x);
+void get_mean_array(const sample_sum_array * s, d_array * means);
+void get_sample_variance_array(const sample_sum_array * s,
+        d_array * v);
+void get_std_dev_array(const sample_sum_array * s, d_array * std_devs);
+double get_euclidean_distance(const d_array * v1, const d_array * v2);
+void standardize_vector(d_array * v, const d_array * means,
+        const d_array * std_devs);
+void help();
+void print_config(const config * c);
+void parse_args(config * conf, int argc, char **argv);
+int split_str(c_array * string, s_array * words, int expected_num);
+void parse_header(const char * path, c_array * line_buffer, s_array * header);
+int headers_match(const s_array * h1, const s_array * h2);
+void parse_observed_stats_file(const char * path, c_array * line_buffer,
+        s_array * header, d_array * stats);
+void get_matching_indices(const s_array * search_strings,
+        const s_array * target_strings,
+        i_array * indices);
+int get_stats(const s_array * line_array, const i_array * stat_indices,
+        d_array * stats);
+void summarize_stat_samples(const s_array * paths,
+        c_array * line_buffer,
+        const i_array * stat_indices,
+        sample_sum_array * ss_array,
+        d_array * means,
+        d_array * std_devs,
+        int num_to_sample,
+        int expected_num_columns);
+int main(int argc, char **argv);
+
 sample_sum init_sample_sum() {
     sample_sum ss;
     ss.n = 0;
@@ -76,6 +158,10 @@ d_array init_d_array(int length) {
         exit(1);
     }
     return v;
+}
+
+void free_d_array(d_array * v) {
+    free((*v).a);
 }
 
 void append_d_array(d_array * v, double x) {
@@ -98,6 +184,10 @@ i_array init_i_array(int length) {
     return v;
 }
 
+void free_i_array(i_array * v) {
+    free((*v).a);
+}
+
 void append_i_array(i_array * v, int x) {
     if (((*v).a = (typeof(*(*v).a) *) realloc((*v).a ,
             (((*v).length + 1) * sizeof(*(*v).a)))) == NULL) {
@@ -117,6 +207,10 @@ c_array init_c_array(int length) {
     }
     v.a[v.length] = '\0';
     return v;
+}
+
+void free_c_array(c_array * v) {
+    free((*v).a);
 }
 
 void append_c_array(c_array * v, char x) {
@@ -144,6 +238,14 @@ c_array_2d init_c_array_2d(int width, int length) {
     return v;
 }
 
+void free_c_array_2d(c_array_2d * v) {
+    int i;
+    for (i = 0; i < (*v).length; i++) {
+        free(&(*v).a[i]);
+    }
+    free((*v).a);
+}
+
 void append_c_array_2d(c_array_2d * v, c_array * x) {
     if (((*v).a = (typeof(*(*v).a) *) realloc((*v).a ,
             (((*v).length + 1) * sizeof(*(*v).a)))) == NULL) {
@@ -162,6 +264,14 @@ s_array init_s_array(int length) {
         exit(1);
     }
     return v;
+}
+
+void free_s_array(s_array * v) {
+    int i;
+    for (i = 0; i < (*v).length; i++) {
+        free((*v).a[i]);
+    }
+    free((*v).a);
 }
 
 void append_s_array(s_array * v, char * x) {
@@ -186,6 +296,45 @@ config init_config() {
     return c;
 }
 
+void free_config(config * c) {
+    free_d_array(&(*c).means);
+    free_d_array(&(*c).std_devs);
+    free_s_array(&(*c).sim_paths);
+}
+
+sample init_sample(
+        char * file_path,
+        const int line_num,
+        const s_array * line_array,
+        const i_array * stat_indices,
+        const d_array * std_observed_stats,
+        const d_array * means,
+        const d_array * std_devs) {
+    int i, get_stats_return;
+    d_array stats;
+    sample s;
+    s.file_path = file_path;
+    s.line_num = line_num;
+    s.line_array = *line_array;
+    stats = init_d_array((*stat_indices).length);
+    get_stats_return = get_stats(line_array, stat_indices, &stats);
+    if (get_stats_return != 0) {
+        fprintf(stderr, "ERROR: file %s line %d contains %d invalid stats "
+                "columns\n",
+                file_path, line_num, get_stats_return);
+    }
+    standardize_vector(&stats, means, std_devs);
+    s.distance = get_euclidean_distance(std_observed_stats, &stats);
+    return s;
+}
+
+void free_sample(sample * s) {
+    int i;
+    free((*s).file_path);
+    free_s_array(&(*s).line_array);
+}
+    
+
 sample_sum_array init_sample_sum_array(int length) {
     sample_sum_array v;
     v.length = length;
@@ -198,6 +347,10 @@ sample_sum_array init_sample_sum_array(int length) {
         v.a[i] = init_sample_sum();
     }
     return v;
+}
+
+void free_sample_sum_array(sample_sum_array * v) {
+    free((*v).a);
 }
 
 void update_sample_sum(sample_sum * s, double x) {
@@ -596,29 +749,26 @@ void get_matching_indices(const s_array * search_strings,
     }
 }
 
-int summarize_stat_samples(const s_array * paths,
+void reject(const s_array * paths,
         c_array * line_buffer,
         const i_array * stat_indices,
-        sample_sum_array * ss_array,
+        d_array * std_observed_stats,
         d_array * means,
         d_array * std_devs,
-        int num_to_sample,
+        int num_retain,
         int expected_num_columns) {
     FILE * f;
-    int i, j, line_num, ncols;
+    int i, j, line_num, ncols, get_stats_return;
     s_array line_array;
-    d_array stats;
-    char * end_ptr;
-    end_ptr = (typeof(*end_ptr) *) malloc(sizeof(end_ptr) * 64);
     line_array = init_s_array(expected_num_columns);
-    stats = init_d_array((*stat_indices).length);
     for (i = 0; i < (*paths).length; i++) {
         line_num = 0;
         if ((f = fopen((*paths).a[i], "r")) == NULL) {
             perror((*paths).a[i]);
             exit(1);
         }
-        while (fgets((*line_buffer).a, (((*line_buffer).length) - 1), f) != NULL) {
+        while (fgets((*line_buffer).a, (((*line_buffer).length) - 1),
+                    f) != NULL) {
             line_num++;
             ncols = split_str(line_buffer, &line_array, expected_num_columns);
             if (ncols == -1) continue; //empty line
@@ -629,14 +779,71 @@ int summarize_stat_samples(const s_array * paths,
                 exit(1);
             }
             if (line_num == 1) continue;
-            for (j = 0; j < (*stat_indices).length; j++) {
-                stats.a[j] = strtod(line_array.a[(*stat_indices).a[j]], &end_ptr);
-                if (end_ptr == line_array.a[(*stat_indices).a[j]]) {
-                    fprintf(stderr, "ERROR: file %s line %d column %d is not a valid "
-                            "number\n", (*paths).a[i], line_num,
-                            ((*stat_indices).a[j] + 1));
-                    exit(1);
-                }
+            sample s;
+            s = init_sample((*paths).a[i], line_num, &line_array, stat_indices,
+                    std_observed_stats, means, std_devs);
+            fprintf(stderr, "file %s line %d: %lf\n", s.file_path, s.line_num,
+                    s.distance);
+        }
+        fclose(f);
+    }
+    free_s_array(&line_array);
+}
+
+int get_stats(const s_array * line_array, const i_array * stat_indices,
+        d_array * stats) {
+    int i, ret;
+    char * end_ptr;
+    end_ptr = (typeof(*end_ptr) *) malloc(sizeof(end_ptr) * 64);
+    ret = 0;
+    for (i = 0; i < (*stat_indices).length; i++) {
+        (*stats).a[i] = strtod((*line_array).a[(*stat_indices).a[i]], &end_ptr);
+        if (end_ptr == (*line_array).a[(*stat_indices).a[i]]) {
+            fprintf(stderr, "ERROR: column %d is not a valid "
+                    "number\n", ((*stat_indices).a[i] + 1));
+            ret++;
+        }
+    }
+    return ret;
+}
+
+void summarize_stat_samples(const s_array * paths,
+        c_array * line_buffer,
+        const i_array * stat_indices,
+        sample_sum_array * ss_array,
+        d_array * means,
+        d_array * std_devs,
+        int num_to_sample,
+        int expected_num_columns) {
+    FILE * f;
+    int i, j, line_num, ncols, get_stats_return;
+    s_array line_array;
+    d_array stats;
+    line_array = init_s_array(expected_num_columns);
+    stats = init_d_array((*stat_indices).length);
+    for (i = 0; i < (*paths).length; i++) {
+        line_num = 0;
+        if ((f = fopen((*paths).a[i], "r")) == NULL) {
+            perror((*paths).a[i]);
+            exit(1);
+        }
+        while (fgets((*line_buffer).a, (((*line_buffer).length) - 1),
+                    f) != NULL) {
+            line_num++;
+            ncols = split_str(line_buffer, &line_array, expected_num_columns);
+            if (ncols == -1) continue; //empty line
+            if (ncols != 0) {
+                fprintf(stderr, "ERROR: file %s line %d has %d columns "
+                        "(expected %d)\n", (*paths).a[i], line_num, ncols,
+                        expected_num_columns);
+                exit(1);
+            }
+            if (line_num == 1) continue;
+            get_stats_return = get_stats(&line_array, stat_indices, &stats);
+            if (get_stats_return != 0) {
+                fprintf(stderr, "ERROR: file %s line %d has %d invalid stats "
+                        "columns\n", (*paths).a[i], line_num, get_stats_return);
+                exit(1);
             }
             update_sample_sum_array(ss_array, &stats);
             if ((*ss_array).a[0].n >= num_to_sample) break;
@@ -646,7 +853,8 @@ int summarize_stat_samples(const s_array * paths,
     }
     get_mean_array(ss_array, means);
     get_std_dev_array(ss_array, std_devs);
-    //free stats, line_array, end_ptr
+    free_d_array(&stats);
+    free_s_array(&line_array);
 }
 
 int main(int argc, char **argv) {
@@ -740,6 +948,9 @@ int main(int argc, char **argv) {
     for (i = 0; i < conf.means.length; i++) {
         printf("%lf %lf\n", conf.means.a[i], conf.std_devs.a[i]);
     }
+    standardize_vector(&obs_stats, &conf.means, &conf.std_devs);
+    reject(&conf.sim_paths, &line_buffer, &indices, &obs_stats,
+            &conf.means, &conf.std_devs, conf.num_retain, sim_header.length);
 
     /* int i, l = 4; */
     /* d_array v1, v2, means, std_devs; */
