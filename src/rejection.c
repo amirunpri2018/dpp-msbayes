@@ -195,13 +195,13 @@ sample init_sample(
 
 void free_sample(sample * s) {
     int i;
-    free((*s).file_path);
     free_s_array(&(*s).line_array);
 }
     
 sample_array init_sample_array(int length) {
     sample_array v;
     v.length = length;
+    v.sample_size = 0;
     if ((v.a = (typeof(*v.a) *) calloc(v.length, sizeof(*v.a))) == NULL) {
         perror("out of memory");
         exit(1);
@@ -210,8 +210,53 @@ sample_array init_sample_array(int length) {
 }
 
 void free_sample_array(sample_array * v) {
+    int i;
+    for (i = 0; i < (*v).length; i++) {
+        free_sample(&(*v).a[i]);
+    }
     free((*v).a);
 }
+
+int process_sample(sample_array * samples, const sample * s) {
+    if ((*samples).sample_size == 0) {
+        (*samples).a[0] = *s;
+        (*samples).sample_size++;
+        return 0;
+    }
+    if ((*samples).a[((*samples).sample_size - 1)].distance <= (*s).distance) {
+        if ((*samples).sample_size >= (*samples).length) {
+            return -1;
+        }
+        else {
+            (*samples).a[(*samples).sample_size] = *s;
+            (*samples).sample_size++;
+            return ((*samples).sample_size + 1);
+        }
+    }
+    int i;
+    for (i = 0; i < (*samples).sample_size; i++) {
+        if ((*samples).a[i].distance > (*s).distance) {
+            rshift_samples(samples, i);
+            (*samples).a[i] = *s;
+            return i;
+        }
+    }
+    return -1;
+}
+
+void rshift_samples(sample_array * s, int index) {
+    int i, inc;
+    inc = 0;
+    if ((*s).sample_size < (*s).length) {
+        (*s).a[(*s).sample_size] = (*s).a[((*s).sample_size - 1)];
+        inc = 1;
+    }
+    for (i = ((*s).sample_size - 1); i > index; i--) {
+        (*s).a[i] = (*s).a[i - 1];
+    }
+    (*s).sample_size += inc;
+}
+
 
 sample_sum_array init_sample_sum_array(int length) {
     sample_sum_array v;
@@ -627,7 +672,7 @@ void get_matching_indices(const s_array * search_strings,
     }
 }
 
-void reject(const s_array * paths,
+sample_array reject(const s_array * paths,
         c_array * line_buffer,
         const i_array * stat_indices,
         d_array * std_observed_stats,
@@ -636,9 +681,10 @@ void reject(const s_array * paths,
         int num_retain,
         int expected_num_columns) {
     FILE * f;
-    int i, j, line_num, ncols, get_stats_return;
+    int i, j, line_num, ncols, get_stats_return, sample_idx;
     s_array line_array;
-    line_array = init_s_array(expected_num_columns);
+    sample_array retained_samples;
+    retained_samples = init_sample_array(num_retain);
     for (i = 0; i < (*paths).length; i++) {
         line_num = 0;
         if ((f = fopen((*paths).a[i], "r")) == NULL) {
@@ -648,6 +694,7 @@ void reject(const s_array * paths,
         while (fgets((*line_buffer).a, (((*line_buffer).length) - 1),
                     f) != NULL) {
             line_num++;
+            line_array = init_s_array(expected_num_columns);
             ncols = split_str(line_buffer, &line_array, expected_num_columns);
             if (ncols == -1) continue; //empty line
             if (ncols != 0) {
@@ -660,12 +707,16 @@ void reject(const s_array * paths,
             sample s;
             s = init_sample((*paths).a[i], line_num, &line_array, stat_indices,
                     std_observed_stats, means, std_devs);
+            sample_idx = process_sample(&retained_samples, &s);
             fprintf(stderr, "file %s line %d: %lf\n", s.file_path, s.line_num,
                     s.distance);
+            if (sample_idx < 0) {
+                free_sample(&s);
+            }
         }
         fclose(f);
     }
-    free_s_array(&line_array);
+    return retained_samples;
 }
 
 int get_stats(const s_array * line_array, const i_array * stat_indices,
@@ -742,6 +793,7 @@ int main(int argc, char **argv) {
     int i, heads_match;
     i_array indices;
     sample_sum_array sample_sums;
+    sample_array retained_samples;
     line_buffer = init_c_array(pow(2, 10));
     obs_header = init_s_array(1);
     obs_stats = init_d_array(1);
@@ -827,8 +879,17 @@ int main(int argc, char **argv) {
         printf("%lf %lf\n", conf.means.a[i], conf.std_devs.a[i]);
     }
     standardize_vector(&obs_stats, &conf.means, &conf.std_devs);
-    reject(&conf.sim_paths, &line_buffer, &indices, &obs_stats,
-            &conf.means, &conf.std_devs, conf.num_retain, sim_header.length);
+    retained_samples = reject(&conf.sim_paths, &line_buffer, &indices,
+            &obs_stats, &conf.means, &conf.std_devs, conf.num_retain,
+            sim_header.length);
+    printf("%d %d\n", retained_samples.length, retained_samples.sample_size);
+    for (i = 0; i < retained_samples.sample_size; i++) {
+        printf("%lf\n", retained_samples.a[i].distance);
+    }
+    free_sample_array(&retained_samples);
+    return 0;
+}
+
 
     /* int i, l = 4; */
     /* d_array v1, v2, means, std_devs; */
@@ -923,5 +984,4 @@ int main(int argc, char **argv) {
     /* printf("%lx\n", sizeof(float)); */
     /* printf("%lx\n", sizeof(long)); */
     /* printf("%lx\n", sizeof(double)); */
-}
 
