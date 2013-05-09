@@ -199,6 +199,19 @@ void free_sample(sample * s) {
     free_s_array(&(*s).line_array);
 }
     
+sample_array init_sample_array(int length) {
+    sample_array v;
+    v.length = length;
+    if ((v.a = (typeof(*v.a) *) calloc(v.length, sizeof(*v.a))) == NULL) {
+        perror("out of memory");
+        exit(1);
+    }
+    return v;
+}
+
+void free_sample_array(sample_array * v) {
+    free((*v).a);
+}
 
 sample_sum_array init_sample_sum_array(int length) {
     sample_sum_array v;
