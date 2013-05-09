@@ -73,13 +73,8 @@ typedef struct sample_ {
 typedef struct sample_array_ {
     sample * a;
     int length;
-} sample_array;
-
-typedef struct best_samples_ {
-    int length;
     int sample_size;
-    sample_array samples;
-} best_samples;
+} sample_array;
 
 sample_sum init_sample_sum();
 d_array init_d_array(int length);
@@ -108,6 +103,10 @@ sample init_sample(
         const d_array * means,
         const d_array * std_devs);
 void free_sample(sample * s);
+sample_array init_sample_array(int length);
+void free_sample_array(sample_array * v);
+int process_sample(sample_array * samples, const sample * s);
+void rshift_samples(sample_array * s, int index);
 sample_sum_array init_sample_sum_array(int length);
 void free_sample_sum_array(sample_sum_array * v);
 void update_sample_sum(sample_sum * s, double x);
@@ -133,7 +132,7 @@ void parse_observed_stats_file(const char * path, c_array * line_buffer,
 void get_matching_indices(const s_array * search_strings,
         const s_array * target_strings,
         i_array * indices);
-void reject(const s_array * paths,
+sample_array reject(const s_array * paths,
         c_array * line_buffer,
         const i_array * stat_indices,
         d_array * std_observed_stats,
