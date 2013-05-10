@@ -61,6 +61,7 @@ typedef struct config_ {
     int std_devs_provided;
     d_array means;
     d_array std_devs;
+    int include_distance;
 } config;
 
 typedef struct sample_ {
@@ -74,12 +75,14 @@ typedef struct sample_array_ {
     sample * a;
     int length;
     int sample_size;
+    s_array header;
 } sample_array;
 
 sample_sum init_sample_sum();
 d_array init_d_array(int length);
 void free_d_array(d_array * v);
 void append_d_array(d_array * v, double x);
+void write_d_array(const d_array * v);
 i_array init_i_array(int length);
 void free_i_array(i_array * v);
 void append_i_array(i_array * v, int x);
@@ -92,6 +95,7 @@ void append_c_array_2d(c_array_2d * v, c_array * x);
 s_array init_s_array(int length);
 void free_s_array(s_array * v);
 void append_s_array(s_array * v, char * x);
+void write_s_array(const s_array * v);
 config init_config();
 void free_config(config * c);
 sample init_sample(
@@ -103,10 +107,12 @@ sample init_sample(
         const d_array * means,
         const d_array * std_devs);
 void free_sample(sample * s);
+void write_sample(const sample * s, const int include_distance);
 sample_array init_sample_array(int length);
 void free_sample_array(sample_array * v);
 int process_sample(sample_array * samples, const sample * s);
 void rshift_samples(sample_array * s, int index);
+void write_sample_array(const sample_array * s, const int include_distance);
 sample_sum_array init_sample_sum_array(int length);
 void free_sample_sum_array(sample_sum_array * v);
 void update_sample_sum(sample_sum * s, double x);
@@ -139,7 +145,7 @@ sample_array reject(const s_array * paths,
         d_array * means,
         d_array * std_devs,
         int num_retain,
-        int expected_num_columns);
+        s_array * header);
 int get_stats(const s_array * line_array, const i_array * stat_indices,
         d_array * stats);
 void summarize_stat_samples(const s_array * paths,

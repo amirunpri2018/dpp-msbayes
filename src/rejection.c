@@ -39,6 +39,14 @@ void append_d_array(d_array * v, double x) {
     (*v).length += 1;
 }
 
+void write_d_array(const d_array * v) {
+    int i;
+    for (i = 0; i < ((*v).length - 1); i++) {
+        fprintf(stdout, "%lf\t", (*v).a[i]);
+    }
+    fprintf(stdout, "%lf\n", (*v).a[((*v).length - 1)]);
+}
+
 i_array init_i_array(int length) {
     i_array v;
     v.length = length;
@@ -149,6 +157,14 @@ void append_s_array(s_array * v, char * x) {
     (*v).length += 1;
 }
 
+void write_s_array(const s_array * v) {
+    int i;
+    for (i = 0; i < ((*v).length - 1); i++) {
+        fprintf(stdout, "%s\t", (*v).a[i]);
+    }
+    fprintf(stdout, "%s\n", (*v).a[((*v).length - 1)]);
+}
+
 config init_config() {
     config c;
     c.num_retain = 1000;
@@ -158,6 +174,7 @@ config init_config() {
     c.means = init_d_array(1);
     c.std_devs = init_d_array(1);
     c.sim_paths = init_s_array(1);
+    c.include_distance = 0;
     return c;
 }
 
@@ -193,6 +210,13 @@ sample init_sample(
     return s;
 }
 
+void write_sample(const sample * s, const int include_distance) {
+    if (include_distance != 0) {
+        fprintf(stdout, "%lf\t", (*s).distance);
+    }
+    write_s_array(&(*s).line_array);
+}
+
 void free_sample(sample * s) {
     int i;
     free_s_array(&(*s).line_array);
@@ -207,14 +231,6 @@ sample_array init_sample_array(int length) {
         exit(1);
     }
     return v;
-}
-
-void free_sample_array(sample_array * v) {
-    int i;
-    for (i = 0; i < (*v).length; i++) {
-        free_sample(&(*v).a[i]);
-    }
-    free((*v).a);
 }
 
 int process_sample(sample_array * samples, const sample * s) {
@@ -257,6 +273,24 @@ void rshift_samples(sample_array * s, int index) {
     (*s).sample_size += inc;
 }
 
+void write_sample_array(const sample_array * s, const int include_distance) {
+    int i;
+    if (include_distance != 0) {
+        fprintf(stdout, "distance\t");
+    }
+    write_s_array(&(*s).header);
+    for (i = 0; i < (*s).sample_size; i++) {
+        write_sample(&(*s).a[i], include_distance);
+    }
+}
+
+void free_sample_array(sample_array * v) {
+    int i;
+    for (i = 0; i < (*v).length; i++) {
+        free_sample(&(*v).a[i]);
+    }
+    free((*v).a);
+}
 
 sample_sum_array init_sample_sum_array(int length) {
     sample_sum_array v;
@@ -389,12 +423,15 @@ void help() {
     char *version = VERSION;
     printf("EuReject Version %s\n\n", version);
     printf("Usage:\n");
-    printf("  eureject -o OBSERVED-FILE [ -k INT -n INT ] \\\n");
+    printf("  eureject -o OBSERVED-FILE [ -k INT -n INT -d ] \\\n");
     printf("      [ -m MEAN1,MEAN2,... -s STDEV1,STDEV2,... ] \\\n");
     printf("      SIMS-FILE1 [ SIMS-FILE2 [...] ]\n\n");
     printf("Options:\n");
     printf(" -o  Path to file containing observed summary statistics\n");
-    printf(" -k  Number of samples to keep. Default: 1000\n");
+    printf(" -k  Number of samples to keep. Default: 1000.\n");
+    printf("     If set to 0, only the stat means and standard deviations\n");
+    printf("     are calculated and reported (i.e., no rejection is\n");
+    printf("     performed).\n");
     printf(" -n  Number of samples to use for calculating stat means and\n");
     printf("     standard deviations for standardizing the statistics.\n");
     printf("     This option is ignored if `-m` and `-s` are provided.\n");
@@ -407,6 +444,10 @@ void help() {
     printf("     standardizing statistics. The number of means must match\n");
     printf("     the number of columns in the observed stats file, and must\n");
     printf("     be in the same order. Must be used with `-m`.\n");
+    printf(" -d  Report Euclidean distances of retained samples in the\n");
+    printf("     first column of the output. Default is not to report\n");
+    printf("     the distance column.\n");
+    printf(" -h  Display this help message and exit\n");
 }
 
 void print_config(const config * c) {
@@ -415,7 +456,7 @@ void print_config(const config * c) {
     fprintf(stderr, "Number of samples to use for standardization: %d\n",
             (*c).num_subsample);
     fprintf(stderr, "Observed stats path: %s\n", (*c).observed_path);
-    fprintf(stderr, "Path(s) to files with simulated draws: ");
+    fprintf(stderr, "Path(s) to file(s) with simulated draws: ");
     for (i = 0; i < ((*c).sim_paths.length - 1); i++) {
         fprintf(stderr, "%s, ", (*c).sim_paths.a[i]);
     }
@@ -446,31 +487,25 @@ void parse_args(config * conf, int argc, char **argv) {
     int i, j, k;
     char * p;
     /* opterr = 0; */
-    while((i = getopt(argc, argv, "o:k:n:m:s:h")) != -1) {
+    while((i = getopt(argc, argv, "o:k:n:m:s:dh")) != -1) {
         switch(i) {
             case 'o':
                 (*conf).observed_path = optarg;
                 break;
             case 'k':
-                if (atoi(optarg) > 0) {
-                    (*conf).num_retain = atoi(optarg);
-                    break;
-                }
-                else {
-                    error("`-k' must be positive integer");
-                    help();
-                    exit(1);
-                }
+                (*conf).num_retain = atoi(optarg);
+                break;
             case 'n':
                 if (atoi(optarg) > 0) {
                     (*conf).num_subsample = atoi(optarg);
                     break;
                 }
                 else {
-                    error("`-n' must be positive integer");
+                    fprintf(stderr, "ERROR: `-n' must be positive integer\n");
                     help();
                     exit(1);
                 }
+                break;
             case 'm':
                 j = 0;
                 (*conf).means_provided = 1;
@@ -501,37 +536,42 @@ void parse_args(config * conf, int argc, char **argv) {
                     j += 1;
                 }
                 break;
+            case 'd':
+                (*conf).include_distance = 1;
+                break;
             case 'h':
                 help();
                 exit(0);
+                break;
             case '?':
                 if (optopt == 'o') {
-                    fprintf(stderr, "option `-%c' requires an argument\n",
-                            optopt);
+                    fprintf(stderr, "ERROR: option `-%c' requires an "
+                            "argument\n", optopt);
                 }
                 else if (optopt == 'k') {
-                    fprintf(stderr, "option `-%c' requires an argument\n",
-                            optopt);
+                    fprintf(stderr, "ERROR: option `-%c' requires an "
+                            "argument\n", optopt);
                 }
                 else if (optopt == 'n') {
-                    fprintf(stderr, "option `-%c' requires an argument\n",
-                            optopt);
+                    fprintf(stderr, "ERROR: option `-%c' requires an "
+                            "argument\n", optopt);
                 }
                 else if (optopt == 'm') {
-                    fprintf(stderr, "option `-%c' requires an argument\n",
-                            optopt);
+                    fprintf(stderr, "ERROR: option `-%c' requires an "
+                            "argument\n", optopt);
                 }
                 else if (optopt == 's') {
-                    fprintf(stderr, "option `-%c' requires an argument\n",
-                            optopt);
+                    fprintf(stderr, "ERROR: option `-%c' requires an "
+                            "argument\n", optopt);
                 }
                 else if (isprint(optopt)) {
-                    fprintf(stderr, "unknown option `-%c'\n", optopt);
+                    fprintf(stderr, "ERROR: unknown option `-%c'\n", optopt);
                 }
                 else {
-                    fprintf(stderr, "unknown option character `\\x%x'\n",
+                    fprintf(stderr, "ERROR: unknown option character `\\x%x'\n",
                             optopt);
                 }
+                break;
             default:
                 help();
                 exit(1);
@@ -572,7 +612,6 @@ int split_str(c_array * string, s_array * words, int expected_num) {
         return column_idx;
     }
     return 0;
-    // free match
 }
 
 void parse_header(const char * path, c_array * line_buffer, s_array * header) {
@@ -615,13 +654,13 @@ void parse_observed_stats_file(const char * path, c_array * line_buffer,
     }
     // parse header
     if ((fgets((*line_buffer).a, (((*line_buffer).length) - 1), f)) == NULL) {
-        fprintf(stderr, "ERROR: found no header in %s", path);
+        fprintf(stderr, "ERROR: found no header in %s\n", path);
         exit(1);
     }
     split_str(line_buffer, header, 0);
     // parse stats
     if ((fgets((*line_buffer).a, (((*line_buffer).length) - 1), f)) == NULL) {
-        fprintf(stderr, "ERROR: found no stats in %s", path);
+        fprintf(stderr, "ERROR: found no stats in %s\n", path);
         exit(1);
     }
     column_idx = 0;
@@ -679,12 +718,13 @@ sample_array reject(const s_array * paths,
         d_array * means,
         d_array * std_devs,
         int num_retain,
-        int expected_num_columns) {
+        s_array * header) {
     FILE * f;
     int i, j, line_num, ncols, get_stats_return, sample_idx;
     s_array line_array;
     sample_array retained_samples;
     retained_samples = init_sample_array(num_retain);
+    retained_samples.header = *header;
     for (i = 0; i < (*paths).length; i++) {
         line_num = 0;
         if ((f = fopen((*paths).a[i], "r")) == NULL) {
@@ -694,13 +734,13 @@ sample_array reject(const s_array * paths,
         while (fgets((*line_buffer).a, (((*line_buffer).length) - 1),
                     f) != NULL) {
             line_num++;
-            line_array = init_s_array(expected_num_columns);
-            ncols = split_str(line_buffer, &line_array, expected_num_columns);
+            line_array = init_s_array((*header).length);
+            ncols = split_str(line_buffer, &line_array, (*header).length);
             if (ncols == -1) continue; //empty line
             if (ncols != 0) {
                 fprintf(stderr, "ERROR: file %s line %d has %d columns "
                         "(expected %d)\n", (*paths).a[i], line_num, ncols,
-                        expected_num_columns);
+                        (*header).length);
                 exit(1);
             }
             if (line_num == 1) continue;
@@ -708,8 +748,6 @@ sample_array reject(const s_array * paths,
             s = init_sample((*paths).a[i], line_num, &line_array, stat_indices,
                     std_observed_stats, means, std_devs);
             sample_idx = process_sample(&retained_samples, &s);
-            fprintf(stderr, "file %s line %d: %lf\n", s.file_path, s.line_num,
-                    s.distance);
             if (sample_idx < 0) {
                 free_sample(&s);
             }
@@ -801,13 +839,9 @@ int main(int argc, char **argv) {
         help();
         exit(1);
     }
-    for (i = 0; i < argc; i++) {
-        printf("%s\n", argv[i]);
-    }
     config conf;
     conf = init_config();
     parse_args(&conf, argc, argv);
-    print_config(&conf);
     if (conf.observed_path == NULL) {
         fprintf(stderr, "ERROR: Please provide path to observed stats\n");
         help();
@@ -838,17 +872,8 @@ int main(int argc, char **argv) {
 
     parse_observed_stats_file(conf.observed_path, &line_buffer, &obs_header,
             &obs_stats);
-    for (i = 0; i < obs_header.length; i++) {
-        printf("%s\n", obs_header.a[i]);
-    }
-    for (i = 0; i < obs_stats.length; i++) {
-        printf("%lf\n", obs_stats.a[i]);
-    }
     sim_header = init_s_array(obs_header.length);
     parse_header(conf.sim_paths.a[0], &line_buffer, &sim_header);
-    for (i = 0; i < sim_header.length; i++) {
-        printf("%s\n", sim_header.a[i]);
-    }
     if (conf.sim_paths.length > 1) {
         sim_header_comp = init_s_array(sim_header.length);
         for (i = 1; i < conf.sim_paths.length; i++) {
@@ -864,9 +889,6 @@ int main(int argc, char **argv) {
     }
     indices = init_i_array(obs_header.length);
     get_matching_indices(&obs_header, &sim_header, &indices);
-    for (i = 0; i < indices.length; i++) {
-        printf("%d\n", indices.a[i]);
-    }
     if (conf.means_provided == 0) {
         sample_sums = init_sample_sum_array(obs_header.length);
         conf.means = init_d_array(obs_header.length);
@@ -875,113 +897,18 @@ int main(int argc, char **argv) {
                 &sample_sums, &conf.means, &conf.std_devs, conf.num_subsample,
                 sim_header.length);
     }
-    for (i = 0; i < conf.means.length; i++) {
-        printf("%lf %lf\n", conf.means.a[i], conf.std_devs.a[i]);
+    if (conf.num_retain < 1) {
+        write_s_array(&obs_header);
+        write_d_array(&conf.means);
+        write_d_array(&conf.std_devs);
+        return 0;
     }
     standardize_vector(&obs_stats, &conf.means, &conf.std_devs);
     retained_samples = reject(&conf.sim_paths, &line_buffer, &indices,
             &obs_stats, &conf.means, &conf.std_devs, conf.num_retain,
-            sim_header.length);
-    printf("%d %d\n", retained_samples.length, retained_samples.sample_size);
-    for (i = 0; i < retained_samples.sample_size; i++) {
-        printf("%lf\n", retained_samples.a[i].distance);
-    }
+            &sim_header);
+    write_sample_array(&retained_samples, conf.include_distance);
     free_sample_array(&retained_samples);
     return 0;
 }
-
-
-    /* int i, l = 4; */
-    /* d_array v1, v2, means, std_devs; */
-    /* v1 = init_d_array(l); */
-    /* v2 = init_d_array(l); */
-    /* means = init_d_array(l); */
-    /* std_devs = init_d_array(l); */
-    /* for (i = 0; i < l; i++) { */
-    /*     v1.a[i] = 2; */
-    /*     v2.a[i] = 4; */
-    /*     means.a[i] = 3; */
-    /*     std_devs.a[i] = 2; */
-    /* } */
-    /* double d1 = get_euclidean_distance(&v1, &v2); */
-    /* standardize_vector(&v1, &means, &std_devs); */
-    /* standardize_vector(&v2, &means, &std_devs); */
-    /* double d2 = get_euclidean_distance(&v1, &v2); */
-    /* fprintf(stdout, "%f\n%f\n", d1, d2); */
-    /* /1* d_array v3 = init_d_array(5); *1/ */
-    /* /1* double d3 = get_euclidean_distance(v1, v3); *1/ */
-
-    /* sample_sum s; */
-    /* s = init_sample_sum(); */
-    /* update_sample_sum(&s, 2.0); */
-    /* update_sample_sum(&s, 4.0); */
-    /* update_sample_sum(&s, 6.0); */
-    /* double m, v, sd; */
-    /* m = get_mean(&s); */
-    /* v = get_sample_variance(&s); */
-    /* sd = get_std_dev(&s); */
-    /* fprintf(stdout, "%f %f %f\n", m, v, sd); */
-
-    /* sample_sum_array sa; */
-    /* sa = init_sample_sum_array(l); */
-    /* for (i = 0; i < sa.length; i++) { */
-    /*     fprintf(stdout, "%f\n", sa.a[i].sum); */
-    /* } */
-    /* for (i = 0; i < l; i++) { */
-    /*     v1.a[i] = 2; */
-    /*     v2.a[i] = 4; */
-    /* } */
-    /* update_sample_sum_array(&sa, &v1); */
-    /* update_sample_sum_array(&sa, &v2); */
-    /* for (i = 0; i < sa.length; i++) { */
-    /*     fprintf(stdout, "%f\n", sa.a[i].sum_of_squares); */
-    /* } */
-    /* append_d_array(&v1, 8.0); */
-    /* fprintf(stdout, "%d %f\n", v1.length, v1.a[4]); */
-    /* c_array c; */
-    /* c = init_c_array(4); */
-    /* printf("%s %lx %d\n", c.a, strlen(c.a), c.length); */
-    /* c.a[0] = 't'; */
-    /* c.a[1] = 'e'; */
-    /* c.a[2] = 's'; */
-    /* c.a[3] = 't'; */
-    /* c.a[4] = '\0'; */
-    /* printf("%s %lx %d\n", c.a, strlen(c.a), c.length); */
-    /* printf("%c\n", c.a[3]); */
-    /* if (c.a[4] == '\0') { */
-    /*     printf("yes\n"); */
-    /* } */
-    /* append_c_array(&c, 's'); */
-    /* printf("%s %lx %d\n", c.a, strlen(c.a), c.length); */
-    /* c_array_2d cc; */
-    /* cc = init_c_array_2d(5, 3); */
-    /* cc.a[0] = c; */
-    /* cc.a[1].a[0] = 'a'; */
-    /* cc.a[1].a[1] = 'r'; */
-    /* cc.a[1].a[2] = 'e'; */
-    /* cc.a[2].a[0] = 'n'; */
-    /* cc.a[2].a[1] = 'o'; */
-    /* cc.a[2].a[2] = 't'; */
-    /* cc.a[2].a[3] = '\0'; */
-    /* printf("%s %s %s %d\n", cc.a[0].a, cc.a[1].a, cc.a[2].a, cc.length); */
-    /* c_array c2; */
-    /* c2 = init_c_array(3); */
-    /* c2.a = "fun"; */
-    /* append_c_array_2d(&cc, &c2); */
-    /* printf("%s %s %s %s %d\n", cc.a[0].a, cc.a[1].a, cc.a[2].a, cc.a[3].a, cc.length); */
-    /* s_array strings; */
-    /* strings = init_s_array(4); */
-    /* for (i = 0; i < cc.length; i++) { */
-    /*     strings.a[i] = cc.a[i].a; */
-    /* } */
-    /* printf("%s %s %s %s %d\n", strings.a[0], strings.a[1], strings.a[2], strings.a[3], strings.length); */
-    /* char * x; */
-    /* x = "foo"; */
-    /* append_s_array(&strings, x); */
-    /* printf("%s %s %s %s %s %d\n", strings.a[0], strings.a[1], strings.a[2], strings.a[3], strings.a[4], strings.length); */
-    /* printf("%lx\n", sizeof(char)); */
-    /* printf("%lx\n", sizeof(int)); */
-    /* printf("%lx\n", sizeof(float)); */
-    /* printf("%lx\n", sizeof(long)); */
-    /* printf("%lx\n", sizeof(double)); */
 
