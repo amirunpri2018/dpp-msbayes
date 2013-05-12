@@ -76,67 +76,6 @@ s_array init_s_array(int capacity) {
     return v;
 }
 
-/* void init_d_array(d_array * v, int capacity) { */
-/*     if (capacity < 1) { */
-/*         fprintf(stderr, "ERROR: init_d_array: capacity must be positive int " */
-/*                 "greater than 0\n"); */
-/*         exit(1); */
-/*     } */
-/*     (*v).capacity = capacity; */
-/*     if (((*v).a = (typeof(*(*v).a) *) calloc((*v).capacity, */
-/*             sizeof(*(*v).a))) == NULL) { */
-/*         perror("out of memory"); */
-/*         exit(1); */
-/*     } */
-/*     (*v).length = 0; */
-/* } */
-
-/* void init_c_array(c_array * v, int capacity) { */
-/*     if (capacity < 1) { */
-/*         fprintf(stderr, "ERROR: init_c_array: capacity must be positive int " */
-/*                 "greater than 0\n"); */
-/*         exit(1); */
-/*     } */
-/*     (*v).capacity = capacity; */
-/*     printf("here\n"); */
-/*     if (((*v).a = (typeof(*(*v).a) *) calloc(((*v).capacity + 1), */
-/*             sizeof(*(*v).a))) == NULL) { */
-/*         perror("out of memory"); */
-/*         exit(1); */
-/*     } */
-/*     /1* (*v).a[(*v).capacity] = '\0'; *1/ */
-/* } */
-
-/* void init_i_array(i_array * v, int capacity) { */
-/*     if (capacity < 1) { */
-/*         fprintf(stderr, "ERROR: init_i_array: capacity must be positive int " */
-/*                 "greater than 0\n"); */
-/*         exit(1); */
-/*     } */
-/*     (*v).capacity = capacity; */
-/*     if (((*v).a = (typeof(*(*v).a) *) calloc((*v).capacity, */
-/*             sizeof(*(*v).a))) == NULL) { */
-/*         perror("out of memory"); */
-/*         exit(1); */
-/*     } */
-/*     (*v).length = 0; */
-/* } */
-
-/* void init_s_array(s_array * v, int capacity) { */
-/*     if (capacity < 1) { */
-/*         fprintf(stderr, "ERROR: init_s_array: capacity must be positive int " */
-/*                 "greater than 0\n"); */
-/*         exit(1); */
-/*     } */
-/*     (*v).capacity = capacity; */
-/*     if (((*v).a = (typeof(*(*v).a) *) calloc((*v).capacity, */
-/*             sizeof(*(*v).a))) == NULL) { */
-/*         perror("out of memory"); */
-/*         exit(1); */
-/*     } */
-/*     (*v).length = 0; */
-/* } */
-
 void expand_d_array(d_array * v) {
     (*v).capacity *= 2;
     if (((*v).a = (typeof(*(*v).a) *) realloc((*v).a ,
@@ -205,11 +144,6 @@ void append_s_array(s_array * v, const char * x) {
     if ((*v).length >= (*v).capacity) {
         expand_s_array(v);
     }
-    /* if (((*v).a[(*v).length] = (typeof(*(*v).a[(*v).length]) *) calloc( */
-    /*         (strlen(x) + 1), */
-    /*         sizeof(*(*v).a[(*v).length]))) == NULL) { */
-    /*     perror("out of memory"); */
-    /* } */
     assign_c_array(&(*v).a[(*v).length], x);
     (*v).length++;
 }
@@ -315,16 +249,6 @@ config init_config() {
     c.include_distance = 0;
     return c;
 }
-/* void init_config(config * c) { */
-/*     (*c).num_retain = 1000; */
-/*     (*c).num_subsample = 10000; */
-/*     (*c).means_provided = 0; */
-/*     (*c).std_devs_provided = 0; */
-/*     init_d_array(&(*c).means, 1); */
-/*     init_d_array(&(*c).std_devs, 1); */
-/*     init_s_array(&(*c).sim_paths, 1); */
-/*     (*c).include_distance = 0; */
-/* } */
 
 void free_config(config * c) {
     free_d_array(&(*c).means);
@@ -347,7 +271,6 @@ sample init_sample(
     s.line_num = line_num;
     s.line_array = init_s_array((*line_array).length);
     extend_s_array(&s.line_array, line_array);
-    /* s.line_array = *line_array; */
     stats = init_d_array((*stat_indices).length);
     get_stats_return = get_stats(line_array, stat_indices, &stats);
     if (get_stats_return != 0) {
@@ -360,32 +283,6 @@ sample init_sample(
     free_d_array(&stats);
     return s;
 }
-/* void init_sample(sample * s, */
-/*         char * file_path, */
-/*         const int line_num, */
-/*         const s_array * line_array, */
-/*         const i_array * stat_indices, */
-/*         const d_array * std_observed_stats, */
-/*         const d_array * means, */
-/*         const d_array * std_devs) { */
-/*     int get_stats_return; */
-/*     d_array * stats; */
-/*     (*s).file_path = file_path; */
-/*     (*s).line_num = line_num; */
-/*     init_s_array(&(*s).line_array, (*line_array).length); */
-/*     extend_s_array(&(*s).line_array, line_array); */
-/*     /1* (*s).line_array = *line_array; *1/ */
-/*     init_d_array(stats, (*stat_indices).length); */
-/*     get_stats_return = get_stats(line_array, stat_indices, stats); */
-/*     if (get_stats_return != 0) { */
-/*         fprintf(stderr, "ERROR: file %s line %d contains %d invalid stats " */
-/*                 "columns\n", */
-/*                 file_path, line_num, get_stats_return); */
-/*     } */
-/*     standardize_vector(stats, means, std_devs); */
-/*     (*s).distance = get_euclidean_distance(std_observed_stats, stats); */
-/*     free_d_array(stats); */
-/* } */
 
 void write_sample(const sample * s, const int include_distance) {
     if (include_distance != 0) {
@@ -414,20 +311,6 @@ sample_array init_sample_array(int capacity) {
     v.length = 0;
     return v;
 }
-/* void init_sample_array(sample_array * v, int capacity) { */
-/*     if (capacity < 1) { */
-/*         fprintf(stderr, "ERROR: init_sample_array: capacity must be positive " */
-/*                 "int greater than 0\n"); */
-/*         exit(1); */
-/*     } */
-/*     (*v).capacity = capacity; */
-/*     if (((*v).a = (typeof(*(*v).a) *) calloc((*v).capacity, */
-/*             sizeof(*(*v).a))) == NULL) { */
-/*         perror("out of memory"); */
-/*         exit(1); */
-/*     } */
-/*     (*v).length = 0; */
-/* } */
 
 int process_sample(sample_array * samples, const sample * s) {
     if ((*samples).length == 0) {
@@ -491,20 +374,11 @@ void free_sample_array(sample_array * v) {
 
 sample_sum init_sample_sum() {
     sample_sum ss;
-    /* ss = (typeof(*ss) *) malloc(sizeof(*ss)); */
     ss.n = 0;
     ss.sum = 0.0;
     ss.sum_of_squares = 0.0;
-    /* (*ss).n = 0; */
-    /* (*ss).sum = 0.0; */
-    /* (*ss).sum_of_squares = 0.0; */
     return ss;
 }
-/* void init_sample_sum(sample_sum * ss) { */
-/*     (*ss).n = 0; */
-/*     (*ss).sum = 0.0; */
-/*     (*ss).sum_of_squares = 0.0; */
-/* } */
 
 sample_sum_array init_sample_sum_array(int length) {
     sample_sum_array v;
@@ -519,18 +393,6 @@ sample_sum_array init_sample_sum_array(int length) {
     }
     return v;
 }
-/* void init_sample_sum_array(sample_sum_array * v, int length) { */
-/*     (*v).length = length; */
-/*     if (((*v).a = (typeof(*(*v).a) *) calloc((*v).length, */
-/*             sizeof(*(*v).a))) == NULL) { */
-/*         perror("out of memory"); */
-/*         exit(1); */
-/*     } */
-/*     int i; */
-/*     for (i = 0; i < (*v).length; i++) { */
-/*         init_sample_sum(&(*v).a[i]); */
-/*     } */
-/* } */
 
 void free_sample_sum_array(sample_sum_array * v) {
     free((*v).a);
@@ -834,7 +696,6 @@ int split_str(const c_array * string, s_array * words, int expected_num) {
     char * ptr;
     c_array match;
     match = init_c_array(63);
-    /* init_c_array(&match, 63); */
     column_idx = 0;
     ptr = (*string).a;
     (*words).length = 0;
@@ -959,15 +820,10 @@ sample_array reject(const s_array * paths,
     FILE * f;
     int i, j, line_num, ncols, get_stats_return, sample_idx;
     s_array line_array;
-    /* s_array * line_array; */
     sample_array retained_samples;
-    /* sample_array * retained_samples; */
     line_array = init_s_array((*header).length);
-    /* init_s_array(line_array, (*header).length); */
     retained_samples = init_sample_array(num_retain);
     retained_samples.header = init_s_array((*header).length);
-    /* init_sample_array(retained_samples, num_retain); */
-    /* init_s_array(&(*retained_samples).header, (*header).length); */
     extend_s_array(&retained_samples.header, header);
     for (i = 0; i < (*paths).length; i++) {
         line_num = 0;
@@ -990,8 +846,6 @@ sample_array reject(const s_array * paths,
             sample s;
             s = init_sample(get_s(paths, i), line_num, &line_array, stat_indices,
                     std_observed_stats, means, std_devs);
-            /* init_sample(s, (*paths).a[i], line_num, line_array, stat_indices, */
-            /*         std_observed_stats, means, std_devs); */
             sample_idx = process_sample(&retained_samples, &s);
             if (sample_idx < 0) {
                 free_sample(&s);
@@ -1040,8 +894,6 @@ void summarize_stat_samples(const s_array * paths,
     d_array stats;
     line_array = init_s_array(expected_num_columns);
     stats = init_d_array((*stat_indices).length);
-    /* init_s_array(line_array, expected_num_columns); */
-    /* init_d_array(stats, (*stat_indices).length); */
     for (i = 0; i < (*paths).length; i++) {
         line_num = 0;
         if ((f = fopen(get_s(paths, i), "r")) == NULL) {
@@ -1092,26 +944,20 @@ int main(int argc, char **argv) {
     line_buffer = init_c_array(pow(2, 10));
     obs_header = init_s_array(1);
     obs_stats = init_d_array(1);
-    /* init_c_array(line_buffer, pow(2, 10)); */
-    /* init_s_array(obs_header, 1); */
-    /* init_d_array(obs_stats, 1); */
     if (argc < 2) {
         help();
         exit(1);
     }
     conf = init_config();
-    /* init_config(&conf); */
     parse_args(&conf, argc, argv);
     print_config(&conf);
 
     parse_observed_stats_file(conf.observed_path, &line_buffer, &obs_header,
             &obs_stats);
     sim_header = init_s_array(obs_header.length);
-    /* init_s_array(sim_header, (*obs_header).length); */
     parse_header(get_s(&conf.sim_paths, 0), &line_buffer, &sim_header);
     if (conf.sim_paths.length > 1) {
         sim_header_comp = init_s_array(sim_header.length);
-        /* init_s_array(sim_header_comp, (*sim_header).length); */
         for (i = 1; i < conf.sim_paths.length; i++) {
             parse_header(get_s(&conf.sim_paths, i), &line_buffer, &sim_header_comp);
             heads_match = headers_match(&sim_header, &sim_header_comp);
@@ -1125,11 +971,9 @@ int main(int argc, char **argv) {
         free_s_array(&sim_header_comp);
     }
     indices = init_i_array(obs_header.length);
-    /* init_i_array(indices, (*obs_header).length); */
     get_matching_indices(&obs_header, &sim_header, &indices);
     if (conf.means_provided == 0) {
         sample_sums = init_sample_sum_array(obs_header.length);
-        /* init_sample_sum_array(sample_sums, (*obs_header).length); */
         summarize_stat_samples(&conf.sim_paths, &line_buffer, &indices,
                 &sample_sums, &conf.means, &conf.std_devs, conf.num_subsample,
                 sim_header.length);
