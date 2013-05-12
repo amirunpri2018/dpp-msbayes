@@ -19,26 +19,24 @@
 typedef struct d_array_ {
     double * a;
     int length;
+    int capacity;
 } d_array;
 
 typedef struct i_array_ {
     int * a;
     int length;
+    int capacity;
 } i_array;
 
 typedef struct c_array_ {
     char * a;
-    int length;
+    int capacity;
 } c_array;
-
-typedef struct c_array_2d_ {
-    c_array * a;
-    int length;
-} c_array_2d;
 
 typedef struct s_array_ {
     char ** a;
     int length;
+    int capacity;
 } s_array;
 
 typedef struct sample_sum_ {
@@ -74,29 +72,44 @@ typedef struct sample_ {
 typedef struct sample_array_ {
     sample * a;
     int length;
-    int sample_size;
+    int capacity;
     s_array header;
 } sample_array;
 
-sample_sum init_sample_sum();
 d_array init_d_array(int length);
-void free_d_array(d_array * v);
+/* void init_d_array(d_array * v, int length); */
+void expand_d_array(d_array * v);
 void append_d_array(d_array * v, double x);
+void extend_d_array(d_array * dest, const d_array * to_add);
+double get_d(const d_array * v, int index);
 void write_d_array(const d_array * v);
-i_array init_i_array(int length);
-void free_i_array(i_array * v);
-void append_i_array(i_array * v, int x);
+void free_d_array(d_array * v);
+
 c_array init_c_array(int length);
+/* void init_c_array(c_array * v, int length); */
+void expand_c_array(c_array * v);
 void free_c_array(c_array * v);
-void append_c_array(c_array * v, char x);
-c_array_2d init_c_array_2d(int width, int length);
-void free_c_array_2d(c_array_2d * v);
-void append_c_array_2d(c_array_2d * v, c_array * x);
+
+i_array init_i_array(int length);
+/* void init_i_array(i_array * v, int length); */
+void expand_i_array(i_array * v);
+void append_i_array(i_array * v, int x);
+void extend_i_array(i_array * dest, const i_array * to_add);
+int get_i(const i_array * v, int index);
+void write_i_array(const i_array * v);
+void free_i_array(i_array * v);
+
 s_array init_s_array(int length);
-void free_s_array(s_array * v);
-void append_s_array(s_array * v, char * x);
+/* void init_s_array(s_array * v, int length); */
+void expand_s_array(s_array * v);
+void append_s_array(s_array * v, const char * x);
+void extend_s_array(s_array * dest, const s_array * to_add);
+char * get_s(const s_array * v, int index);
 void write_s_array(const s_array * v);
+void free_s_array(s_array * v);
+
 config init_config();
+/* void init_config(config * c); */
 void free_config(config * c);
 sample init_sample(
         char * file_path,
@@ -106,14 +119,26 @@ sample init_sample(
         const d_array * std_observed_stats,
         const d_array * means,
         const d_array * std_devs);
+/* void init_sample(sample * s, */
+/*         char * file_path, */
+/*         const int line_num, */
+/*         const s_array * line_array, */
+/*         const i_array * stat_indices, */
+/*         const d_array * std_observed_stats, */
+/*         const d_array * means, */
+/*         const d_array * std_devs); */
 void free_sample(sample * s);
 void write_sample(const sample * s, const int include_distance);
 sample_array init_sample_array(int length);
+/* void init_sample_array(sample_array * v, int length); */
 void free_sample_array(sample_array * v);
 int process_sample(sample_array * samples, const sample * s);
 void rshift_samples(sample_array * s, int index);
 void write_sample_array(const sample_array * s, const int include_distance);
+sample_sum init_sample_sum();
+/* void init_sample_sum(sample_sum * ss); */
 sample_sum_array init_sample_sum_array(int length);
+/* void init_sample_sum_array(sample_sum_array * s, int length); */
 void free_sample_sum_array(sample_sum_array * v);
 void update_sample_sum(sample_sum * s, double x);
 double get_mean(const sample_sum * s);
@@ -130,7 +155,7 @@ void standardize_vector(d_array * v, const d_array * means,
 void help();
 void print_config(const config * c);
 void parse_args(config * conf, int argc, char **argv);
-int split_str(c_array * string, s_array * words, int expected_num);
+int split_str(const c_array * string, s_array * words, int expected_num);
 void parse_header(const char * path, c_array * line_buffer, s_array * header);
 int headers_match(const s_array * h1, const s_array * h2);
 void parse_observed_stats_file(const char * path, c_array * line_buffer,
