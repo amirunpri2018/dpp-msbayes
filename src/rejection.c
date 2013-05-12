@@ -62,11 +62,15 @@ s_array init_s_array(int capacity) {
                 "greater than 0\n");
         exit(1);
     }
+    int i;
     s_array v;
     v.capacity = capacity;
     if ((v.a = (typeof(*v.a) *) calloc(v.capacity, sizeof(*v.a))) == NULL) {
         perror("out of memory");
         exit(1);
+    }
+    for (i = 0; i < v.capacity; i++) {
+        v.a[i] = init_c_array(64);
     }
     v.length = 0;
     return v;
@@ -143,12 +147,13 @@ void expand_d_array(d_array * v) {
 }
 
 void expand_c_array(c_array * v) {
-    (*v).capacity *= 2;
+    (*v).capacity = ((*v).capacity + 1) * 2;
     if (((*v).a = (typeof(*(*v).a) *) realloc((*v).a ,
-            ((*v).capacity * sizeof(*(*v).a)))) == NULL) {
+            (((*v).capacity + 1) * sizeof(*(*v).a)))) == NULL) {
         perror("out of memory");
         exit(1);
     }
+    (*v).a[(*v).capacity] = '\0';
 }
 
 void expand_i_array(i_array * v) {
@@ -161,12 +166,16 @@ void expand_i_array(i_array * v) {
 }
 
 void expand_s_array(s_array * v) {
-    (*v).capacity *= 2;
+    int i;
     if (((*v).a = (typeof(*(*v).a) *) realloc((*v).a ,
-            ((*v).capacity * sizeof(*(*v).a)))) == NULL) {
+            (((*v).capacity * 2) * sizeof(*(*v).a)))) == NULL) {
         perror("out of memory");
         exit(1);
     }
+    for (i = (*v).capacity; i < ((*v).capacity * 2); i++) {
+        (*v).a[i] = init_c_array(64);
+    }
+    (*v).capacity *= 2;
 }
 
 void append_d_array(d_array * v, double x) {
@@ -175,6 +184,13 @@ void append_d_array(d_array * v, double x) {
     }
     (*v).a[(*v).length] = x;
     (*v).length++;
+}
+
+void assign_c_array(c_array * v, const char * s) {
+    while (strlen(s) > (*v).capacity) {
+        expand_c_array(v);
+    }
+    strncpy((*v).a, s, (*v).capacity);
 }
 
 void append_i_array(i_array * v, int x) {
@@ -189,12 +205,12 @@ void append_s_array(s_array * v, const char * x) {
     if ((*v).length >= (*v).capacity) {
         expand_s_array(v);
     }
-    if (((*v).a[(*v).length] = (typeof(*(*v).a[(*v).length]) *) calloc(
-            (strlen(x) + 1),
-            sizeof(*(*v).a[(*v).length]))) == NULL) {
-        perror("out of memory");
-    }
-    strcpy((*v).a[(*v).length], x);
+    /* if (((*v).a[(*v).length] = (typeof(*(*v).a[(*v).length]) *) calloc( */
+    /*         (strlen(x) + 1), */
+    /*         sizeof(*(*v).a[(*v).length]))) == NULL) { */
+    /*     perror("out of memory"); */
+    /* } */
+    assign_c_array(&(*v).a[(*v).length], x);
     (*v).length++;
 }
 
@@ -215,7 +231,7 @@ void extend_i_array(i_array * dest, const i_array * to_add) {
 void extend_s_array(s_array * dest, const s_array * to_add) {
     int i;
     for (i = 0; i < (*to_add).length; i++) {
-        append_s_array(dest, (*to_add).a[i]);
+        append_s_array(dest, get_s(to_add, i));
     }
 }
 
@@ -240,7 +256,7 @@ char * get_s(const s_array * v, int index) {
         fprintf(stderr, "ERROR: get_s: index %d out of bounds\n", index);
         exit(1);
     }
-    return ((*v).a[index]);
+    return ((*v).a[index].a);
 }
 
 void write_d_array(const d_array * v) {
@@ -262,9 +278,9 @@ void write_i_array(const i_array * v) {
 void write_s_array(const s_array * v) {
     int i;
     for (i = 0; i < ((*v).length - 1); i++) {
-        fprintf(stdout, "%s\t", (*v).a[i]);
+        fprintf(stdout, "%s\t", get_s(v, i));
     }
-    fprintf(stdout, "%s\n", (*v).a[((*v).length - 1)]);
+    fprintf(stdout, "%s\n", get_s(v, ((*v).length - 1)));
 }
 
 void free_d_array(d_array * v) {
@@ -281,8 +297,8 @@ void free_i_array(i_array * v) {
 
 void free_s_array(s_array * v) {
     int i;
-    for (i = 0; i < (*v).length; i++) {
-        free((*v).a[i]);
+    for (i = 0; i < (*v).capacity; i++) {
+        free_c_array(&(*v).a[i]);
     }
     free((*v).a);
 }
@@ -656,9 +672,9 @@ void print_config(const config * c) {
     fprintf(stderr, "Observed stats path: %s\n", (*c).observed_path);
     fprintf(stderr, "Path(s) to file(s) with simulated draws: ");
     for (i = 0; i < ((*c).sim_paths.length - 1); i++) {
-        fprintf(stderr, "%s, ", (*c).sim_paths.a[i]);
+        fprintf(stderr, "%s, ", get_s(&(*c).sim_paths, i));
     }
-    fprintf(stderr, "%s\n", (*c).sim_paths.a[((*c).sim_paths.length-1)]);
+    fprintf(stderr, "%s\n", get_s(&(*c).sim_paths,((*c).sim_paths.length-1)));
     fprintf(stderr, "Means for standardization: ");
     if ((*c).means_provided == 0) {
         fprintf(stderr, "None\n");
@@ -792,7 +808,7 @@ void parse_args(config * conf, int argc, char **argv) {
         help();
         exit(1);
     }
-    if (((*conf).sim_paths.length < 1) || ((*conf).sim_paths.a[0] == NULL)) {
+    if (((*conf).sim_paths.length < 1) || (get_s(&(*conf).sim_paths, 0) == NULL)) {
         fprintf(stderr, "ERROR: Please provide at least one simulation file\n");
         help();
         exit(1);
@@ -858,7 +874,7 @@ int headers_match(const s_array * h1, const s_array * h2) {
         return 0;
     }
     for (i = 0; i < (*h1).length; i++) {
-        if (strcmp((*h1).a[i], (*h2).a[i]) != 0) {
+        if (strcmp(get_s(h1, i), get_s(h2, i)) != 0) {
             return 0;
         }
     }
@@ -914,10 +930,10 @@ void get_matching_indices(const s_array * search_strings,
     for (i = 0; i < (*search_strings).length; i++) {
         found = 0;
         for (j = 0; j < (*target_strings).length; j++) {
-            if (strcmp((*search_strings).a[i], (*target_strings).a[j]) == 0) {
+            if (strcmp(get_s(search_strings, i), get_s(target_strings, j)) == 0) {
                 if (found != 0) {
                     fprintf(stderr, "string %s found more than once\n",
-                            (*search_strings).a[i]);
+                            get_s(search_strings, i));
                     exit(1);
                 }
                 found = 1;
@@ -926,7 +942,7 @@ void get_matching_indices(const s_array * search_strings,
         }
         if (found == 0) {
             fprintf(stderr, "string %s was not found\n",
-                    (*search_strings).a[i]);
+                    get_s(search_strings, i));
             exit(1);
         }
     }
@@ -955,8 +971,8 @@ sample_array reject(const s_array * paths,
     extend_s_array(&retained_samples.header, header);
     for (i = 0; i < (*paths).length; i++) {
         line_num = 0;
-        if ((f = fopen((*paths).a[i], "r")) == NULL) {
-            perror((*paths).a[i]);
+        if ((f = fopen(get_s(paths, i), "r")) == NULL) {
+            perror(get_s(paths, i));
             exit(1);
         }
         while (fgets((*line_buffer).a, (((*line_buffer).capacity) - 1),
@@ -966,13 +982,13 @@ sample_array reject(const s_array * paths,
             if (ncols == -1) continue; //empty line
             if (ncols != 0) {
                 fprintf(stderr, "ERROR: file %s line %d has %d columns "
-                        "(expected %d)\n", (*paths).a[i], line_num, ncols,
+                        "(expected %d)\n", get_s(paths, i), line_num, ncols,
                         (*header).length);
                 exit(1);
             }
             if (line_num == 1) continue;
             sample s;
-            s = init_sample((*paths).a[i], line_num, &line_array, stat_indices,
+            s = init_sample(get_s(paths, i), line_num, &line_array, stat_indices,
                     std_observed_stats, means, std_devs);
             /* init_sample(s, (*paths).a[i], line_num, line_array, stat_indices, */
             /*         std_observed_stats, means, std_devs); */
@@ -1028,8 +1044,8 @@ void summarize_stat_samples(const s_array * paths,
     /* init_d_array(stats, (*stat_indices).length); */
     for (i = 0; i < (*paths).length; i++) {
         line_num = 0;
-        if ((f = fopen((*paths).a[i], "r")) == NULL) {
-            perror((*paths).a[i]);
+        if ((f = fopen(get_s(paths, i), "r")) == NULL) {
+            perror(get_s(paths, i));
             exit(1);
         }
         while (fgets((*line_buffer).a, (((*line_buffer).capacity) - 1),
@@ -1039,7 +1055,7 @@ void summarize_stat_samples(const s_array * paths,
             if (ncols == -1) continue; //empty line
             if (ncols != 0) {
                 fprintf(stderr, "ERROR: file %s line %d has %d columns "
-                        "(expected %d)\n", (*paths).a[i], line_num, ncols,
+                        "(expected %d)\n", get_s(paths, i), line_num, ncols,
                         expected_num_columns);
                 exit(1);
             }
@@ -1047,7 +1063,7 @@ void summarize_stat_samples(const s_array * paths,
             get_stats_return = get_stats(&line_array, stat_indices, &stats);
             if (get_stats_return != 0) {
                 fprintf(stderr, "ERROR: file %s line %d has %d invalid stats "
-                        "columns\n", (*paths).a[i], line_num, get_stats_return);
+                        "columns\n", get_s(paths, i), line_num, get_stats_return);
                 exit(1);
             }
             update_sample_sum_array(ss_array, &stats);
@@ -1092,17 +1108,17 @@ int main(int argc, char **argv) {
             &obs_stats);
     sim_header = init_s_array(obs_header.length);
     /* init_s_array(sim_header, (*obs_header).length); */
-    parse_header(conf.sim_paths.a[0], &line_buffer, &sim_header);
+    parse_header(get_s(&conf.sim_paths, 0), &line_buffer, &sim_header);
     if (conf.sim_paths.length > 1) {
         sim_header_comp = init_s_array(sim_header.length);
         /* init_s_array(sim_header_comp, (*sim_header).length); */
         for (i = 1; i < conf.sim_paths.length; i++) {
-            parse_header(conf.sim_paths.a[i], &line_buffer, &sim_header_comp);
+            parse_header(get_s(&conf.sim_paths, i), &line_buffer, &sim_header_comp);
             heads_match = headers_match(&sim_header, &sim_header_comp);
             if (heads_match != 1) {
                 fprintf(stderr, "ERROR: Files %s and %s have different "
-                        "headers\n", conf.sim_paths.a[0],
-                        conf.sim_paths.a[i]);
+                        "headers\n", get_s(&conf.sim_paths, 0),
+                        get_s(&conf.sim_paths, i));
                 exit(1);
             }
         }

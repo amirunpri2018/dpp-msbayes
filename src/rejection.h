@@ -34,7 +34,7 @@ typedef struct c_array_ {
 } c_array;
 
 typedef struct s_array_ {
-    char ** a;
+    c_array * a;
     int length;
     int capacity;
 } s_array;
