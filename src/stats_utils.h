@@ -34,12 +34,12 @@ typedef struct sample_sum_ {
 } sample_sum;
 
 typedef struct sample_sum_array_ {
-    sample_sum * a;
+    sample_sum ** a;
     int length;
 } sample_sum_array;
 
-sample_sum init_sample_sum();
-sample_sum_array init_sample_sum_array(int length);
+sample_sum * init_sample_sum();
+sample_sum_array * init_sample_sum_array(int length);
 void free_sample_sum_array(sample_sum_array * v);
 void update_sample_sum(sample_sum * s, double x);
 double get_mean(const sample_sum * s);

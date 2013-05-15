@@ -20,30 +20,42 @@
 
 #include "stats_utils.h"
 
-sample_sum init_sample_sum() {
-    sample_sum ss;
-    ss.n = 0;
-    ss.sum = 0.0;
-    ss.sum_of_squares = 0.0;
+sample_sum * init_sample_sum() {
+    sample_sum * ss;
+    ss = (typeof(*ss) *) malloc(sizeof(*ss));
+    ss->n = 0;
+    ss->sum = 0.0;
+    ss->sum_of_squares = 0.0;
     return ss;
 }
 
-sample_sum_array init_sample_sum_array(int length) {
-    sample_sum_array v;
-    v.length = length;
-    if ((v.a = (typeof(*v.a) *) calloc(v.length, sizeof(*v.a))) == NULL) {
+void free_sample_sum(sample_sum * s) {
+    free(s);
+}
+
+sample_sum_array * init_sample_sum_array(int length) {
+    sample_sum_array * v;
+    v = (typeof(*v) *) malloc(sizeof(*v));
+    v->length = length;
+    if ((v->a = (typeof(*v->a) *) calloc(v->length,
+            sizeof(*v->a))) == NULL) {
         perror("out of memory");
         exit(1);
     }
     int i;
-    for (i = 0; i < v.length; i++) {
-        v.a[i] = init_sample_sum();
+    for (i = 0; i < v->length; i++) {
+        v->a[i] = init_sample_sum();
     }
     return v;
 }
 
 void free_sample_sum_array(sample_sum_array * v) {
-    free((*v).a);
+    int i;
+    for (i = 0; i < v->length; i++) {
+        free_sample_sum(v->a[i]);
+    }
+    free(v->a);
+    free(v);
 }
 
 void update_sample_sum(sample_sum * s, double x) {
@@ -76,7 +88,7 @@ void update_sample_sum_array(sample_sum_array * s, const d_array * x) {
     assert((*s).length == (*x).length);
     int i;
     for (i = 0; i < (*s).length; i++) {
-        update_sample_sum(&(*s).a[i], (*x).a[i]);
+        update_sample_sum((*s).a[i], (*x).a[i]);
     }
 }
 
@@ -84,7 +96,7 @@ void get_mean_array(const sample_sum_array * s, d_array * means) {
     int i;
     (*means).length = 0;
     for (i = 0; i < (*s).length; i++) {
-        append_d_array(means, get_mean(&(*s).a[i]));
+        append_d_array(means, get_mean((*s).a[i]));
     }
 }
 
@@ -93,7 +105,7 @@ void get_sample_variance_array(const sample_sum_array * s,
     int i;
     (*v).length = 0;
     for (i = 0; i < (*s).length; i++) {
-        append_d_array(v, get_sample_variance(&(*s).a[i]));
+        append_d_array(v, get_sample_variance((*s).a[i]));
     }
 }
         
@@ -101,7 +113,7 @@ void get_std_dev_array(const sample_sum_array * s, d_array * std_devs) {
     int i;
     (*std_devs).length = 0;
     for (i = 0; i < (*s).length; i++) {
-        append_d_array(std_devs, get_std_dev(&(*s).a[i]));
+        append_d_array(std_devs, get_std_dev((*s).a[i]));
     }
 }
 
