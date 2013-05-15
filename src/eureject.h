@@ -36,34 +36,34 @@
 #define VERSION "0.1"
 
 typedef struct config_ {
-    char * observed_path;
-    s_array sim_paths;
+    c_array * observed_path;
+    s_array * sim_paths;
     int num_retain;
     int num_subsample;
     int means_provided;
     int std_devs_provided;
-    d_array means;
-    d_array std_devs;
+    d_array * means;
+    d_array * std_devs;
     int include_distance;
 } config;
 
 typedef struct sample_ {
-    char * file_path;
+    c_array * file_path;
     int line_num;
     double distance;
-    s_array line_array;
+    s_array * line_array;
 } sample;
 
 typedef struct sample_array_ {
-    sample * a;
+    sample ** a;
     int length;
     int capacity;
-    s_array header;
+    s_array * header;
 } sample_array;
 
-config init_config();
+config * init_config();
 void free_config(config * c);
-sample init_sample(
+sample * init_sample(
         char * file_path,
         const int line_num,
         const s_array * line_array,
@@ -73,15 +73,15 @@ sample init_sample(
         const d_array * std_devs);
 void free_sample(sample * s);
 void write_sample(const sample * s, const int include_distance);
-sample_array init_sample_array(int length);
+sample_array * init_sample_array(int length);
 void free_sample_array(sample_array * v);
-int process_sample(sample_array * samples, const sample * s);
+int process_sample(sample_array * samples, sample * s);
 void rshift_samples(sample_array * s, int index);
 void write_sample_array(const sample_array * s, const int include_distance);
 void help();
 void print_config(const config * c);
 void parse_args(config * conf, int argc, char ** argv);
-sample_array reject(const s_array * paths,
+sample_array * reject(const s_array * paths,
         c_array * line_buffer,
         const i_array * stat_indices,
         d_array * std_observed_stats,
