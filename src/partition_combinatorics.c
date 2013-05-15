@@ -47,67 +47,67 @@ int integer_partition_cumulative_spectrum(int n, i_array * spectrum_dest) {
 
 int integer_partition_spectrum(int n, i_array * spectrum_dest) {
     int i;
-    i_array v;
+    i_array * v;
     v = init_i_array(n);
-    int ip = integer_partition_cumulative_spectrum(n, &v);
+    int ip = integer_partition_cumulative_spectrum(n, v);
     (*spectrum_dest).length = 0;
     append_i_array(spectrum_dest, 1);
     for (i = 1; i < n; i++) {
-        append_i_array(spectrum_dest, (v.a[i] - v.a[i-1]));
+        append_i_array(spectrum_dest, (v->a[i] - v->a[i-1]));
     }
-    free_i_array(&v);
+    free_i_array(v);
     return ip;
 }
     
 double integer_partition_cumulative_probs(int n, d_array * probs) {
     int i;
-    i_array v;
+    i_array * v;
     v = init_i_array(n);
-    int ip = integer_partition_cumulative_spectrum(n, &v);
+    int ip = integer_partition_cumulative_spectrum(n, v);
     (*probs).length = 0;
     for (i = 0; i < n; i++) {
-        append_d_array(probs, (v.a[i] / ((double) ip)));
+        append_d_array(probs, (v->a[i] / ((double) ip)));
     }
-    free_i_array(&v);
+    free_i_array(v);
     return (get_d_array(probs, (n-1)));
 }
 
 double integer_partition_probs(int n, d_array * probs) {
     int i;
-    i_array v;
+    i_array * v;
     v = init_i_array(n);
-    int ip = integer_partition_spectrum(n, &v);
+    int ip = integer_partition_spectrum(n, v);
     (*probs).length = 0;
     double sum = 0.0;
     for (i = 0; i < n; i++) {
-        append_d_array(probs, (v.a[i] / ((double) ip)));
+        append_d_array(probs, (v->a[i] / ((double) ip)));
         sum += get_d_array(probs, i);
     }
-    free_i_array(&v);
+    free_i_array(v);
     return sum;
 }
 
 int integer_partition(int n) {
-    i_array v;
+    i_array * v;
     v = init_i_array(n);
-    int ip = integer_partition_cumulative_spectrum(n, &v);
-    free_i_array(&v);
+    int ip = integer_partition_cumulative_spectrum(n, v);
+    free_i_array(v);
     return ip;
 }
 
 int draw_integer_partition_category(const gsl_rng * rng, int n) {
-    d_array cumulative_probs;
+    d_array * cumulative_probs;
     cumulative_probs = init_d_array(n);
     double total_prob = integer_partition_cumulative_probs(n,
-            &cumulative_probs);
+            cumulative_probs);
     double r = gsl_rng_uniform(rng);
     int i;
     for (i = 0; i < n; i++) {
-        if (r < get_d_array(&cumulative_probs, i)) {
+        if (r < get_d_array(cumulative_probs, i)) {
             break;
         }
     }
-    free_d_array(&cumulative_probs);
+    free_d_array(cumulative_probs);
     return (i+1);
 }
 
@@ -118,11 +118,11 @@ int dirichlet_process_draw(const gsl_rng * rng, int n, double alpha,
         i_array * elements) {
     int num_subsets;
     double subset_prob, new_subset_prob, u;
-    i_array subset_counts;
+    i_array * subset_counts;
     (*elements).length = 0;
     append_i_array(elements, 0);
     subset_counts = init_i_array(n);
-    append_i_array(&subset_counts, 1);
+    append_i_array(subset_counts, 1);
     num_subsets = 1;
     int i, j;
     for (i = 1; i < n; i++) {
@@ -131,25 +131,25 @@ int dirichlet_process_draw(const gsl_rng * rng, int n, double alpha,
         u -= new_subset_prob;
         if (u < 0.0) {
             append_i_array(elements, num_subsets);
-            append_i_array(&subset_counts, 1);
+            append_i_array(subset_counts, 1);
             num_subsets += 1;
             continue;
         }
         for (j = 0; j < num_subsets; j++) {
-            subset_prob = ((double)subset_counts.a[j] / (alpha + (double)i));
+            subset_prob = ((double)subset_counts->a[j] / (alpha + (double)i));
             u -= subset_prob;
             if (u < 0.0) {
                 append_i_array(elements, j);
-                subset_counts.a[j] += 1;
+                subset_counts->a[j] += 1;
                 break;
             }
         }
         if (u > 0.0) {
             append_i_array(elements, (num_subsets-1));
-            subset_counts.a[num_subsets-1] += 1;
+            subset_counts->a[num_subsets-1] += 1;
         }
     }
-    free_i_array(&subset_counts);
+    free_i_array(subset_counts);
     return num_subsets;
 }
 
