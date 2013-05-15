@@ -74,9 +74,3 @@ msprior_SOURCES = \
 
 msReject_SOURCES = rejectinC.c
 
-# eureject_LDADD = @MATHLDADD@
-# # sumstatsvector_LDADD = @LIBS@
-# # msDQH_LDADD = @LIBS@
-# msReject_LDADD = @MATHLDADD@
-# # msprior_LDADD = @LIBS@
-
