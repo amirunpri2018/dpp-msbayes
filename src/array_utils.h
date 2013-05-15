@@ -44,12 +44,12 @@ typedef struct c_array_ {
 } c_array;
 
 typedef struct s_array_ {
-    c_array * a;
+    c_array ** a;
     int length;
     int capacity;
 } s_array;
 
-d_array init_d_array(int length);
+d_array * init_d_array(int length);
 void expand_d_array(d_array * v);
 void append_d_array(d_array * v, double x);
 void extend_d_array(d_array * dest, const d_array * to_add);
@@ -58,12 +58,12 @@ void set_d_array(d_array * v, int index, double x);
 void write_d_array(const d_array * v);
 void free_d_array(d_array * v);
 
-c_array init_c_array(int length);
+c_array * init_c_array(int length);
 void expand_c_array(c_array * v);
 void assign_c_array(c_array * v, const char * s);
 void free_c_array(c_array * v);
 
-i_array init_i_array(int length);
+i_array * init_i_array(int length);
 void expand_i_array(i_array * v);
 void append_i_array(i_array * v, int x);
 void extend_i_array(i_array * dest, const i_array * to_add);
@@ -72,7 +72,7 @@ void set_i_array(i_array * v, int index, int x);
 void write_i_array(const i_array * v);
 void free_i_array(i_array * v);
 
-s_array init_s_array(int length);
+s_array * init_s_array(int length);
 void expand_s_array(s_array * v);
 void append_s_array(s_array * v, const char * x);
 void extend_s_array(s_array * dest, const s_array * to_add);
