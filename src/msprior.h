@@ -28,6 +28,7 @@
 #define NUMBER_OF_THETA_PARAMETERS 3
 
 #include "hashtab.h"
+#include "partition_combinatorics.h"
 
 // JRO - modified - 11/17/2011
 typedef struct

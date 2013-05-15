@@ -116,7 +116,6 @@
 #include <gsl/gsl_randist.h>	/* for gsl_ran_gamma */
 #include "msprior.h"
 #include "setup.h"
-#include "partitionCombinatorics.c"
 
 /* This has to be Global */
 const gsl_rng *gBaseRand;	/* global rand number generator */
@@ -256,7 +255,7 @@ main (int argc, char *argv[])
   else if ((gParam.concentrationShape > -1.0) &&
           (gParam.concentrationScale > -1.0))
   {
-      numDivModels = integerPartition(gParam.numTaxonPairs);
+      numDivModels = integer_partition(gParam.numTaxonPairs);
       divModels = (int **) calloc(numDivModels, sizeof(int*));
       for (i = 0; i < numDivModels; i++) {
           divModels[i] = (int *) calloc(gParam.numTaxonPairs, sizeof(int));
@@ -273,7 +272,8 @@ main (int argc, char *argv[])
                   " divergence models\n");
           exit (EXIT_FAILURE);
       }
-      generateIntegerPartitions(gParam.numTaxonPairs, numDivModels, divModels);
+      generate_integer_partitions(gParam.numTaxonPairs, numDivModels,
+              divModels);
   }
   recTbl = calloc (gParam.numLoci, sizeof (double));
 
@@ -371,8 +371,8 @@ main (int argc, char *argv[])
             {
                 concentrationParameter = gsl_ran_gamma(gBaseRand,
                         gParam.concentrationShape, gParam.concentrationScale);
-                numTauClasses = dirichletProcessDraw(gBaseRand, gParam.numTaxonPairs,
-                        concentrationParameter, divIndices);
+                numTauClasses = dirichlet_process_draw(gBaseRand,
+                        gParam.numTaxonPairs, concentrationParameter, divIndices);
             }
             else if ((gParam.concentrationShape > -1.0) &&
                     (gParam.concentrationScale > -1.0))
