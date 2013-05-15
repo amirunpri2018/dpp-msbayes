@@ -163,7 +163,7 @@ void help() {
     printf("      [ -m MEAN1,MEAN2,... -s STDEV1,STDEV2,... ] \\\n");
     printf("      SIMS-FILE1 [ SIMS-FILE2 [...] ]\n\n");
     printf("Options:\n");
-    printf(" -o  Path to file containing observed summary statistics\n");
+    printf(" -f  Path to file containing observed summary statistics\n");
     printf(" -k  Number of samples to keep. Default: 1000.\n");
     printf("     If set to 0, only the stat means and standard deviations\n");
     printf("     are calculated and reported (i.e., no rejection is\n");
@@ -180,7 +180,7 @@ void help() {
     printf("     standardizing statistics. The number of means must match\n");
     printf("     the number of columns in the observed stats file, and must\n");
     printf("     be in the same order. Must be used with `-m`.\n");
-    printf(" -d  Report Euclidean distances of retained samples in the\n");
+    printf(" -e  Report Euclidean distances of retained samples in the\n");
     printf("     first column of the output. Default is not to report\n");
     printf("     the distance column.\n");
     printf(" -h  Display this help message and exit\n");
@@ -231,9 +231,9 @@ void parse_args(config * conf, int argc, char ** argv) {
     (*conf).means.length = 0;
     (*conf).std_devs.length = 0;
     (*conf).sim_paths.length = 0;
-    while((i = getopt(argc, argv, "o:k:n:m:s:dh")) != -1) {
+    while((i = getopt(argc, argv, "f:k:n:m:s:eh")) != -1) {
         switch(i) {
-            case 'o':
+            case 'f':
                 (*conf).observed_path = optarg;
                 break;
             case 'k':
@@ -278,7 +278,7 @@ void parse_args(config * conf, int argc, char ** argv) {
                     j += 1;
                 }
                 break;
-            case 'd':
+            case 'e':
                 (*conf).include_distance = 1;
                 break;
             case 'h':
