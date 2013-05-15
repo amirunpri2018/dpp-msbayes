@@ -1,4 +1,9 @@
-bin_PROGRAMS = eureject
+bin_PROGRAMS = \
+	eureject \
+	sumstatsvector \
+	msDQH \
+	msprior \
+	msReject
 
 dist_bin_SCRIPTS = \
 	acceptRej.pl \
@@ -29,5 +34,49 @@ eureject_SOURCES = \
 	parsing.c \
 	parsing.h
 
-eureject_LDADD = $(MATHLDADD)
+sumstatsvector_SOURCES = \
+	msStatsDQH.c \
+	sumStatsVector.c \
+	sumStatsVector.h \
+	hashtab.c \
+	hashtab.h \
+	whiteSpaces.c \
+	whiteSpaces.h \
+	stringUtils.c \
+	stringUtils.h
+
+msDQH_SOURCES = \
+	msQHarbpop.c \
+	msQHarbpop.h \
+	QHarbpop-streec.c \
+	QHsubs.c \
+	QHsubs.h \
+	QHarbpop-getpars.c \
+	rand2new.c
+
+msprior_SOURCES = \
+	msprior.c \
+	msprior.h \
+	setup.c \
+	setup.h \
+	initvars.c \
+	initvars.h \
+	whiteSpaces.c \
+	whiteSpaces.h \
+	hashtab.c \
+	hashtab.h \
+	stringUtils.c \
+	stringUtils.h \
+	array_utils.c \
+	array_utils.h \
+	partition_combinatorics.c \
+	partition_combinatorics.h
+
+msReject_SOURCES = rejectinC.c
+
+# eureject_LDADD = @MATHLDADD@
+# # sumstatsvector_LDADD = @LIBS@
+# # msDQH_LDADD = @LIBS@
+# msReject_LDADD = @MATHLDADD@
+# # msprior_LDADD = @LIBS@
 

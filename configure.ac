@@ -30,6 +30,21 @@ AC_FUNC_MALLOC
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([pow strtok strncpy calloc sqrt]) 
 
+# check for "Check"
+# AM_PATH_CHECK([0.9.0],[],[AC_MSG_WARN([check is missing or old; you will not be able to run the test suite])])
+PKG_CHECK_MODULES([CHECK], [check >= 0.9.4], [], [AC_MSG_WARN([check is missing or old; you will not be able to run the test suite])])
+
+###############################################################################
+# check for GSL
+# (from http://www.gnu.org/software/gsl/manual/html_node/Autoconf-Macros.html)
+# These tests create macros:
+#   HAVE_LIBGSL, HAVE_LIBGSLCBGLAS, HAVE_LIBM
+# They will also add '-lgls -lgslcblas -lm' to `LIBS`
+###############################################################################
+AC_CHECK_LIB([m],[cos])
+AC_CHECK_LIB([gslcblas],[cblas_dgemm])
+AC_CHECK_LIB([gsl],[gsl_blas_dgemm])
+          
 # define flags
 MATHLDADD="-lm"
 AC_SUBST([MATHLDADD])
@@ -38,7 +53,7 @@ AC_SUBST([MATHLDADD])
 AC_CONFIG_HEADERS([config.h])
 
 # declare output `Makefile`s
-AC_CONFIG_FILES([Makefile src/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile test/Makefile])
 
 # output declared files
 AC_OUTPUT
