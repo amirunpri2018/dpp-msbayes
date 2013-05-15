@@ -1,8 +1,17 @@
 bin_PROGRAMS = eureject
 
-rlibdir = $(libdir)/msbayes
+dist_bin_SCRIPTS = \
+	acceptRej.pl \
+	acceptRej_flex.pl \
+	convertIM.pl \
+	dataSummary.pl \
+	msbayes.pl \
+	msCombModels.pl \
+	obsSumStats.pl \
+	regress_cli.r
 
-dist_rlibdir_SCRIPTS = \
+rlibdir = $(libdir)/msbayes
+dist_rlib_SCRIPTS = \
 	acceptRej_flex.r \
 	acceptRej.r \
 	calmod.r \
@@ -19,3 +28,6 @@ eureject_SOURCES = \
 	stats_utils.h \
 	parsing.c \
 	parsing.h
+
+eureject_LDADD = $(MATHLDADD)
+

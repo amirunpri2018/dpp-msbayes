@@ -12,11 +12,27 @@ AC_CONFIG_SRCDIR([src/eureject.c])
 # designate dir for auxiliary scripts
 AC_CONFIG_AUX_DIR([build-aux])
 
+# set default install prefix
+AC_PREFIX_DEFAULT([/usr/local])
+
 # initialize Automake
 AM_INIT_AUTOMAKE([1.9 foreign -Wall dist-tarZ tar-ustar filename-length-max=299])
 
 # check for C compiler
 AC_PROG_CC
+
+# check for header files
+AC_HEADER_STDC
+AC_CHECK_HEADERS([stdio.h stdlib.h math.h assert.h unistd.h ctype.h string.h]) 
+
+# check for library functions
+AC_FUNC_MALLOC
+AC_FUNC_STRTOD
+AC_CHECK_FUNCS([pow strtok strncpy calloc sqrt]) 
+
+# define flags
+MATHLDADD="-lm"
+AC_SUBST([MATHLDADD])
 
 # declare `config.h` as output header
 AC_CONFIG_HEADERS([config.h])
