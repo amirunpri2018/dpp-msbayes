@@ -116,6 +116,7 @@
 #include <gsl/gsl_randist.h>	/* for gsl_ran_gamma */
 #include "msprior.h"
 #include "setup.h"
+#include "partitionCombinatorics.c"
 
 /* This has to be Global */
 const gsl_rng *gBaseRand;	/* global rand number generator */
@@ -151,10 +152,13 @@ main (int argc, char *argv[])
 {
   double N1, N2, Nanc, NancLower, *uniqTauArray = NULL, *taxonTauArray = NULL,
          *descendant1ThetaArray = NULL, *descendant2ThetaArray = NULL,
-         *ancestralThetaArray = NULL, spTheta, tauequalizer, gaussTime = 0.0,
-         mig, rec, BottStr1, BottStr2, BottleTime;
+         *ancestralThetaArray = NULL, spTheta, thetaMean, descendant1Theta,
+         descendant2Theta, tauequalizer, gaussTime = 0.0, mig, rec, BottStr1,
+         BottStr2, BottleTime, concentrationParameter;
   double *recTbl;
-  int tauClass, *PSIarray = NULL;
+  int tauClass, numDivModels, *PSIarray = NULL, *divIndices = NULL,
+          **divModels = NULL, i, j;
+  int divModelIndex = 0; 
   unsigned int numTauClasses = -1, u, locus, taxonID, zzz;
   unsigned long randSeed;
   unsigned long long rep;
@@ -172,10 +176,10 @@ main (int argc, char *argv[])
   LoadConfiguration (argc, argv);
 
   /* set the lower Nanc */
-  NancLower = 0.00001 * gParam.lowerTheta;
-  if (NancLower < 0.00000000004) { /* 4 * (mu=10^(-11)) * (Ne=1) */
-    NancLower = 0.00000000004;
-  }
+  /* NancLower = 0.00001 * gParam.lowerTheta; */
+  /* if (NancLower < 0.00000000004) { /1* 4 * (mu=10^(-11)) * (Ne=1) *1/ */
+  /*   NancLower = 0.00000000004; */
+  /* } */
 
   /* set b_constrain to 1 if constrain */
   if (gParam.constrain > 0)
@@ -192,7 +196,6 @@ main (int argc, char *argv[])
 	  exit (EXIT_FAILURE);
 	}
 
-      int i;
       for (i = 0; i < strlen (gParam.subParamConstrain); i++)
 	{
 	  char a = (gParam.subParamConstrain)[i];
@@ -240,7 +243,38 @@ main (int argc, char *argv[])
   descendant1ThetaArray = calloc (gParam.numTaxonPairs, sizeof (double));
   descendant2ThetaArray = calloc (gParam.numTaxonPairs, sizeof (double));
   ancestralThetaArray = calloc (gParam.numTaxonPairs, sizeof (double));
-
+  if ((gParam.concentrationShape > 0) && (gParam.concentrationScale > 0))
+  {
+      divIndices = calloc(gParam.numTaxonPairs, sizeof(int));
+      if (divIndices == NULL)
+      {
+          fprintf(stderr, "ERROR: Not enough memory for array of divergence "
+                  "indices\n");
+          exit (EXIT_FAILURE);
+      }
+  }
+  else if ((gParam.concentrationShape > -1.0) &&
+          (gParam.concentrationScale > -1.0))
+  {
+      numDivModels = integerPartition(gParam.numTaxonPairs);
+      divModels = (int **) calloc(numDivModels, sizeof(int*));
+      for (i = 0; i < numDivModels; i++) {
+          divModels[i] = (int *) calloc(gParam.numTaxonPairs, sizeof(int));
+          if (divModels[i] == NULL)
+          {
+              fprintf(stderr, "ERROR: Not enough memory for 2-D array of "
+                      " divergence models\n");
+              exit (EXIT_FAILURE);
+          }
+      }
+      if (divModels == NULL)
+      {
+          fprintf(stderr, "ERROR: Not enough memory for 2-D array of "
+                  " divergence models\n");
+          exit (EXIT_FAILURE);
+      }
+      generateIntegerPartitions(gParam.numTaxonPairs, numDivModels, divModels);
+  }
   recTbl = calloc (gParam.numLoci, sizeof (double));
 
   if (uniqTauArray == NULL || PSIarray == NULL || recTbl == NULL ||
@@ -315,6 +349,8 @@ main (int argc, char *argv[])
   }
 #endif
 
+  thetaMean = gParam.thetaShape * gParam.thetaScale;
+
   /* Beginning of the main loop */
   for (rep = 0; rep < gParam.reps; rep++)
     {
@@ -328,14 +364,44 @@ main (int argc, char *argv[])
        * If gParam.numTauClasses is not set, we are sampling
        * numTauClasses from a uniform prior dist'n.
        */
-      if (gParam.numTauClasses == 0)
-	{			/* numTauClasses is NOT fixed */
-	  numTauClasses =
-	    1 + gsl_rng_uniform_int (gBaseRand, gParam.numTaxonPairs);
-	}
+        if (gParam.numTauClasses == 0)
+        {			/* numTauClasses is NOT fixed */
+            if ((gParam.concentrationShape > 0) &&
+                    (gParam.concentrationScale > 0))
+            {
+                concentrationParameter = gsl_ran_gamma(gBaseRand,
+                        gParam.concentrationShape, gParam.concentrationScale);
+                numTauClasses = dirichletProcessDraw(gBaseRand, gParam.numTaxonPairs,
+                        concentrationParameter, divIndices);
+            }
+            else if ((gParam.concentrationShape > -1.0) &&
+                    (gParam.concentrationScale > -1.0))
+            {
+                divModelIndex = gsl_rng_uniform_int(gBaseRand, numDivModels);
+                PSIarray = divModels[divModelIndex];
+                numTauClasses = 0;
+                for (i = 0; i < gParam.numTaxonPairs; i++) {
+                    if (PSIarray[i] < 1) {
+                        break;
+                    }
+                    numTauClasses += 1;
+                }
+            }
+            else
+            {
+            numTauClasses = 1 + gsl_rng_uniform_int (gBaseRand,
+                    gParam.numTaxonPairs);
+            }
+        }
       
       /* create the recombination rate table for each gene */
-      rec = gsl_ran_flat (gBaseRand, 0.0, gParam.upperRec);
+      rec = 0.0;
+      if ((gParam.recombinationShape > 0) && (gParam.recombinationScale > 0))
+      {
+          rec = gsl_ran_gamma(gBaseRand, gParam.recombinationShape,
+                  gParam.recombinationScale);
+      }
+      /* rec = gsl_ran_flat (gBaseRand, 0.0, gParam.upperRec); */
       for (u=0; u < gParam.numLoci; u++)
 	{
 	  /* all loci shares same recombination rate */
@@ -366,57 +432,103 @@ main (int argc, char *argv[])
 #endif
 
       // Randomly generate TauArray only when NOT constrain
-      if ((b_constrain == 0) || (subParamConstrainConfig[0] != 1))
-	{
-	  int counter;
-	  /* sample tau's from uniform prior dist'n */
-	  for (u = 0; u < numTauClasses; u++)
-// JRO - modified - 11/17/2011
-//	    uniqTauArray[u] = gsl_ran_flat (gBaseRand, 0.0, gParam.upperTau);
-	    uniqTauArray[u] = gsl_ran_flat (gBaseRand, gParam.lowerTau,
-	                                    gParam.upperTau);
+    if ((b_constrain == 0) || (subParamConstrainConfig[0] != 1))
+    {
+        int counter;
+	    /* sample tau's from uniform prior dist'n */
+        for (u = 0; u < numTauClasses; u++)
+        {
+        // JRO - modified - 11/17/2011
+        // uniqTauArray[u] = gsl_ran_flat (gBaseRand, 0.0, gParam.upperTau);
+	    /* uniqTauArray[u] = gsl_ran_flat (gBaseRand, gParam.lowerTau, */
+	    /*                                 gParam.upperTau); */
+            uniqTauArray[u] = gsl_ran_gamma(gBaseRand, gParam.tauShape,
+                    gParam.tauScale);
+        }
 
-          qsort(uniqTauArray, numTauClasses, sizeof(double),comp_nums);
+        if ((gParam.concentrationShape > 0) && (gParam.concentrationScale > 0))
+        {
+            /* memset(PSIarray, 0, sizeof(PSIarray)); */
+            for (i = 0; i < gParam.numTaxonPairs; i++)
+            {
+                PSIarray[i] = 0;
+            }
+            for (i = 0; i < gParam.numTaxonPairs; i++)
+            {
+                tauClass = divIndices[i];
+                taxonTauArray[i] = uniqTauArray[tauClass];
+                PSIarray[tauClass] += 1;
+            }
+        }
+        else if ((gParam.concentrationShape > -1.0) &&
+                    (gParam.concentrationScale > -1.0))
+        {
+            counter = 0;
+            for (i = 0; i < numTauClasses; i++)
+            {
+                for (j = 0; j < PSIarray[i]; j++)
+                {
+                    taxonTauArray[counter] = uniqTauArray[i];
+                    counter += 1;
+                }
+            }
+            gsl_ran_shuffle(gBaseRand, taxonTauArray, 
+                    gParam.numTaxonPairs, sizeof (double));
+        }
+        else 
+        {
+            qsort(uniqTauArray, numTauClasses, sizeof(double),comp_nums);
+            for (counter = 0; counter < numTauClasses; counter++) 
+            {
+                taxonTauArray[counter] = uniqTauArray[counter];
+                PSIarray[counter] = 1;
+            }
 
-          for (counter = 0; counter < numTauClasses; counter++) 
-	    {
-	      taxonTauArray[counter] = uniqTauArray[counter];
-	      PSIarray[counter] = 1;
-	    }
+            for (counter = numTauClasses; counter < gParam.numTaxonPairs; counter++)
+            {
+                tauClass = gsl_rng_uniform_int(gBaseRand, numTauClasses);
+                taxonTauArray[counter] = uniqTauArray[tauClass];
+                PSIarray[tauClass] = PSIarray[tauClass] + 1;
+            }
 
-          for (counter = numTauClasses; 
-	       counter < gParam.numTaxonPairs; counter++)
-	    {
-	      tauClass = gsl_rng_uniform_int(gBaseRand, numTauClasses);
-	      taxonTauArray[counter] = uniqTauArray[tauClass];
-	      PSIarray[tauClass] = PSIarray[tauClass] + 1;
-	    }
-
-	  /* randomly shuflling the order of taxonTauArray */
-	  gsl_ran_shuffle(gBaseRand, taxonTauArray, 
-			  gParam.numTaxonPairs, sizeof (double));
-	}
+            /* randomly shuflling the order of taxonTauArray */
+            gsl_ran_shuffle(gBaseRand, taxonTauArray, 
+                    gParam.numTaxonPairs, sizeof (double));
+        }
+    }
       
       for (taxonID = 0; taxonID < gParam.numTaxonPairs; taxonID++)
 	{
 	  //Check upperAncPopSize before doing anything
 	  /* ancestral population size prior */
-	  if (gParam.upperAncPopSize < gParam.lowerTheta)
-	    {
-	      fprintf (stderr,
-		       "The upper bound (%lf * %lf) of ancestral pop. size is "
-		       "smaller than the lower bound (%lf)\n",
-		       gParam.upperAncPopSize, gParam.upperTheta, gParam.lowerTheta);
-	      exit (EXIT_FAILURE);
-	    }
+	  /* if (gParam.upperAncPopSize < gParam.lowerTheta) */
+	  /*   { */
+	  /*     fprintf (stderr, */
+		       /* "The upper bound (%lf * %lf) of ancestral pop. size is " */
+		       /* "smaller than the lower bound (%lf)\n", */
+		       /* gParam.upperAncPopSize, gParam.upperTheta, gParam.lowerTheta); */
+	  /*     exit (EXIT_FAILURE); */
+	  /*   } */
 
 	  constrainedParameter conTaxonPairDat;
 
 	  /* Population sizes during the bottleneck after the divergence of 2 
 	     pops. This is same as the population sizes, immediately after the 
 	     divergence/separation of the 2 pops. These are relative sizes. */
-	  BottStr1 = gsl_ran_flat (gBaseRand, 0.01, 1.0);
-	  BottStr2 = gsl_ran_flat (gBaseRand, 0.01, 1.0);
+	  /* BottStr1 = gsl_ran_flat (gBaseRand, 0.01, 1.0); */
+	  /* BottStr2 = gsl_ran_flat (gBaseRand, 0.01, 1.0); */
+      BottStr1 = 1.0;
+      BottStr2 = 1.0;
+      if ((gParam.bottleProportionShapeA > 0) && (gParam.bottleProportionShapeB > 0))
+      {
+          BottStr1 = gsl_ran_beta(gBaseRand, gParam.bottleProportionShapeA,
+                  gParam.bottleProportionShapeB);
+          BottStr2 = BottStr1;
+          if (gParam.bottleProportionShared == 0) {
+              BottStr2 = gsl_ran_beta(gBaseRand, gParam.bottleProportionShapeA,
+                      gParam.bottleProportionShapeB);
+          }
+      }
 
 	  /* After the populations diverge, they experience pop. bottleneck.
 	     Then the population size exponentially grows until current size.
@@ -427,18 +539,41 @@ main (int argc, char *argv[])
 	  BottleTime = gsl_ran_flat (gBaseRand, 0.000001, 1.0);
 
 	  /* migration rate prior */
-	  mig = gsl_ran_flat (gBaseRand, 0.0, gParam.upperMig);
+      mig = 0.0;
+      if ((gParam.migrationShape > 0) && (gParam.migrationScale > 0))
+      {
+          mig = gsl_ran_gamma(gBaseRand, gParam.migrationShape,
+                  gParam.migrationScale);
+      }
+	  /* mig = gsl_ran_flat (gBaseRand, 0.0, gParam.upperMig); */
+
 	  /* spTheta prior */
-	  while ((spTheta = gsl_ran_flat (gBaseRand, gParam.lowerTheta,
-					  gParam.upperTheta)) <= 0);
+
+      descendant1Theta = gsl_ran_gamma(gBaseRand, gParam.thetaShape,
+              gParam.thetaScale);
+      if (gParam.thetaParameters[1] == '1') {
+          descendant2Theta = gsl_ran_gamma(gBaseRand, gParam.thetaShape,
+                  gParam.thetaScale);
+      } else if (gParam.thetaParameters[1] == '0') {
+          descendant2Theta = descendant1Theta;
+      } else {
+          fprintf(stderr, "ERROR: second character of `thetaParameters` "
+                "in the config file should be either 0 or 1\n");
+	      exit (EXIT_FAILURE);
+	  }
+      spTheta = (descendant1Theta + descendant2Theta) / 2;
+	  /* while ((spTheta = gsl_ran_flat (gBaseRand, gParam.lowerTheta, */
+					  /* gParam.upperTheta)) <= 0); */
 
 	  /* The ratio of current population sizes.  The populations
 	     exponentially grow to these sizes after bottkleneck is done. */
 	  /* both ends excluded for symmetry */
-	  while ((N1 = gsl_ran_flat (gBaseRand, 0.01, 1.99)) == 0.01)
-	    ;
+      N1 = descendant1Theta / spTheta;
+      N2 = descendant2Theta / spTheta;
+	  /* while ((N1 = gsl_ran_flat (gBaseRand, 0.01, 1.99)) == 0.01) */
+	  /*   ; */
 	  
-	  N2 = 2.0 - N1;
+	  /* N2 = 2.0 - N1; */
 
 	  /* The upper limit of ancestral theta is defined by the product
 	     of upper Theta (e.g. 40) and upper AncPopSize (e.g. 0.5) */
@@ -446,11 +581,39 @@ main (int argc, char *argv[])
 	     theta to the lower limit specified by user */
 	  /* Nanc = gsl_ran_flat (gBaseRand, 0.01,
 			       gParam.upperAncPopSize * gParam.upperTheta);*/
-	  Nanc = gsl_ran_flat (gBaseRand, gParam.lowerTheta,
-			       gParam.upperAncPopSize * gParam.upperTheta);
-
-      descendant1ThetaArray[taxonID] = spTheta * N1;
-      descendant2ThetaArray[taxonID] = spTheta * N2;
+	  /* Nanc = gsl_ran_flat (gBaseRand, gParam.lowerTheta, */
+			       /* gParam.upperAncPopSize * gParam.upperTheta); */
+      if ((gParam.thetaParameters[2] == '2') ||
+              ((gParam.thetaParameters[2] == '1') &&
+                      (gParam.thetaParameters[1] == '0')))
+      {
+          if ((gParam.ancestralThetaShape > 0) && (gParam.ancestralThetaScale > 0))
+          {
+              Nanc = gsl_ran_gamma(gBaseRand, gParam.ancestralThetaShape,
+                      gParam.ancestralThetaScale);
+          } else
+          {
+              Nanc = gsl_ran_gamma(gBaseRand, gParam.thetaShape,
+                      gParam.thetaScale);
+          }
+      }
+      else if ((gParam.thetaParameters[2] == '1') && 
+              (gParam.thetaParameters[1] == '1'))
+      {
+          Nanc = descendant2Theta;
+      }
+      else if (gParam.thetaParameters[2] == '0')
+      {
+          Nanc = descendant1Theta;
+      }
+      else
+      {
+          fprintf(stderr, "ERROR: third character of `thetaParameters` "
+                "in the config file should be either 0, 1, or 2\n");
+	      exit (EXIT_FAILURE);
+	  }
+      descendant1ThetaArray[taxonID] = descendant1Theta;
+      descendant2ThetaArray[taxonID] = descendant2Theta;
       ancestralThetaArray[taxonID] = Nanc;
 	  
 	  /* pick a tau for every taxon-pair with replacement from the
@@ -523,7 +686,10 @@ main (int argc, char *argv[])
 		     AncPopSize (e.g. 0.5), then converted to relative size 
 		     to spTheta */
 		  if (subParamConstrainConfig[7] == 1)
-		    Nanc = conTaxonPairDat.conNanc * gParam.upperTheta;
+		    /* Nanc = conTaxonPairDat.conNanc * gParam.upperTheta; */
+            /* Constrained values of ancestral theta will now have to be
+             * specified in absolute terms */
+		    Nanc = conTaxonPairDat.conNanc;
 		  
 		  /* recombination rate per neighboring site */
 		  if (subParamConstrainConfig[8] == 1)
@@ -560,8 +726,9 @@ main (int argc, char *argv[])
 	      /* this scaling is done inside of locus loop to accomodate 
 		 the gamma dist'n of mut rate for each locus */
 
-	      tauequalizer = gParam.upperTheta / 
-		2 / (spTheta * taxonPairDat.NScaler);
+	      /* tauequalizer = gParam.upperTheta / */ 
+		/* 2 / (spTheta * taxonPairDat.NScaler); */
+          tauequalizer = thetaMean / (spTheta * taxonPairDat.NScaler);
 	      /* WORK, CONFIRM THIS. Naoki Nov 2, 2009.  IT USED TO BE
 		 tauequalizer = gParam.upperTheta * taxonPairDat.seqLen / 
 		 2 / locTheta;
@@ -647,6 +814,18 @@ main (int argc, char *argv[])
   free (ancestralThetaArray);
   free (recTbl);
   free (subParamConstrainConfig);
+  if ((gParam.concentrationShape > 0) && (gParam.concentrationScale > 0))
+  {
+      free (divIndices);
+  }
+  else if ((gParam.concentrationShape > -1.0) &&
+          (gParam.concentrationScale > -1.0))
+  {
+      for (i = 0; i < gParam.numTaxonPairs; i++) {
+          free(divModels[i]);
+      }
+      free(divModels);
+  }
   exit (0);
 }
 

@@ -351,37 +351,74 @@ GetLine (char *line, int max)
 static void
 SetDefaultParams (runParameters * paramPtr)
 {
-  if (!paramPtr->upperTheta)
+  if (!paramPtr->concentrationShape)
     {
-      paramPtr->upperTheta = DEFAULT_UPPER_THETA;
+      paramPtr->concentrationShape = DEFAULT_CONCENTRATION_SHAPE;
     }
-  if (!paramPtr->lowerTheta)
+  if (!paramPtr->concentrationScale)
     {
-      paramPtr->lowerTheta = DEFAULT_LOWER_THETA;
+      paramPtr->concentrationScale = DEFAULT_CONCENTRATION_SCALE;
     }
-  if (!paramPtr->upperTau)
+  if (!paramPtr->thetaScale)
     {
-      paramPtr->upperTau = DEFAULT_UPPER_TAU;
+      paramPtr->thetaScale = DEFAULT_THETA_SCALE;
     }
-  if (!paramPtr->lowerTau)
+  if (!paramPtr->thetaShape)
     {
-      paramPtr->lowerTau = DEFAULT_LOWER_TAU;
+      paramPtr->thetaShape = DEFAULT_THETA_SHAPE;
+    }
+  if (!paramPtr->tauScale)
+    {
+      paramPtr->tauScale = DEFAULT_TAU_SCALE;
+    }
+  if (!paramPtr->tauShape)
+    {
+      paramPtr->tauShape = DEFAULT_TAU_SHAPE;
+    }
+  if (!paramPtr->bottleProportionShapeA)
+    {
+      paramPtr->bottleProportionShapeA = DEFAULT_BOTTLE_PROP_A;
+    }
+  if (!paramPtr->bottleProportionShapeB)
+    {
+      paramPtr->bottleProportionShapeB = DEFAULT_BOTTLE_PROP_B;
+    }
+  if (!paramPtr->bottleProportionShared)
+    {
+      paramPtr->bottleProportionShared = DEFAULT_BOTTLE_PROP_SHARED;
     }
   if (!paramPtr->numTauClasses)
     {
       paramPtr->numTauClasses = 0;
     }
-  if (!paramPtr->upperMig)
+  if (!paramPtr->migrationShape)
     {
-      paramPtr->upperMig = DEFAULT_UPPER_MIG;
+      paramPtr->migrationShape = DEFAULT_MIGRATION_SHAPE;
     }
-  if (!paramPtr->upperRec)
+  if (!paramPtr->migrationScale)
     {
-      paramPtr->upperRec = DEFAULT_UPPER_REC;
+      paramPtr->migrationScale = DEFAULT_MIGRATION_SCALE;
     }
-  if (!paramPtr->upperAncPopSize)
+  if (!paramPtr->recombinationShape)
     {
-      paramPtr->upperAncPopSize = DEFAULT_UPPER_ANC_POPSIZE;
+      paramPtr->recombinationShape = DEFAULT_REC_SHAPE;
+    }
+  if (!paramPtr->recombinationScale)
+    {
+      paramPtr->recombinationScale = DEFAULT_REC_SCALE;
+    }
+  if (!paramPtr->ancestralThetaScale)
+    {
+      paramPtr->ancestralThetaScale = DEFAULT_ANC_THETA_SCALE;
+    }
+  if (!paramPtr->ancestralThetaShape)
+    {
+      paramPtr->ancestralThetaShape = DEFAULT_ANC_THETA_SHAPE;
+    }
+  if (!paramPtr->thetaParameters || !paramPtr->thetaParameters[0])
+    {
+      strncpy (paramPtr->thetaParameters, DEFAULT_THETA_PARAMETERS,
+	       NUMBER_OF_THETA_PARAMETERS);
     }
   if (!paramPtr->reps)
     {
@@ -423,33 +460,65 @@ InteractiveSetupParams (runParameters * paramPtr)
 
   SetDefaultParams (paramPtr);
 
-  /* theta */
+  /* Concentration parameter of Dirichlet process */
   for (badInput = 1; badInput;)
     {
       fprintf (stderr,
-	       "Lower limit of uniform prior distribution for theta "
-	       "[%lf]: \n", paramPtr->lowerTheta);
+	       "Shape parameter for gamma prior distribution on the concentration "
+           "parameter of the Dirichlet process "
+	       "[%lf]: \n", paramPtr->concentrationShape);
       lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
       if (lineLen == 1)
 	badInput = 0;		/* use default value */
       else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
 	{
 	  badInput = 0;
-	  paramPtr->lowerTheta = tempValDouble;
+	  paramPtr->concentrationShape = tempValDouble;
 	}
     }
   for (badInput = 1; badInput;)
     {
       fprintf (stderr,
-	       "Upper limit of uniform prior distribution for theta "
-	       "[%lf]: \n", paramPtr->upperTheta);
+	       "Scale parameter for gamma prior distribution on the concentration "
+           "parameter of the Dirichlet process "
+	       "[%lf]: \n", paramPtr->concentrationScale);
       lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
       if (lineLen == 1)
 	badInput = 0;		/* use default value */
       else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
 	{
 	  badInput = 0;
-	  paramPtr->upperTheta = tempValDouble;
+	  paramPtr->concentrationScale = tempValDouble;
+	}
+    }
+
+  /* theta */
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+	       "Shape parameter for gamma prior distribution for theta "
+	       "[%lf]: \n", paramPtr->thetaShape);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->thetaShape = tempValDouble;
+	}
+    }
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+	       "Scale parameter for gamma prior distribution for theta "
+	       "[%lf]: \n", paramPtr->thetaScale);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->thetaScale = tempValDouble;
 	}
     }
 
@@ -458,29 +527,73 @@ InteractiveSetupParams (runParameters * paramPtr)
   for (badInput = 1; badInput;)
     {
       fprintf (stderr,
-	       "Lower limit of uniform prior distribution for tau, time of divergence (tau-min) "
-	       "[%lf]: \n", paramPtr->lowerTau);
+	       "Shape parameter for gamma prior distribution for tau, time of divergence "
+	       "[%lf]: \n", paramPtr->tauShape);
       lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
       if (lineLen == 1)
 	badInput = 0;		/* use default value */
       else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
 	{
 	  badInput = 0;
-	  paramPtr->lowerTau = tempValDouble;
+	  paramPtr->tauShape = tempValDouble;
 	}
     }
   for (badInput = 1; badInput;)
     {
       fprintf (stderr,
-	       "Upper limit of uniform prior distribution for tau, time of divergence (tau-max) "
-	       "[%lf]: \n", paramPtr->upperTau);
+	       "Scale parameter for gamma prior distribution for tau, time of divergence "
+	       "[%lf]: \n", paramPtr->tauScale);
       lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
       if (lineLen == 1)
 	badInput = 0;		/* use default value */
       else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
 	{
 	  badInput = 0;
-	  paramPtr->upperTau = tempValDouble;
+	  paramPtr->tauScale = tempValDouble;
+	}
+    }
+
+  /* bottle neck proportion */
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+           "First shape parameter (alpha) for beta prior on the bottleneck proportion "
+	       "[%lf]: \n", paramPtr->bottleProportionShapeA);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->bottleProportionShapeA = tempValDouble;
+	}
+    }
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+           "Second shape parameter (beta) for beta prior on the bottleneck proportion "
+	       "[%lf]: \n", paramPtr->bottleProportionShapeB);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->bottleProportionShapeB = tempValDouble;
+	}
+    }
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+           "Bottleneck proportion shared between descendant populations (0: False, 1: True) "
+	       "[%u]: \n", paramPtr->bottleProportionShared);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%u", &tempValUI) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->bottleProportionShared = tempValUI;
 	}
     }
 
@@ -503,15 +616,29 @@ InteractiveSetupParams (runParameters * paramPtr)
   for (badInput = 1; badInput;)
     {
       fprintf (stderr,
-	       "Upper limit of uniform prior distribution for migration rate [%lf]: \n",
-	       paramPtr->upperMig);
+	       "Shape parameter of gamma distribution on migration rate [%lf]: \n",
+	       paramPtr->migrationShape);
       lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
       if (lineLen == 1)
 	badInput = 0;		/* use default value */
       else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
 	{
 	  badInput = 0;
-	  paramPtr->upperMig = tempValDouble;
+	  paramPtr->migrationShape = tempValDouble;
+	}
+    }
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+	       "Scale parameter of gamma distribution on migration rate [%lf]: \n",
+	       paramPtr->migrationScale);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->migrationScale = tempValDouble;
 	}
     }
 
@@ -519,8 +646,8 @@ InteractiveSetupParams (runParameters * paramPtr)
   for (badInput = 1; badInput;)
     {
       fprintf (stderr,
-	       "Upper limit of uniform prior distribution for recombination rate: "
-	       "[%lf]: \n", paramPtr->upperRec);
+	       "Shape parameter of gamma distribution on intra-locus recombination rate [%lf]: \n",
+	       paramPtr->recombinationShape);
 
       lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
       if (lineLen == 1)
@@ -528,27 +655,52 @@ InteractiveSetupParams (runParameters * paramPtr)
       else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
 	{
 	  badInput = 0;
-	  paramPtr->upperRec = tempValDouble;
+	  paramPtr->recombinationShape = tempValDouble;
 	}
     }
-
-  /* ancPop */
   for (badInput = 1; badInput;)
     {
       fprintf (stderr,
-	       "Coefficient for the upper limit of uniform prior distribution for ancestral theta "
-	       ": [%lf]\n", paramPtr->upperAncPopSize);
-      fprintf (stderr,
-	       "  The upper limit for ancestral theta is determined by "
-	       "this coefficient\n  multiplied by the upper limit for (current) theta (%lf) : \n",
-	       paramPtr->upperTheta);
+	       "Scale parameter of gamma distribution on intra-locus recombination rate [%lf]: \n",
+	       paramPtr->recombinationScale);
+
       lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
       if (lineLen == 1)
 	badInput = 0;		/* use default value */
       else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
 	{
 	  badInput = 0;
-	  paramPtr->upperAncPopSize = tempValDouble;
+	  paramPtr->recombinationScale = tempValDouble;
+	}
+    }
+
+  /* ancestral theta */
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+	       "Shape parameter for gamma prior distribution for ancestralTheta of ancestral population "
+	       "[%lf]: \n", paramPtr->ancestralThetaShape);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->ancestralThetaShape = tempValDouble;
+	}
+    }
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+	       "Scale parameter for gamma prior distribution for ancestralTheta of ancestral population "
+	       "[%lf]: \n", paramPtr->ancestralThetaScale);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%lf", &tempValDouble) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->ancestralThetaScale = tempValDouble;
 	}
     }
 
@@ -611,13 +763,18 @@ SetupParams (FILE * fp, runParameters * paramPtr)
 // JRO - modified - 11/29/2011
 // JRO - modified - 11/17/2011
   retVal = init_globals (fp,
-			 "lowerTheta upperTheta lowerTau upperTau upperMig upperRec upperAncPopSize numTauClasses reps constrain subParamConstrain",
-			 "ddddddduVus",
-			 &paramPtr->lowerTheta, &paramPtr->upperTheta,
-			 &paramPtr->lowerTau, &paramPtr->upperTau, &paramPtr->upperMig, 
-			 &paramPtr->upperRec, &paramPtr->upperAncPopSize, 
-			 &paramPtr->numTauClasses, &paramPtr->reps,
-			 &paramPtr->constrain, &paramPtr->subParamConstrain);
+			 "concentrationShape concentrationScale thetaShape thetaScale tauShape tauScale bottleProportionShapeA bottleProportionShapeB bottleProportionShared migrationShape migrationScale recombinationShape recombinationScale ancestralThetaShape ancestralThetaScale thetaParameters numTauClasses reps constrain subParamConstrain",
+			 "dddddddduddddddsuVus",
+             &paramPtr->concentrationShape, &paramPtr->concentrationScale,
+             &paramPtr->thetaShape, &paramPtr->thetaScale, &paramPtr->tauShape,
+             &paramPtr->tauScale, &paramPtr->bottleProportionShapeA,
+             &paramPtr->bottleProportionShapeB,
+             &paramPtr->bottleProportionShared, &paramPtr->migrationShape,
+             &paramPtr->migrationScale, &paramPtr->recombinationShape,
+             &paramPtr->recombinationScale, &paramPtr->ancestralThetaShape,
+             &paramPtr->ancestralThetaScale, &paramPtr->thetaParameters,
+             &paramPtr->numTauClasses, &paramPtr->reps, &paramPtr->constrain,
+             &paramPtr->subParamConstrain);
 
   if (retVal != 0)
     {
@@ -1192,14 +1349,23 @@ PrintParam (FILE *fp)
   int i;
 
   fprintf (fp, "## gParam ##\n");
-  fprintf (fp, "lowerTheta =\t%.17lf\n", gParam.lowerTheta);
-  fprintf (fp, "upperTheta =\t%.17lf\n", gParam.upperTheta);
+  fprintf (fp, "concentrationShape =\t%.17lf\n", gParam.concentrationShape);
+  fprintf (fp, "concentrationScale =\t%.17lf\n", gParam.concentrationScale);
+  fprintf (fp, "thetaShape =\t%.17lf\n", gParam.thetaShape);
+  fprintf (fp, "thetaScale =\t%.17lf\n", gParam.thetaScale);
 // JRO - modified - 11/17/2011
-  fprintf (fp, "lowerTau =\t%.17lf\n", gParam.lowerTau);
-  fprintf (fp, "upperTau =\t%.17lf\n", gParam.upperTau);
-  fprintf (fp, "upperMig =\t%.17lf\n", gParam.upperMig);
-  fprintf (fp, "upperRec =\t%.17lf\n", gParam.upperRec);
-  fprintf (fp, "upperAncPopSize =\t%.17lf\n", gParam.upperAncPopSize);
+  fprintf (fp, "tauShape =\t%.17lf\n", gParam.tauShape);
+  fprintf (fp, "tauScale =\t%.17lf\n", gParam.tauScale);
+  fprintf (fp, "bottleProportionShapeA =\t%.17lf\n", gParam.bottleProportionShapeA);
+  fprintf (fp, "bottleProportionShapeB =\t%.17lf\n", gParam.bottleProportionShapeB);
+  fprintf (fp, "bottleProportionShared =\t%u\n", gParam.bottleProportionShared);
+  fprintf (fp, "migrationShape =\t%.17lf\n", gParam.migrationShape);
+  fprintf (fp, "migrationScale =\t%.17lf\n", gParam.migrationScale);
+  fprintf (fp, "recombinationShape =\t%.17lf\n", gParam.recombinationShape);
+  fprintf (fp, "recombinationScale =\t%.17lf\n", gParam.recombinationScale);
+  fprintf (fp, "ancestralThetaShape =\t%.17lf\n", gParam.ancestralThetaShape);
+  fprintf (fp, "ancestralThetaScale =\t%.17lf\n", gParam.ancestralThetaScale);
+  fprintf (fp, "thetaParameters =\t%s\n", gParam.thetaParameters);
   fprintf (fp, "reps =\t%llu\n", gParam.reps);
   fprintf (fp, "numTaxonLocusPairs =\t%u\n", gParam.numTaxonLocusPairs);
   fprintf (fp, "numTaxonPairs =\t%u\n", gParam.numTaxonPairs);

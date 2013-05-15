@@ -2,13 +2,22 @@
 #define MS_PRIOR_H
 
 /* Default values used for interactive setup */
-#define DEFAULT_LOWER_THETA 0.00000000004 /* mu = 10^(-11), N = 1 */
-#define DEFAULT_UPPER_THETA 0.04 /* mu = 10^(-8), N=10^6 */
-#define DEFAULT_LOWER_TAU  0.0
-#define DEFAULT_UPPER_TAU  1.0
-#define DEFAULT_UPPER_MIG  0.0	/* when set 0, it is a constant */
-#define DEFAULT_UPPER_REC  0.0
-#define DEFAULT_UPPER_ANC_POPSIZE 0.25
+#define DEFAULT_CONCENTRATION_SHAPE 0.0
+#define DEFAULT_CONCENTRATION_SCALE 0.0
+#define DEFAULT_THETA_SHAPE 1.0
+#define DEFAULT_THETA_SCALE 0.001
+#define DEFAULT_TAU_SHAPE  1.0
+#define DEFAULT_TAU_SCALE  2.0
+#define DEFAULT_BOTTLE_PROP_A 5.0
+#define DEFAULT_BOTTLE_PROP_B 1.0
+#define DEFAULT_BOTTLE_PROP_SHARED 0
+#define DEFAULT_MIGRATION_SHAPE 0.0
+#define DEFAULT_MIGRATION_SCALE 0.0
+#define DEFAULT_REC_SHAPE 0.0
+#define DEFAULT_REC_SCALE 0.0
+#define DEFAULT_ANC_THETA_SHAPE 0.0
+#define DEFAULT_ANC_THETA_SCALE 0.0
+#define DEFAULT_THETA_PARAMETERS "012"
 #define DEFAULT_REPS  1000000
 #define DEFAULT_MUT_FILE "SampleSize_MuModel_Vector"
 #define DEFAULT_SUBPARAMCONSTRAIN "000000000"
@@ -16,19 +25,29 @@
 #define MAX_FILENAME_LEN 1024
 #define MAX_NAME_CHAR_LEN 1024
 #define NUMBER_OF_CONPARAM 9
+#define NUMBER_OF_THETA_PARAMETERS 3
 
 #include "hashtab.h"
 
 // JRO - modified - 11/17/2011
 typedef struct
 {
-  double upperTheta;		/* upper limit of prior dist'n for theta */
-  double lowerTheta;		/* lower limit of prior dist'n for theta */
-  double upperTau;		/* upper limit of prior dist'n for time of separation */
-  double lowerTau;		/* lower limit of prior dist'n for time of separation */
-  double upperMig;		/* upper limit of prior dist'n for migration rate */
-  double upperRec;		/* upper limit of prior dist'n for recombination rate */
-  double upperAncPopSize;	/* upper limit of prior dist'n for ancestral pop size */
+  double concentrationScale;
+  double concentrationShape;
+  double thetaScale;
+  double thetaShape;
+  double tauScale;
+  double tauShape;
+  double bottleProportionShapeA;
+  double bottleProportionShapeB;
+  unsigned int bottleProportionShared;
+  double migrationShape;
+  double migrationScale;
+  double recombinationShape;
+  double recombinationScale;
+  double ancestralThetaScale;
+  double ancestralThetaShape;
+  char thetaParameters[NUMBER_OF_THETA_PARAMETERS];
   unsigned long long reps;
   unsigned int numTaxonLocusPairs; /* total number of taxon:locus pairs */
   unsigned int numTaxonPairs;     /* number of unique taxon pairs */ 
