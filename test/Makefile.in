@@ -48,8 +48,8 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-TESTS = check_array_utils$(EXEEXT)
-check_PROGRAMS = check_array_utils$(EXEEXT)
+TESTS = check_array_utils$(EXEEXT) check_stats_utils$(EXEEXT)
+check_PROGRAMS = check_array_utils$(EXEEXT) check_stats_utils$(EXEEXT)
 subdir = test
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -66,6 +66,12 @@ check_array_utils_OBJECTS = $(am_check_array_utils_OBJECTS)
 check_array_utils_DEPENDENCIES =
 check_array_utils_LINK = $(CCLD) $(check_array_utils_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+am_check_stats_utils_OBJECTS =  \
+	check_stats_utils-check_stats_utils.$(OBJEXT)
+check_stats_utils_OBJECTS = $(am_check_stats_utils_OBJECTS)
+check_stats_utils_DEPENDENCIES =
+check_stats_utils_LINK = $(CCLD) $(check_stats_utils_CFLAGS) $(CFLAGS) \
+	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/build-aux/depcomp
 am__depfiles_maybe = depfiles
@@ -74,8 +80,9 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(check_array_utils_SOURCES)
-DIST_SOURCES = $(check_array_utils_SOURCES)
+SOURCES = $(check_array_utils_SOURCES) $(check_stats_utils_SOURCES)
+DIST_SOURCES = $(check_array_utils_SOURCES) \
+	$(check_stats_utils_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -179,10 +186,19 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-check_array_utils_SOURCES = check_array_utils.c $(top_builddir)/src/array_utils.h
+check_array_utils_SOURCES = \
+	check_array_utils.c \
+	$(top_builddir)/src/array_utils.h
+
 check_array_utils_CFLAGS = @CHECK_CFLAGS@
 # check_array_utils_LDADD = $(top_builddir)/src/libarray_utils.la @CHECK_LIBS@
 check_array_utils_LDADD = @CHECK_LIBS@
+check_stats_utils_SOURCES = \
+	check_stats_utils.c \
+	$(top_builddir)/src/array_utils.h
+
+check_stats_utils_CFLAGS = @CHECK_CFLAGS@
+check_stats_utils_LDADD = @CHECK_LIBS@
 all: all-am
 
 .SUFFIXES:
@@ -223,6 +239,9 @@ clean-checkPROGRAMS:
 check_array_utils$(EXEEXT): $(check_array_utils_OBJECTS) $(check_array_utils_DEPENDENCIES) $(EXTRA_check_array_utils_DEPENDENCIES) 
 	@rm -f check_array_utils$(EXEEXT)
 	$(check_array_utils_LINK) $(check_array_utils_OBJECTS) $(check_array_utils_LDADD) $(LIBS)
+check_stats_utils$(EXEEXT): $(check_stats_utils_OBJECTS) $(check_stats_utils_DEPENDENCIES) $(EXTRA_check_stats_utils_DEPENDENCIES) 
+	@rm -f check_stats_utils$(EXEEXT)
+	$(check_stats_utils_LINK) $(check_stats_utils_OBJECTS) $(check_stats_utils_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -231,6 +250,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_array_utils-check_array_utils.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_stats_utils-check_stats_utils.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -259,6 +279,20 @@ check_array_utils-check_array_utils.obj: check_array_utils.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='check_array_utils.c' object='check_array_utils-check_array_utils.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_array_utils_CFLAGS) $(CFLAGS) -c -o check_array_utils-check_array_utils.obj `if test -f 'check_array_utils.c'; then $(CYGPATH_W) 'check_array_utils.c'; else $(CYGPATH_W) '$(srcdir)/check_array_utils.c'; fi`
+
+check_stats_utils-check_stats_utils.o: check_stats_utils.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_stats_utils_CFLAGS) $(CFLAGS) -MT check_stats_utils-check_stats_utils.o -MD -MP -MF $(DEPDIR)/check_stats_utils-check_stats_utils.Tpo -c -o check_stats_utils-check_stats_utils.o `test -f 'check_stats_utils.c' || echo '$(srcdir)/'`check_stats_utils.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/check_stats_utils-check_stats_utils.Tpo $(DEPDIR)/check_stats_utils-check_stats_utils.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='check_stats_utils.c' object='check_stats_utils-check_stats_utils.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_stats_utils_CFLAGS) $(CFLAGS) -c -o check_stats_utils-check_stats_utils.o `test -f 'check_stats_utils.c' || echo '$(srcdir)/'`check_stats_utils.c
+
+check_stats_utils-check_stats_utils.obj: check_stats_utils.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_stats_utils_CFLAGS) $(CFLAGS) -MT check_stats_utils-check_stats_utils.obj -MD -MP -MF $(DEPDIR)/check_stats_utils-check_stats_utils.Tpo -c -o check_stats_utils-check_stats_utils.obj `if test -f 'check_stats_utils.c'; then $(CYGPATH_W) 'check_stats_utils.c'; else $(CYGPATH_W) '$(srcdir)/check_stats_utils.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/check_stats_utils-check_stats_utils.Tpo $(DEPDIR)/check_stats_utils-check_stats_utils.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='check_stats_utils.c' object='check_stats_utils-check_stats_utils.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_stats_utils_CFLAGS) $(CFLAGS) -c -o check_stats_utils-check_stats_utils.obj `if test -f 'check_stats_utils.c'; then $(CYGPATH_W) 'check_stats_utils.c'; else $(CYGPATH_W) '$(srcdir)/check_stats_utils.c'; fi`
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \
@@ -555,6 +589,9 @@ uninstall-am:
 	mostlyclean-generic pdf pdf-am ps ps-am tags uninstall \
 	uninstall-am
 
+	$(top_builddir)/src/stats_utils.h
+	$(top_builddir)/src/array_utils.c
+	$(top_builddir)/src/stats_utils.c
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
