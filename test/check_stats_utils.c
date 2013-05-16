@@ -10,6 +10,10 @@ START_TEST (test_init_free_sample_sum) {
     sample_sum * ss;
     ss = init_sample_sum();
     ck_assert_msg((ss->n == 0), "`sample_sum.n` did not initiate to 0");
+    ck_assert_msg((ss->sum == 0.0), "`sample_sum.sum` did not initiate to 0");
+    ck_assert_msg((ss->sum_of_squares == 0.0), "`sample_sum.sum_of_squares` "
+            "did not initiate to 0");
+    free_sample_sum(ss);
 }
 END_TEST
 
