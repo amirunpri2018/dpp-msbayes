@@ -86,8 +86,8 @@ int split_str(char * string, s_array * words, int expected_num);
 void get_matching_indices(const s_array * search_strings,
         const s_array * target_strings,
         i_array * indices);
-int get_doubles(const s_array * line_array, const i_array * stat_indices,
-        d_array * stats);
+int get_doubles(const s_array * strings, const i_array * indices,
+        d_array * doubles_dest);
 
 #endif /* ARRAY_UTILS_H */
 

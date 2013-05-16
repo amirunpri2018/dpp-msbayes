@@ -112,7 +112,7 @@ void expand_d_array(d_array * v) {
 }
 
 void expand_c_array(c_array * v) {
-    v->capacity = (v->capacity + 1) * 2;
+    v->capacity = ((v->capacity + 1) * 2) - 1;
     if ((v->a = (typeof(*v->a) *) realloc(v->a ,
             ((v->capacity + 1) * sizeof(*v->a)))) == NULL) {
         perror("out of memory");
@@ -201,6 +201,10 @@ int get_i_array(const i_array * v, int index) {
 char * get_s_array(const s_array * v, int index) {
     assert((index >= 0) && (index < v->length));
     return (v->a[index]->a);
+}
+
+char * get_c_array(const c_array * v) {
+    return (v->a);
 }
 
 void write_d_array(const d_array * v) {
@@ -320,22 +324,22 @@ void get_matching_indices(const s_array * search_strings,
     }
 }
 
-int get_doubles(const s_array * line_array, const i_array * stat_indices,
-        d_array * stats) {
+int get_doubles(const s_array * strings, const i_array * indices,
+        d_array * doubles_dest) {
     int i, ret;
     char * end_ptr;
     char * end_ptr_orig;
     end_ptr = (typeof(*end_ptr) *) malloc(sizeof(end_ptr) * 64);
     end_ptr_orig = end_ptr;
     ret = 0;
-    (*stats).length = 0;
-    for (i = 0; i < (*stat_indices).length; i++) {
-        append_d_array(stats, strtod(
-                get_s_array(line_array, (*stat_indices).a[i]),
+    (*doubles_dest).length = 0;
+    for (i = 0; i < (*indices).length; i++) {
+        append_d_array(doubles_dest, strtod(
+                get_s_array(strings, (*indices).a[i]),
                 &end_ptr));
-        if (end_ptr == get_s_array(line_array, (*stat_indices).a[i])) {
+        if (end_ptr == get_s_array(strings, (*indices).a[i])) {
             fprintf(stderr, "ERROR: get_doubles : column %d is not a valid "
-                    "number\n", ((*stat_indices).a[i] + 1));
+                    "number\n", ((*indices).a[i] + 1));
             ret++;
         }
     }
