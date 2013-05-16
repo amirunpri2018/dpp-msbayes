@@ -31,6 +31,7 @@ sample_sum * init_sample_sum() {
 
 void free_sample_sum(sample_sum * s) {
     free(s);
+    s = NULL;
 }
 
 sample_sum_array * init_sample_sum_array(int length) {
@@ -56,6 +57,7 @@ void free_sample_sum_array(sample_sum_array * v) {
     }
     free(v->a);
     free(v);
+    v = NULL;
 }
 
 void update_sample_sum(sample_sum * s, double x) {

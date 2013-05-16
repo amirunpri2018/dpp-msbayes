@@ -42,6 +42,7 @@ void free_config(config * c) {
     free_s_array(c->sim_paths);
     free_c_array(c->observed_path);
     free(c);
+    c = NULL;
 }
 
 sample * init_sample(
@@ -85,6 +86,7 @@ void free_sample(sample * s) {
     free_s_array(s->line_array);
     free_c_array(s->file_path);
     free(s);
+    s = NULL;
 }
     
 sample_array * init_sample_array(int capacity) {
@@ -164,6 +166,7 @@ void free_sample_array(sample_array * v) {
     free(v->a);
     free_s_array(v->header);
     free(v);
+    v = NULL;
 }
 
 void help() {

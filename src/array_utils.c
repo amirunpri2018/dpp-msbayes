@@ -230,16 +230,19 @@ void write_s_array(const s_array * v) {
 void free_d_array(d_array * v) {
     free(v->a);
     free(v);
+    v = NULL;
 }
 
 void free_c_array(c_array * v) {
     free(v->a);
     free(v);
+    v = NULL;
 }
 
 void free_i_array(i_array * v) {
     free(v->a);
     free(v);
+    v = NULL;
 }
 
 void free_s_array(s_array * v) {
@@ -249,6 +252,7 @@ void free_s_array(s_array * v) {
     }
     free(v->a);
     free(v);
+    v = NULL;
 }
 
 int s_arrays_equal(const s_array * h1, const s_array * h2) {
