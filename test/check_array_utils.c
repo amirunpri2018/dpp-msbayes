@@ -27,6 +27,11 @@ START_TEST (test_init_free_d_array) {
             "to zero", i, size);
     }
     free_d_array(v);
+}
+END_TEST
+
+START_TEST (test_init_d_array_fail) {
+    d_array * v;
     v = init_d_array(0); // SIGABRT
 }
 END_TEST
@@ -79,6 +84,15 @@ START_TEST (test_set_d_array) {
     set_d_array(v, 0, 0.2);
     ck_assert_msg((v->a[0] == 0.2), "`d_array` element is %lf, expecting %lf",
             v->a[0], 0.2);
+}
+END_TEST
+
+START_TEST (test_set_d_array_fail) {
+    int size;
+    d_array * v;
+    size = 1;
+    v = init_d_array(size);
+    append_d_array(v, 0.1);
     set_d_array(v, 1, 0.3); // SIGABRT
 }
 END_TEST
@@ -94,7 +108,16 @@ START_TEST (test_get_d_array) {
     append_d_array(v, 0.2);
     ck_assert_msg((get_d_array(v, 1) == 0.2), "`d_array` element is %lf, expecting %lf",
             get_d_array(v, 1), 0.2);
-    get_d_array(v, 2); // SIGABRT
+}
+END_TEST
+
+START_TEST (test_get_d_array_fail) {
+    int size;
+    d_array * v;
+    size = 1;
+    v = init_d_array(size);
+    append_d_array(v, 0.1);
+    get_d_array(v, 1); // SIGABRT
 }
 END_TEST
 
@@ -121,6 +144,11 @@ START_TEST (test_init_free_i_array) {
             "to zero", i, size);
     }
     free_i_array(v);
+}
+END_TEST
+
+START_TEST (test_init_i_array_fail) {
+    i_array * v;
     v = init_i_array(0); // SIGABRT
 }
 END_TEST
@@ -173,6 +201,15 @@ START_TEST (test_set_i_array) {
     set_i_array(v, 0, 2);
     ck_assert_msg((v->a[0] == 2), "`i_array` element is %d, expecting %d",
             v->a[0], 2);
+}
+END_TEST
+
+START_TEST (test_set_i_array_fail) {
+    int size;
+    i_array * v;
+    size = 1;
+    v = init_i_array(size);
+    append_i_array(v, 1);
     set_i_array(v, 1, 3); // SIGABRT
 }
 END_TEST
@@ -188,7 +225,16 @@ START_TEST (test_get_i_array) {
     append_i_array(v, 2);
     ck_assert_msg((get_i_array(v, 1) == 2), "`i_array` element is %d, expecting %d",
             get_i_array(v, 1), 2);
-    get_i_array(v, 2); // SIGABRT
+}
+END_TEST
+
+START_TEST (test_get_i_array_fail) {
+    int size;
+    i_array * v;
+    size = 1;
+    v = init_i_array(size);
+    append_i_array(v, 1);
+    get_i_array(v, 1); // SIGABRT
 }
 END_TEST
 
@@ -214,6 +260,11 @@ START_TEST (test_init_free_c_array) {
     ck_assert_msg((v->a[v->capacity] == '\0'), "`c_array` does not have "
             "extra NULL terminating character");
     free_c_array(v);
+}
+END_TEST
+
+START_TEST (test_init_c_array_fail) {
+    c_array * v;
     v = init_c_array(0); // SIGABRT
 }
 END_TEST
@@ -295,6 +346,11 @@ START_TEST (test_init_free_s_array) {
                 "not initialized ", i, size);
     }
     free_s_array(v);
+}
+END_TEST
+
+START_TEST (test_init_s_array_fail) {
+    s_array * v;
     v = init_s_array(0); // SIGABRT
 }
 END_TEST
@@ -355,6 +411,16 @@ START_TEST (test_set_s_array) {
     set_s_array(v, 0, s2);
     ck_assert_msg((*v->a[0]->a == *s2), "`s_array` element is %d, expecting %d",
             v->a[0], s2);
+}
+END_TEST
+
+START_TEST (test_set_s_array_fail) {
+    int size;
+    s_array * v;
+    char * s = "foo";
+    size = 1;
+    v = init_s_array(size);
+    append_s_array(v, s);
     set_s_array(v, 1, s); // SIGABRT
 }
 END_TEST
@@ -372,7 +438,17 @@ START_TEST (test_get_s_array) {
     append_s_array(v, s2);
     ck_assert_msg((*(get_s_array(v, 1)) == *s2), "`s_array` element is %s, "
             "expecting %s", get_s_array(v, 1), s2);
-    get_s_array(v, 2); // SIGABRT
+}
+END_TEST
+
+START_TEST (test_get_s_array_fail) {
+    int size;
+    s_array * v;
+    char * s = "foo";
+    size = 1;
+    v = init_s_array(size);
+    append_s_array(v, s);
+    get_s_array(v, 1); // SIGABRT
 }
 END_TEST
 
@@ -428,6 +504,21 @@ START_TEST (test_get_matching_indices) {
     ck_assert_int_eq(indices->capacity, 2);
     ck_assert_int_eq(get_i_array(indices, 0), 1);
     ck_assert_int_eq(get_i_array(indices, 1), 2);
+}
+END_TEST
+
+START_TEST (test_get_matching_indices_fail) {
+    s_array * search_strings;
+    s_array * target_strings;
+    i_array * indices;
+    search_strings = init_s_array(1);
+    target_strings = init_s_array(1);
+    indices = init_i_array(1);
+    append_s_array(search_strings, "foo");
+    append_s_array(search_strings, "bar");
+    append_s_array(target_strings, "boo");
+    append_s_array(target_strings, "foo");
+    append_s_array(target_strings, "bar");
     append_s_array(search_strings, "fail");
     get_matching_indices(search_strings, target_strings, indices); // exit(1)
 }
@@ -473,40 +564,52 @@ Suite * array_utils_suite(void) {
     Suite * s = suite_create("array_utils");
 
     TCase * tc_d_array = tcase_create("d_array_test_case");
-    tcase_add_test_raise_signal(tc_d_array, test_init_free_d_array, SIGABRT);
+    tcase_add_test(tc_d_array, test_init_free_d_array);
+    tcase_add_test_raise_signal(tc_d_array, test_init_d_array_fail, SIGABRT);
     tcase_add_test(tc_d_array, test_expand_d_array);
     tcase_add_test(tc_d_array, test_append_d_array);
-    tcase_add_test_raise_signal(tc_d_array, test_set_d_array, SIGABRT);
-    tcase_add_test_raise_signal(tc_d_array, test_get_d_array, SIGABRT);
+    tcase_add_test(tc_d_array, test_set_d_array);
+    tcase_add_test_raise_signal(tc_d_array, test_set_d_array_fail, SIGABRT);
+    tcase_add_test(tc_d_array, test_get_d_array);
+    tcase_add_test_raise_signal(tc_d_array, test_get_d_array_fail, SIGABRT);
     suite_add_tcase(s, tc_d_array);
 
     TCase * tc_i_array = tcase_create("i_array_test_case");
-    tcase_add_test_raise_signal(tc_i_array, test_init_free_i_array, SIGABRT);
+    tcase_add_test(tc_i_array, test_init_free_i_array);
+    tcase_add_test_raise_signal(tc_i_array, test_init_i_array_fail, SIGABRT);
     tcase_add_test(tc_i_array, test_expand_i_array);
     tcase_add_test(tc_i_array, test_append_i_array);
-    tcase_add_test_raise_signal(tc_i_array, test_set_i_array, SIGABRT);
-    tcase_add_test_raise_signal(tc_i_array, test_get_i_array, SIGABRT);
+    tcase_add_test(tc_i_array, test_set_i_array);
+    tcase_add_test_raise_signal(tc_i_array, test_set_i_array_fail, SIGABRT);
+    tcase_add_test(tc_i_array, test_get_i_array);
+    tcase_add_test_raise_signal(tc_i_array, test_get_i_array_fail, SIGABRT);
     suite_add_tcase(s, tc_i_array);
     
     TCase * tc_c_array = tcase_create("c_array_test_case");
-    tcase_add_test_raise_signal(tc_c_array, test_init_free_c_array, SIGABRT);
+    tcase_add_test(tc_c_array, test_init_free_c_array);
+    tcase_add_test_raise_signal(tc_c_array, test_init_c_array_fail, SIGABRT);
     tcase_add_test(tc_c_array, test_expand_c_array);
     tcase_add_test(tc_c_array, test_assign_c_array);
     tcase_add_test(tc_c_array, test_get_c_array);
     suite_add_tcase(s, tc_c_array);
 
     TCase * tc_s_array = tcase_create("s_array_test_case");
-    tcase_add_test_raise_signal(tc_s_array, test_init_free_s_array, SIGABRT);
+    tcase_add_test(tc_s_array, test_init_free_s_array);
+    tcase_add_test_raise_signal(tc_s_array, test_init_s_array_fail, SIGABRT);
     tcase_add_test(tc_s_array, test_expand_s_array);
     tcase_add_test(tc_s_array, test_append_s_array);
-    tcase_add_test_raise_signal(tc_s_array, test_set_s_array, SIGABRT);
-    tcase_add_test_raise_signal(tc_s_array, test_get_s_array, SIGABRT);
+    tcase_add_test(tc_s_array, test_set_s_array);
+    tcase_add_test_raise_signal(tc_s_array, test_set_s_array_fail, SIGABRT);
+    tcase_add_test(tc_s_array, test_get_s_array);
+    tcase_add_test_raise_signal(tc_s_array, test_get_s_array_fail, SIGABRT);
     tcase_add_test(tc_s_array, test_s_arrays_equal);
     suite_add_tcase(s, tc_s_array);
 
     TCase * tc_get_matching_indices = tcase_create(
             "get_matching_indices_test_case");
-    tcase_add_exit_test(tc_get_matching_indices, test_get_matching_indices, 1);
+    tcase_add_test(tc_get_matching_indices, test_get_matching_indices);
+    tcase_add_exit_test(tc_get_matching_indices, test_get_matching_indices_fail,
+            1);
     suite_add_tcase(s, tc_get_matching_indices);
 
     TCase * tc_get_doubles = tcase_create("get_doubles_test_case");
