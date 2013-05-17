@@ -28,7 +28,7 @@
 #include <gsl/gsl_statistics.h>
 #include <gsl/gsl_sort.h>
 
-#include "hashtab.h"
+#include "hashtab/hashtab.h"
 #include "msprior.h"  /* I'm not sure why this is included 03/31/09 */
 #include "sumStatsVector.h"
 #include <string.h>

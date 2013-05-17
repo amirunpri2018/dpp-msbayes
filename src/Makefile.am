@@ -1,3 +1,5 @@
+EXTRA_DIST = hashtab/main.c hashtab/Makefile
+
 bin_PROGRAMS = \
 	eureject \
 	sumstatsvector \
@@ -38,8 +40,8 @@ sumstatsvector_SOURCES = \
 	msStatsDQH.c \
 	sumStatsVector.c \
 	sumStatsVector.h \
-	hashtab.c \
-	hashtab.h \
+	hashtab/hashtab.c \
+	hashtab/hashtab.h \
 	whiteSpaces.c \
 	whiteSpaces.h \
 	stringUtils.c \
@@ -63,8 +65,8 @@ msprior_SOURCES = \
 	initvars.h \
 	whiteSpaces.c \
 	whiteSpaces.h \
-	hashtab.c \
-	hashtab.h \
+	hashtab/hashtab.c \
+	hashtab/hashtab.h \
 	stringUtils.c \
 	stringUtils.h \
 	array_utils.c \
