@@ -104,6 +104,41 @@ START_TEST (test_get_sample_variance) {
 }
 END_TEST
 
+START_TEST (test_get_std_dev_n0) {
+    sample_sum * ss;
+    ss = init_sample_sum();
+    get_std_dev(ss);
+}
+END_TEST
+
+START_TEST (test_get_std_dev_n1) {
+    sample_sum * ss;
+    ss = init_sample_sum();
+    update_sample_sum(ss, 100.0);
+    get_std_dev(ss);
+}
+END_TEST
+
+START_TEST (test_get_std_dev) {
+    double e = 0.00001;
+    sample_sum * ss;
+    ss = init_sample_sum();
+    update_sample_sum(ss, 100.0);
+    update_sample_sum(ss, 101.0);
+    ck_assert_msg(almost_equal(get_std_dev(ss), 0.7071068, e),
+            "std deviation is %lf, expecting %lf", get_std_dev(ss), 0.7071068);
+    update_sample_sum(ss, 117.0);
+    ck_assert_msg(almost_equal(get_std_dev(ss), 9.539392, e),
+            "std deviation is %lf, expecting %lf", get_std_dev(ss), 9.539392);
+    update_sample_sum(ss, -500.0);
+    ck_assert_msg(almost_equal(get_std_dev(ss), 303.1001, e),
+            "std deviation is %lf, expecting %lf", get_std_dev(ss),
+            303.1001);
+    free_sample_sum(ss);
+}
+END_TEST
+
+
 Suite * array_utils_suite(void) {
     Suite * s = suite_create("stats_utils");
 
@@ -117,6 +152,11 @@ Suite * array_utils_suite(void) {
     tcase_add_test_raise_signal(tc_sample_sum, test_get_sample_variance_n1,
             SIGABRT);
     tcase_add_test(tc_sample_sum, test_get_sample_variance);
+    tcase_add_test_raise_signal(tc_sample_sum, test_get_std_dev_n0,
+            SIGABRT);
+    tcase_add_test_raise_signal(tc_sample_sum, test_get_std_dev_n1,
+            SIGABRT);
+    tcase_add_test(tc_sample_sum, test_get_std_dev);
     suite_add_tcase(s, tc_sample_sum);
 
     return s;
