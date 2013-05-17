@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <check.h>
 #include <signal.h>
+#include "test_utils.h"
 #include "../src/array_utils.c"
 
 /**
@@ -452,13 +453,13 @@ START_TEST (test_get_doubles) {
     ret = get_doubles(search_strings, indices, dest);
     ck_assert_int_eq(ret, 0);
     ck_assert_int_eq(dest->length, 3);
-    ck_assert_msg((fabs(get_d_array(dest, 0) - 0.345) < 0.000001),
+    ck_assert_msg((almost_equal(get_d_array(dest, 0), 0.345, 0.000001)),
             "extracted double is %lf, expected %lf",
             get_d_array(dest, 0), 0.345);
-    ck_assert_msg((fabs(get_d_array(dest, 1) - 156.345) < 0.000001),
+    ck_assert_msg((almost_equal(get_d_array(dest, 1), 156.345, 0.000001)),
             "extracted double is %lf, expected %lf",
             get_d_array(dest, 1), 156.345);
-    ck_assert_msg((fabs(get_d_array(dest, 2) - 1230.0) < 0.000001),
+    ck_assert_msg((almost_equal(get_d_array(dest, 2), 1230.0, 0.000001)),
             "extracted double is %lf, expected %lf",
             get_d_array(dest, 2), 1230.0);
     append_i_array(indices, 0);
