@@ -452,6 +452,77 @@ START_TEST (test_get_s_array_fail) {
 }
 END_TEST
 
+START_TEST (test_d_arrays_equal) {
+    int size, ret;
+    d_array * v1;
+    d_array * v2;
+    double s = 1.0;
+    double e = 0.0000001;
+    size = 3;
+    v1 = init_d_array(size);
+    v2 = init_d_array(size);
+    ret = d_arrays_equal(v1, v2, e);
+    ck_assert_msg((ret != 0), "`d_array`s not equal, but should be");
+    append_d_array(v1, s);
+    ret = d_arrays_equal(v1, v2, e);
+    ck_assert_msg((ret == 0), "`d_array`s equal, but should not be");
+    append_d_array(v2, s);
+    ret = d_arrays_equal(v1, v2, e);
+    ck_assert_msg((ret != 0), "`d_array`s not equal, but should be");
+    s = 2.0;
+    append_d_array(v1, s);
+    ret = d_arrays_equal(v1, v2, e);
+    ck_assert_msg((ret == 0), "`d_array`s equal, but should not be");
+    append_d_array(v2, s);
+    ret = d_arrays_equal(v1, v2, e);
+    ck_assert_msg((ret != 0), "`d_array`s not equal, but should be");
+    append_d_array(v1, s);
+    ret = d_arrays_equal(v1, v2, e);
+    ck_assert_msg((ret == 0), "`d_array`s equal, but should not be");
+    s = 3.0;
+    append_d_array(v2, s);
+    ret = d_arrays_equal(v1, v2, e);
+    ck_assert_msg((ret == 0), "`d_array`s equal, but should not be");
+    free_d_array(v1);
+    free_d_array(v2);
+}
+END_TEST
+
+START_TEST (test_i_arrays_equal) {
+    int size, ret;
+    i_array * v1;
+    i_array * v2;
+    int s = 1;
+    size = 3;
+    v1 = init_i_array(size);
+    v2 = init_i_array(size);
+    ret = i_arrays_equal(v1, v2);
+    ck_assert_msg((ret != 0), "`i_array`s not equal, but should be");
+    append_i_array(v1, s);
+    ret = i_arrays_equal(v1, v2);
+    ck_assert_msg((ret == 0), "`i_array`s equal, but should not be");
+    append_i_array(v2, s);
+    ret = i_arrays_equal(v1, v2);
+    ck_assert_msg((ret != 0), "`i_array`s not equal, but should be");
+    s = 2;
+    append_i_array(v1, s);
+    ret = i_arrays_equal(v1, v2);
+    ck_assert_msg((ret == 0), "`i_array`s equal, but should not be");
+    append_i_array(v2, s);
+    ret = i_arrays_equal(v1, v2);
+    ck_assert_msg((ret != 0), "`i_array`s not equal, but should be");
+    append_i_array(v1, s);
+    ret = i_arrays_equal(v1, v2);
+    ck_assert_msg((ret == 0), "`i_array`s equal, but should not be");
+    s = 3;
+    append_i_array(v2, s);
+    ret = i_arrays_equal(v1, v2);
+    ck_assert_msg((ret == 0), "`i_array`s equal, but should not be");
+    free_i_array(v1);
+    free_i_array(v2);
+}
+END_TEST
+
 START_TEST (test_s_arrays_equal) {
     int size, ret;
     s_array * v1;
@@ -602,8 +673,13 @@ Suite * array_utils_suite(void) {
     tcase_add_test_raise_signal(tc_s_array, test_set_s_array_fail, SIGABRT);
     tcase_add_test(tc_s_array, test_get_s_array);
     tcase_add_test_raise_signal(tc_s_array, test_get_s_array_fail, SIGABRT);
-    tcase_add_test(tc_s_array, test_s_arrays_equal);
     suite_add_tcase(s, tc_s_array);
+
+    TCase * tc_arrays_equal = tcase_create("arrays_equal_test_case");
+    tcase_add_test(tc_arrays_equal, test_s_arrays_equal);
+    tcase_add_test(tc_arrays_equal, test_i_arrays_equal);
+    tcase_add_test(tc_arrays_equal, test_d_arrays_equal);
+    suite_add_tcase(s, tc_arrays_equal);
 
     TCase * tc_get_matching_indices = tcase_create(
             "get_matching_indices_test_case");

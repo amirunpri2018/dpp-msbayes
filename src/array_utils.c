@@ -259,13 +259,39 @@ void free_s_array(s_array * v) {
     v = NULL;
 }
 
-int s_arrays_equal(const s_array * h1, const s_array * h2) {
+int d_arrays_equal(const d_array * v1, const d_array * v2, double error) {
     int i;
-    if (h1->length != h2->length) {
+    if (v1->length != v2->length) {
         return 0;
     }
-    for (i = 0; i < h1->length; i++) {
-        if (strcmp(get_s_array(h1, i), get_s_array(h2, i)) != 0) {
+    for (i = 0; i < v1->length; i++) {
+        if (fabs(get_d_array(v1, i) - get_d_array(v2, i)) > error) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+int i_arrays_equal(const i_array * v1, const i_array * v2) {
+    int i;
+    if (v1->length != v2->length) {
+        return 0;
+    }
+    for (i = 0; i < v1->length; i++) {
+        if (get_i_array(v1, i) != get_i_array(v2, i)) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+int s_arrays_equal(const s_array * v1, const s_array * v2) {
+    int i;
+    if (v1->length != v2->length) {
+        return 0;
+    }
+    for (i = 0; i < v1->length; i++) {
+        if (strcmp(get_s_array(v1, i), get_s_array(v2, i)) != 0) {
             return 0;
         }
     }

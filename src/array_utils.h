@@ -80,7 +80,10 @@ char * get_s_array(const s_array * v, int index);
 void set_s_array(s_array * v, int index, const char * s);
 void write_s_array(const s_array * v);
 void free_s_array(s_array * v);
-int s_arrays_equal(const s_array * h1, const s_array * h2);
+
+int d_arrays_equal(const d_array * v1, const d_array * v2, double error);
+int i_arrays_equal(const i_array * v1, const i_array * v2);
+int s_arrays_equal(const s_array * v1, const s_array * v2);
 
 int split_str(char * string, s_array * words, int expected_num);
 void get_matching_indices(const s_array * search_strings,
