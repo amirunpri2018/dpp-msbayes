@@ -35,6 +35,7 @@ void free_sample_sum(sample_sum * s) {
 }
 
 sample_sum_array * init_sample_sum_array(int length) {
+    assert(length > 0);
     sample_sum_array * v;
     v = (typeof(*v) *) malloc(sizeof(*v));
     v->length = length;
