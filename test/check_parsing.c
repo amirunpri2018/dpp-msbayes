@@ -5,8 +5,8 @@
 #include "test_utils.h"
 
 START_TEST (test_parse_header) {
-    char * path = "../../test/data/observed_stats_extra_line.txt";
-    /* char * path = "data/observed_stats_extra_line.txt"; */
+    /* char * path = "../../test/data/observed_stats_extra_line.txt"; */
+    char * path = "data/observed_stats_extra_line.txt";
     c_array * line_buffer;
     s_array * header;
     line_buffer = init_c_array(1023);
