@@ -155,8 +155,10 @@ main (int argc, char *argv[])
          descendant2Theta, tauequalizer, gaussTime = 0.0, mig, rec, BottStr1,
          BottStr2, BottleTime, concentrationParameter;
   double *recTbl;
-  int tauClass, numDivModels, *PSIarray = NULL, *divIndices = NULL,
-          **divModels = NULL, i, j;
+  int tauClass, *PSIarray = NULL, i, j;
+  i_array_2d * divModels;
+  i_array * divMod;
+  i_array * divIndices;
   int divModelIndex = 0; 
   unsigned int numTauClasses = -1, u, locus, taxonID, zzz;
   unsigned long randSeed;
@@ -244,36 +246,12 @@ main (int argc, char *argv[])
   ancestralThetaArray = calloc (gParam.numTaxonPairs, sizeof (double));
   if ((gParam.concentrationShape > 0) && (gParam.concentrationScale > 0))
   {
-      divIndices = calloc(gParam.numTaxonPairs, sizeof(int));
-      if (divIndices == NULL)
-      {
-          fprintf(stderr, "ERROR: Not enough memory for array of divergence "
-                  "indices\n");
-          exit (EXIT_FAILURE);
-      }
+      divIndices = init_i_array(gParam.numTaxonPairs);
   }
   else if ((gParam.concentrationShape > -1.0) &&
           (gParam.concentrationScale > -1.0))
   {
-      numDivModels = number_of_int_partitions(gParam.numTaxonPairs);
-      divModels = (int **) calloc(numDivModels, sizeof(int*));
-      for (i = 0; i < numDivModels; i++) {
-          divModels[i] = (int *) calloc(gParam.numTaxonPairs, sizeof(int));
-          if (divModels[i] == NULL)
-          {
-              fprintf(stderr, "ERROR: Not enough memory for 2-D array of "
-                      " divergence models\n");
-              exit (EXIT_FAILURE);
-          }
-      }
-      if (divModels == NULL)
-      {
-          fprintf(stderr, "ERROR: Not enough memory for 2-D array of "
-                  " divergence models\n");
-          exit (EXIT_FAILURE);
-      }
-      generate_int_partitions(gParam.numTaxonPairs, numDivModels,
-              divModels);
+      divModels = generate_int_partitions(gParam.numTaxonPairs);
   }
   recTbl = calloc (gParam.numLoci, sizeof (double));
 
@@ -377,15 +355,11 @@ main (int argc, char *argv[])
             else if ((gParam.concentrationShape > -1.0) &&
                     (gParam.concentrationScale > -1.0))
             {
-                divModelIndex = gsl_rng_uniform_int(gBaseRand, numDivModels);
-                PSIarray = divModels[divModelIndex];
-                numTauClasses = 0;
-                for (i = 0; i < gParam.numTaxonPairs; i++) {
-                    if (PSIarray[i] < 1) {
-                        break;
-                    }
-                    numTauClasses += 1;
-                }
+                divModelIndex = gsl_rng_uniform_int(gBaseRand,
+                        divModels->length);
+                divMod = get_i_array_2d(divModels, divModelIndex);
+                PSIarray = divMod->a;
+                numTauClasses = divMod->length;
             }
             else
             {
@@ -455,7 +429,7 @@ main (int argc, char *argv[])
             }
             for (i = 0; i < gParam.numTaxonPairs; i++)
             {
-                tauClass = divIndices[i];
+                tauClass = get_i_array(divIndices, i);
                 taxonTauArray[i] = uniqTauArray[tauClass];
                 PSIarray[tauClass] += 1;
             }
@@ -464,9 +438,9 @@ main (int argc, char *argv[])
                     (gParam.concentrationScale > -1.0))
         {
             counter = 0;
-            for (i = 0; i < numTauClasses; i++)
+            for (i = 0; i < divMod->length; i++)
             {
-                for (j = 0; j < PSIarray[i]; j++)
+                for (j = 0; j < get_i_array(divMod, i); j++)
                 {
                     taxonTauArray[counter] = uniqTauArray[i];
                     counter += 1;
@@ -816,15 +790,12 @@ main (int argc, char *argv[])
   free (subParamConstrainConfig);
   if ((gParam.concentrationShape > 0) && (gParam.concentrationScale > 0))
   {
-      free (divIndices);
+      free_i_array(divIndices);
   }
   else if ((gParam.concentrationShape > -1.0) &&
           (gParam.concentrationScale > -1.0))
   {
-      for (i = 0; i < gParam.numTaxonPairs; i++) {
-          free(divModels[i]);
-      }
-      free(divModels);
+      free_i_array_2d(divModels);
   }
   exit (0);
 }
