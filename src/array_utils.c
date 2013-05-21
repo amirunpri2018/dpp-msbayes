@@ -373,3 +373,83 @@ int get_doubles(const s_array * strings, const i_array * indices,
     return ret;
 }
 
+i_array_2d * init_i_array_2d(int capacity, int initial_element_capacity) {
+    assert(capacity > 0);
+    int i;
+    i_array_2d * v;
+    v = (typeof(*v) *) malloc(sizeof(*v));
+    v->capacity = capacity;
+    v->initial_element_capacity = initial_element_capacity;
+    if ((v->a = (typeof(*v->a) *) calloc(v->capacity,
+            sizeof(*v->a))) == NULL) {
+        perror("out of memory");
+        exit(1);
+    }
+    for (i = 0; i < v->capacity; i++) {
+        v->a[i] = init_i_array(initial_element_capacity);
+    }
+    v->length = 0;
+    return v;
+}
+
+void set_i_array_2d(i_array_2d * v, int index, const i_array * x) {
+    assert((index >= 0) && (index < v->length));
+    v->a[index]->length = 0;
+    extend_i_array(v->a[index], x);
+}
+
+void set_el_i_array_2d(i_array_2d * v, int i_array_index, int el_index, int x) {
+    set_i_array(get_i_array_2d(v, i_array_index), el_index, x);
+}
+
+void expand_i_array_2d(i_array_2d * v) {
+    int i;
+    if ((v->a = (typeof(*v->a) *) realloc(v->a ,
+            ((v->capacity * 2) * sizeof(*v->a)))) == NULL) {
+        perror("out of memory");
+        exit(1);
+    }
+    for (i = v->capacity; i < (v->capacity * 2); i++) {
+        v->a[i] = init_i_array(v->initial_element_capacity);
+    }
+    v->capacity *= 2;
+}
+
+void append_i_array_2d(i_array_2d * v, const i_array * x) {
+    if (v->length >= v->capacity) {
+        expand_i_array_2d(v);
+    }
+    v->length++;
+    set_i_array_2d(v, (v->length - 1), x);
+}
+
+void append_el_i_array_2d(i_array_2d * v, int i_array_index, int x) {
+    append_i_array(get_i_array_2d(v, i_array_index), x);
+}
+
+void extend_i_array_2d(i_array_2d * dest, const i_array_2d * to_add) {
+    int i;
+    for (i = 0; i < to_add->length; i++) {
+        append_i_array_2d(dest, get_i_array_2d(to_add, i));
+    }
+}
+
+i_array * get_i_array_2d(const i_array_2d * v, int index) {
+    assert((index >= 0) && (index < v->length));
+    return (v->a[index]);
+}
+
+int get_el_i_array_2d(const i_array_2d * v, int i_array_index, int el_index) {
+    return(get_i_array(get_i_array_2d(v, i_array_index), el_index));
+}
+
+void free_i_array_2d(i_array_2d * v) {
+    int i;
+    for (i = 0; i < v->capacity; i++) {
+        free_i_array(v->a[i]);
+    }
+    free(v->a);
+    free(v);
+    v = NULL;
+}
+

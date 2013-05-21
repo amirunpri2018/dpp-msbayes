@@ -630,6 +630,273 @@ START_TEST (test_get_doubles) {
 }
 END_TEST
 
+/**
+ * `i_array_2d` tests
+ */
+START_TEST (test_init_free_i_array_2d) {
+    int i, size, el_size;
+    i_array_2d * v;
+    size = 10;
+    el_size = 5;
+    v = init_i_array_2d(size, el_size);
+    ck_assert_int_eq(v->capacity, size);
+    ck_assert_int_eq(v->initial_element_capacity, el_size);
+    ck_assert_int_eq(v->length, 0);
+    ck_assert_msg((sizeof(v->length) == sizeof(int)), "`i_array_2d.length` "
+            "attribute is not an int");
+    ck_assert_msg((sizeof(v->capacity) == sizeof(int)), "`i_array_2d.capacity` "
+            "attribute is not an int");
+    ck_assert_msg((sizeof(v->a) == sizeof(long)), "Array attribute "
+            "of `i_array_2d` is not a pointer");
+    ck_assert_msg((sizeof(*v->a) == sizeof(i_array *)), "Pointer to array"
+            "of `i_array_2d` is not pointing to array of `i_array`s");
+    for (i = 0; i < v->capacity; i++) {
+        ck_assert_msg((v->a[i]->capacity == el_size),
+                "`i_array` element %d of %d was initialized with capacity %d, "
+                "expecting %d", i, size, v->a[i]->capacity, el_size);
+    }
+    free_i_array_2d(v);
+}
+END_TEST
+
+START_TEST (test_init_i_array_2d_fail) {
+    i_array_2d * v;
+    v = init_i_array_2d(0, 1); // SIGABRT
+}
+END_TEST
+
+START_TEST (test_expand_i_array_2d) {
+    int i, size, el_size;
+    i_array_2d * v;
+    size = 1;
+    el_size = 1;
+    v = init_i_array_2d(size, el_size);
+    ck_assert_int_eq(v->capacity, size);
+    ck_assert_int_eq(v->length, 0);
+    for (i = 0; i < 5; i++) {
+        expand_i_array_2d(v);
+        size *= 2;
+        ck_assert_int_eq(v->capacity, size);
+        ck_assert_int_eq(v->length, 0);
+    }
+    for (i = 0; i < v->capacity; i++) {
+        ck_assert_msg((v->a[i]->capacity == el_size), "`i_array` element %d of "
+                "%d was initialized with capacity %d, expecting %d",
+                i, size, v->a[i]->capacity, el_size);
+    }
+    free_i_array_2d(v);
+}
+END_TEST
+
+START_TEST (test_append_i_array_2d) {
+    int size, el_size, i, ret;
+    i_array_2d * v;
+    i_array * ia1;
+    i_array * ia2;
+    el_size = 3;
+    ia1 = init_i_array(el_size);
+    ia2 = init_i_array(el_size);
+    for (i = 0; i < el_size; i++) {
+        append_i_array(ia1, i);
+        append_i_array(ia2, (el_size + i));
+    }
+    size = 1;
+    v = init_i_array_2d(size, el_size);
+    ck_assert_int_eq(v->capacity, size);
+    ck_assert_int_eq(v->length, 0);
+    append_i_array_2d(v, ia1);
+    ck_assert_int_eq(v->capacity, size);
+    ck_assert_int_eq(v->length, 1);
+    ret = i_arrays_equal(v->a[0], ia1);
+    ck_assert_msg((ret != 0), "`i_array_2d` element is incorrect");
+    append_i_array_2d(v, ia2);
+    ck_assert_int_eq(v->capacity, size*2);
+    ck_assert_int_eq(v->length, 2);
+    ret = i_arrays_equal(v->a[1], ia2);
+    ck_assert_msg((ret != 0), "`i_array_2d` element is incorrect");
+
+    free_i_array_2d(v);
+    free_i_array(ia1);
+    free_i_array(ia2);
+}
+END_TEST
+
+START_TEST (test_append_el_i_array_2d) {
+    int size, el_size, i, ret;
+    i_array_2d * v;
+    i_array * ia1;
+    i_array * ia2;
+    el_size = 3;
+    size = 1;
+    v = init_i_array_2d(1, 1);
+    ia1 = init_i_array(el_size);
+    ia2 = init_i_array(el_size);
+    append_i_array_2d(v, init_i_array(1));
+    append_i_array_2d(v, init_i_array(1));
+    for (i = 0; i < el_size; i++) {
+        append_i_array(ia1, i);
+        append_el_i_array_2d(v, 0, i);
+        append_i_array(ia2, (el_size + i));
+        append_el_i_array_2d(v, 1, (el_size + i));
+    }
+    ret = i_arrays_equal(v->a[0], ia1);
+    ck_assert_msg((ret != 0), "`i_array_2d` element %d is incorrect: %d %d %d",
+            0, v->a[0]->a[0], v->a[0]->a[1], v->a[0]->a[2]);
+    ret = i_arrays_equal(v->a[1], ia2);
+    ck_assert_msg((ret != 0), "`i_array_2d` element %d is incorrect: %d %d %d",
+            0, v->a[1]->a[0], v->a[1]->a[1], v->a[1]->a[2]);
+
+    free_i_array_2d(v);
+    free_i_array(ia1);
+    free_i_array(ia2);
+}
+END_TEST
+
+START_TEST (test_set_i_array_2d) {
+    int size, el_size, i, ret;
+    i_array_2d * v;
+    i_array * ia1;
+    i_array * ia2;
+    el_size = 3;
+    ia1 = init_i_array(el_size);
+    ia2 = init_i_array(el_size);
+    for (i = 0; i < el_size; i++) {
+        append_i_array(ia1, i);
+        append_i_array(ia2, (el_size + i));
+    }
+    size = 1;
+    v = init_i_array_2d(size, el_size);
+    append_i_array_2d(v, ia1);
+    ret = i_arrays_equal(v->a[0], ia1);
+    ck_assert_msg((ret != 0), "`i_array_2d` element %d is incorrect: %d %d %d",
+            0, v->a[0]->a[0], v->a[0]->a[1], v->a[0]->a[2]);
+    set_i_array_2d(v, 0, ia2);
+    ret = i_arrays_equal(v->a[0], ia2);
+    ck_assert_msg((ret != 0), "`i_array_2d` element %d is incorrect: %d %d %d",
+            0, v->a[0]->a[0], v->a[0]->a[1], v->a[0]->a[2]);
+
+    free_i_array_2d(v);
+    free_i_array(ia1);
+    free_i_array(ia2);
+}
+END_TEST
+
+START_TEST (test_set_el_i_array_2d) {
+    int size, el_size, i, ret;
+    i_array_2d * v;
+    i_array * ia1;
+    i_array * ia2;
+    el_size = 3;
+    ia1 = init_i_array(el_size);
+    ia2 = init_i_array(el_size);
+    for (i = 0; i < el_size; i++) {
+        append_i_array(ia1, i);
+        append_i_array(ia2, i);
+    }
+    set_i_array(ia2, 1, 99);
+    size = 1;
+    v = init_i_array_2d(size, el_size);
+    append_i_array_2d(v, ia1);
+    set_el_i_array_2d(v, 0, 1, 99);
+    ret = i_arrays_equal(v->a[0], ia2);
+    ck_assert_msg((ret != 0), "`i_array_2d` element is incorrect");
+    ret = i_arrays_equal(v->a[0], ia1);
+    ck_assert_msg((ret == 0), "`i_array_2d` element is incorrect");
+
+    free_i_array_2d(v);
+    free_i_array(ia1);
+    free_i_array(ia2);
+}
+END_TEST
+
+START_TEST (test_set_i_array_2d_fail) {
+    int size, el_size, i, ret;
+    i_array_2d * v;
+    i_array * ia1;
+    el_size = 3;
+    ia1 = init_i_array(el_size);
+    for (i = 0; i < el_size; i++) {
+        append_i_array(ia1, i);
+    }
+    size = 1;
+    v = init_i_array_2d(size, el_size);
+    append_i_array_2d(v, ia1);
+    set_i_array_2d(v, 1, ia1); // SIGABRT
+}
+END_TEST
+
+START_TEST (test_get_i_array_2d) {
+    int size, el_size, i, ret;
+    i_array_2d * v;
+    i_array * ia1;
+    i_array * ia2;
+    el_size = 3;
+    ia1 = init_i_array(el_size);
+    ia2 = init_i_array(el_size);
+    for (i = 0; i < el_size; i++) {
+        append_i_array(ia1, i);
+        append_i_array(ia2, (el_size + i));
+    }
+    size = 1;
+    v = init_i_array_2d(size, el_size);
+    append_i_array_2d(v, ia1);
+    ret = i_arrays_equal(get_i_array_2d(v, 0), ia1);
+    ck_assert_msg((ret != 0), "`i_array_2d` element is incorrect");
+    append_i_array_2d(v, ia2);
+    ret = i_arrays_equal(get_i_array_2d(v, 1), ia2);
+    ck_assert_msg((ret != 0), "`i_array_2d` element is incorrect");
+
+    free_i_array_2d(v);
+    free_i_array(ia1);
+    free_i_array(ia2);
+}
+END_TEST
+
+START_TEST (test_get_el_i_array_2d) {
+    int size, el_size, i, ret;
+    i_array_2d * v;
+    i_array * ia1;
+    i_array * ia2;
+    el_size = 3;
+    ia1 = init_i_array(el_size);
+    ia2 = init_i_array(el_size);
+    for (i = 0; i < el_size; i++) {
+        append_i_array(ia1, i);
+        append_i_array(ia2, (el_size + i));
+    }
+    size = 1;
+    v = init_i_array_2d(size, el_size);
+    append_i_array_2d(v, ia1);
+    ck_assert_msg((get_el_i_array_2d(v, 0, 1) == 1), "`i_array_2d` array %d "
+            "element %d is %d, expecting %d", 0, 1,
+            get_el_i_array_2d(v, 0, 1), 1);
+    append_i_array_2d(v, ia2);
+    ck_assert_msg((get_el_i_array_2d(v, 1, 1) == 4), "`i_array_2d` array %d "
+            "element %d is %d, expecting %d", 1, 1,
+            get_el_i_array_2d(v, 1, 1), 4);
+
+    free_i_array_2d(v);
+    free_i_array(ia1);
+    free_i_array(ia2);
+}
+END_TEST
+
+START_TEST (test_get_i_array_2d_fail) {
+    int size, el_size, i, ret;
+    i_array_2d * v;
+    i_array * ia1;
+    el_size = 3;
+    ia1 = init_i_array(el_size);
+    for (i = 0; i < el_size; i++) {
+        append_i_array(ia1, i);
+    }
+    size = 1;
+    v = init_i_array_2d(size, el_size);
+    append_i_array_2d(v, ia1);
+    get_i_array_2d(v, 1); // SIGABRT
+}
+END_TEST
+
 
 Suite * array_utils_suite(void) {
     Suite * s = suite_create("array_utils");
@@ -674,6 +941,23 @@ Suite * array_utils_suite(void) {
     tcase_add_test(tc_s_array, test_get_s_array);
     tcase_add_test_raise_signal(tc_s_array, test_get_s_array_fail, SIGABRT);
     suite_add_tcase(s, tc_s_array);
+
+    TCase * tc_i_array_2d = tcase_create("i_array_2d_test_case");
+    tcase_add_test(tc_i_array_2d, test_init_free_i_array_2d);
+    tcase_add_test_raise_signal(tc_i_array_2d, test_init_i_array_2d_fail,
+            SIGABRT);
+    tcase_add_test(tc_i_array_2d, test_expand_i_array_2d);
+    tcase_add_test(tc_i_array_2d, test_append_i_array_2d);
+    tcase_add_test(tc_i_array_2d, test_append_el_i_array_2d);
+    tcase_add_test(tc_i_array_2d, test_set_i_array_2d);
+    tcase_add_test(tc_i_array_2d, test_set_el_i_array_2d);
+    tcase_add_test_raise_signal(tc_i_array_2d, test_set_i_array_2d_fail,
+            SIGABRT);
+    tcase_add_test(tc_i_array_2d, test_get_i_array_2d);
+    tcase_add_test(tc_i_array_2d, test_get_el_i_array_2d);
+    tcase_add_test_raise_signal(tc_i_array_2d, test_get_i_array_2d_fail,
+            SIGABRT);
+    suite_add_tcase(s, tc_i_array_2d);
 
     TCase * tc_arrays_equal = tcase_create("arrays_equal_test_case");
     tcase_add_test(tc_arrays_equal, test_s_arrays_equal);

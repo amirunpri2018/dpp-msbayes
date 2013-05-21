@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <math.h>
 
 typedef struct d_array_ {
     double * a;
@@ -48,6 +49,13 @@ typedef struct s_array_ {
     int length;
     int capacity;
 } s_array;
+
+typedef struct i_array_2d_ {
+    i_array ** a;
+    int length;
+    int capacity;
+    int initial_element_capacity;
+} i_array_2d;
 
 d_array * init_d_array(int length);
 void expand_d_array(d_array * v);
@@ -91,6 +99,17 @@ void get_matching_indices(const s_array * search_strings,
         i_array * indices);
 int get_doubles(const s_array * strings, const i_array * indices,
         d_array * doubles_dest);
+
+i_array_2d * init_i_array_2d(int capacity, int initial_element_capacity);
+void set_i_array_2d(i_array_2d * v, int index, const i_array * x);
+void set_el_i_array_2d(i_array_2d * v, int i_array_index, int el_index, int x);
+void expand_i_array_2d(i_array_2d * v);
+void append_i_array_2d(i_array_2d * v, const i_array * x);
+void append_el_i_array_2d(i_array_2d * v, int i_array_index, int x);
+void extend_i_array_2d(i_array_2d * dest, const i_array_2d * to_add);
+i_array * get_i_array_2d(const i_array_2d * v, int index);
+int get_el_i_array_2d(const i_array_2d * v, int i_array_index, int el_index);
+void free_i_array_2d(i_array_2d * v);
 
 #endif /* ARRAY_UTILS_H */
 
