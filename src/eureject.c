@@ -120,7 +120,7 @@ int process_sample(sample_array * samples, sample * s) {
         else {
             samples->a[samples->length] = s;
             samples->length++;
-            return (samples->length + 1);
+            return (samples->length - 1);
         }
     }
     int i;
