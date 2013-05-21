@@ -16,7 +16,7 @@ check_array_utils_SOURCES = \
 	test_utils.h
 
 check_array_utils_CFLAGS = @CHECK_CFLAGS@
-check_array_utils_LDADD =  @CHECK_LIBS@
+check_array_utils_LDADD =  @CHECK_LIBS@ @MATHLDADD@
 
 check_stats_utils_SOURCES = \
 	check_stats_utils.c \
@@ -25,7 +25,7 @@ check_stats_utils_SOURCES = \
 	test_utils.h
 
 check_stats_utils_CFLAGS = @CHECK_CFLAGS@
-check_stats_utils_LDADD =  @CHECK_LIBS@
+check_stats_utils_LDADD =  @CHECK_LIBS@ @MATHLDADD@
 
 check_parsing_SOURCES = \
 	check_parsing.c \
