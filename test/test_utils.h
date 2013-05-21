@@ -21,9 +21,8 @@
 #ifndef TEST_UTILS_H
 #define TEST_UTILS_H
 
-#include <math.h>
+#include "../src/stats_utils.h"
 
-int almost_equal(const double x, const double y, const double error);
 
 #endif /* TEST_UTILS_H */
 

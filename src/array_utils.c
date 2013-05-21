@@ -259,13 +259,17 @@ void free_s_array(s_array * v) {
     v = NULL;
 }
 
+int almost_equal(const double x, const double y, const double error) {
+    return ((fabs(x - y) < error));
+}
+
 int d_arrays_equal(const d_array * v1, const d_array * v2, double error) {
     int i;
     if (v1->length != v2->length) {
         return 0;
     }
     for (i = 0; i < v1->length; i++) {
-        if (fabs(get_d_array(v1, i) - get_d_array(v2, i)) > error) {
+        if (almost_equal(get_d_array(v1, i), get_d_array(v2, i), error) == 0) {
             return 0;
         }
     }
@@ -424,6 +428,12 @@ void append_i_array_2d(i_array_2d * v, const i_array * x) {
 }
 
 void append_el_i_array_2d(i_array_2d * v, int i_array_index, int x) {
+    if (i_array_index >= v->length) {
+        while (i_array_index >= v->capacity) {
+            expand_i_array_2d(v);
+        }
+        v->length = i_array_index + 1;
+    }
     append_i_array(get_i_array_2d(v, i_array_index), x);
 }
 

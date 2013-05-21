@@ -20,7 +20,4 @@
 
 #include "test_utils.h"
 
-int almost_equal(const double x, const double y, const double error) {
-    return ((fabs(x - y) < error));
-}
 

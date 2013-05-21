@@ -89,6 +89,7 @@ void set_s_array(s_array * v, int index, const char * s);
 void write_s_array(const s_array * v);
 void free_s_array(s_array * v);
 
+int almost_equal(const double x, const double y, const double error);
 int d_arrays_equal(const d_array * v1, const d_array * v2, double error);
 int i_arrays_equal(const i_array * v1, const i_array * v2);
 int s_arrays_equal(const s_array * v1, const s_array * v2);
