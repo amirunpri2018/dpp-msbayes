@@ -29,6 +29,7 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "math_utils.h"
 #include "stats_utils.h"
 #include "array_utils.h"
 #include "parsing.h"
