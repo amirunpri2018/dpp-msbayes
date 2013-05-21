@@ -731,14 +731,17 @@ START_TEST (test_append_el_i_array_2d) {
     v = init_i_array_2d(1, 1);
     ia1 = init_i_array(el_size);
     ia2 = init_i_array(el_size);
-    append_i_array_2d(v, init_i_array(1));
-    append_i_array_2d(v, init_i_array(1));
+    ck_assert_int_eq(v->length, 0);
     for (i = 0; i < el_size; i++) {
         append_i_array(ia1, i);
         append_el_i_array_2d(v, 0, i);
+    }
+    ck_assert_int_eq(v->length, 1);
+    for (i = 0; i < el_size; i++) {
         append_i_array(ia2, (el_size + i));
         append_el_i_array_2d(v, 1, (el_size + i));
     }
+    ck_assert_int_eq(v->length, 2);
     ret = i_arrays_equal(v->a[0], ia1);
     ck_assert_msg((ret != 0), "`i_array_2d` element %d is incorrect: %d %d %d",
             0, v->a[0]->a[0], v->a[0]->a[1], v->a[0]->a[2]);
