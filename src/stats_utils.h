@@ -50,7 +50,6 @@ void get_mean_array(const sample_sum_array * s, d_array * means);
 void get_sample_variance_array(const sample_sum_array * s,
         d_array * v);
 void get_std_dev_array(const sample_sum_array * s, d_array * std_devs);
-double get_euclidean_distance(const d_array * v1, const d_array * v2);
 void standardize_vector(d_array * v, const d_array * means,
         const d_array * std_devs);
 

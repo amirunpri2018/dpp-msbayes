@@ -120,16 +120,6 @@ void get_std_dev_array(const sample_sum_array * s, d_array * std_devs) {
     }
 }
 
-double get_euclidean_distance(const d_array * v1, const d_array * v2) {
-    assert((*v1).length == (*v2).length);
-    double sum_of_squared_diffs = 0.0;
-    int i;
-    for (i = 0; i < (*v1).length; i++) {
-        sum_of_squared_diffs += pow(((*v1).a[i] - (*v2).a[i]), 2);
-    }
-    return sqrt(sum_of_squared_diffs);
-}
-
 void standardize_vector(d_array * v, const d_array * means,
         const d_array * std_devs) {
     assert (((*v).length == (*means).length) &&
