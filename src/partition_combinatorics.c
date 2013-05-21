@@ -109,6 +109,7 @@ int draw_int_partition_category(const gsl_rng * rng, int n) {
     cumulative_probs = init_d_array(n);
     double total_prob = cumulative_frequency_of_int_partitions_by_k(n,
             cumulative_probs);
+    assert(almost_equal(total_prob, 1.0, 0.000001) != 0);
     double r = gsl_rng_uniform(rng);
     int i;
     for (i = 0; i < n; i++) {
@@ -166,15 +167,13 @@ int dirichlet_process_draw(const gsl_rng * rng, int n, double alpha,
 /** 
  * A function for generating all partitions of an integer.
  */ 
-void generate_int_partitions(int n, int ip, int ** partitions) {
-    /* memset(partitions, 0, sizeof(partitions[0][0]) * ip * n); */
+i_array_2d * generate_int_partitions(int n) {
     assert(n > 0);
-    int i, j;
-    for (i = 0; i < ip; i++) {
-        for (j = 0; j < n; j++) {
-            partitions[i][j] = 0;
-        }
-    }
+    int i, ip;
+    i_array_2d * partitions;
+    ip = number_of_int_partitions(n);
+    partitions = init_i_array_2d(ip, n);
+    partitions->length = ip;
     int x[n];
     for (i = 0; i < n; i++) {
         x[i] = 1;
@@ -183,7 +182,8 @@ void generate_int_partitions(int n, int ip, int ** partitions) {
     int m = 0;
     int h = 0;
     int r, t, sum;
-    partitions[0][0] = x[0];
+    append_el_i_array_2d(partitions, 0, x[0]);
+    /* partitions[0][0] = x[0]; */
     int part_index = 0;
     while (x[0] != 1) {
         part_index += 1;
@@ -214,12 +214,14 @@ void generate_int_partitions(int n, int ip, int ** partitions) {
         }
         sum = 0;
         for (i = 0; i < n; i++) {
-            partitions[part_index][i] = x[i];
+            /* partitions[part_index][i] = x[i]; */
+            append_el_i_array_2d(partitions, part_index, x[i]);
             sum += x[i];
             if (sum >= n) {
                 break;
             }
         }
     }
+    return partitions;
 }
 

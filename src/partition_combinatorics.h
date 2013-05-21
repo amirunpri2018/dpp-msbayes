@@ -63,15 +63,13 @@ int dirichlet_process_draw(const gsl_rng * rng, int n, double alpha,
  *
  * @param n
  *   The integer to partition.
- * @param ip
- *   The integer partition of n, or the total number of was to partition n when
- *   order is irrelevant.
+ * @return
+ *   The function returns a pointer to an `i_array_2d` struct. This is an array
+ *   of `i_array`s. Each `i_array` contains a distinct integer partition of
+ *   `n`; there will be `number_of_int_partitions(n)` of these.
  *   @see number_of_int_partitions()
- * @param partitions
- *   A 2-dimensional array (ip x n) where the generated partitions will be
- *   stored.
  */ 
-void generate_int_partitions(int n, int ip, int **partitions);
+i_array_2d * generate_int_partitions(int n);
 
 #endif /* PARTITION_COMBINATORICS_H */
 
