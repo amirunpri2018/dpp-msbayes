@@ -20,7 +20,9 @@
 
 #include "partition_combinatorics.h"
 
-int integer_partition_cumulative_spectrum(int n, i_array * spectrum_dest) {
+int cumulative_number_of_int_partitions_by_k(int n,
+        i_array * dest) {
+    assert(n > 0);
     int i, j;
     int table[n+1][n+1];
     // initialize table with base cases
@@ -38,32 +40,35 @@ int integer_partition_cumulative_spectrum(int n, i_array * spectrum_dest) {
             table[i][j] = table[i][j-1] + table[i-j][j];
         }
     }
-    (*spectrum_dest).length = 0;
+    (*dest).length = 0;
     for (i = 0; i < n; i++) {
-        append_i_array(spectrum_dest, table[n][i+1]);
+        append_i_array(dest, table[n][i+1]);
     }
     return table[n][n];
 }
 
-int integer_partition_spectrum(int n, i_array * spectrum_dest) {
+int number_of_int_partitions_by_k(int n, i_array * dest) {
+    assert(n > 0);
     int i;
     i_array * v;
     v = init_i_array(n);
-    int ip = integer_partition_cumulative_spectrum(n, v);
-    (*spectrum_dest).length = 0;
-    append_i_array(spectrum_dest, 1);
+    int ip = cumulative_number_of_int_partitions_by_k(n, v);
+    (*dest).length = 0;
+    append_i_array(dest, 1);
     for (i = 1; i < n; i++) {
-        append_i_array(spectrum_dest, (v->a[i] - v->a[i-1]));
+        append_i_array(dest, (v->a[i] - v->a[i-1]));
     }
     free_i_array(v);
     return ip;
 }
     
-double integer_partition_cumulative_probs(int n, d_array * probs) {
+double cumulative_frequency_of_int_partitions_by_k(int n,
+        d_array * probs) {
+    assert(n > 0);
     int i;
     i_array * v;
     v = init_i_array(n);
-    int ip = integer_partition_cumulative_spectrum(n, v);
+    int ip = cumulative_number_of_int_partitions_by_k(n, v);
     (*probs).length = 0;
     for (i = 0; i < n; i++) {
         append_d_array(probs, (v->a[i] / ((double) ip)));
@@ -72,11 +77,12 @@ double integer_partition_cumulative_probs(int n, d_array * probs) {
     return (get_d_array(probs, (n-1)));
 }
 
-double integer_partition_probs(int n, d_array * probs) {
+double frequency_of_int_partitions_by_k(int n, d_array * probs) {
+    assert(n > 0);
     int i;
     i_array * v;
     v = init_i_array(n);
-    int ip = integer_partition_spectrum(n, v);
+    int ip = number_of_int_partitions_by_k(n, v);
     (*probs).length = 0;
     double sum = 0.0;
     for (i = 0; i < n; i++) {
@@ -87,18 +93,21 @@ double integer_partition_probs(int n, d_array * probs) {
     return sum;
 }
 
-int integer_partition(int n) {
+int number_of_int_partitions(int n) {
+    if (n < 0) return 0;
+    if (n == 0) return 1;
     i_array * v;
     v = init_i_array(n);
-    int ip = integer_partition_cumulative_spectrum(n, v);
+    int ip = cumulative_number_of_int_partitions_by_k(n, v);
     free_i_array(v);
     return ip;
 }
 
-int draw_integer_partition_category(const gsl_rng * rng, int n) {
+int draw_int_partition_category(const gsl_rng * rng, int n) {
+    assert(n > 0);
     d_array * cumulative_probs;
     cumulative_probs = init_d_array(n);
-    double total_prob = integer_partition_cumulative_probs(n,
+    double total_prob = cumulative_frequency_of_int_partitions_by_k(n,
             cumulative_probs);
     double r = gsl_rng_uniform(rng);
     int i;
@@ -116,6 +125,7 @@ int draw_integer_partition_category(const gsl_rng * rng, int n) {
  */
 int dirichlet_process_draw(const gsl_rng * rng, int n, double alpha,
         i_array * elements) {
+    assert(n > 0);
     int num_subsets;
     double subset_prob, new_subset_prob, u;
     i_array * subset_counts;
@@ -156,8 +166,9 @@ int dirichlet_process_draw(const gsl_rng * rng, int n, double alpha,
 /** 
  * A function for generating all partitions of an integer.
  */ 
-void generate_integer_partitions(int n, int ip, int ** partitions) {
+void generate_int_partitions(int n, int ip, int ** partitions) {
     /* memset(partitions, 0, sizeof(partitions[0][0]) * ip * n); */
+    assert(n > 0);
     int i, j;
     for (i = 0; i < ip; i++) {
         for (j = 0; j < n; j++) {

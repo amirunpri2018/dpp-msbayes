@@ -24,12 +24,12 @@
 #include <gsl/gsl_rng.h>
 #include "array_utils.h"
 
-int integer_partition_cumulative_spectrum(int n, i_array * spectrum_dest);
-int integer_partition_spectrum(int n, i_array * spectrum_dest);
-double integer_partition_cumulative_probs(int n, d_array * probs);
-double integer_partition_probs(int n, d_array * probs);
-int integer_partition(int n);
-int draw_integer_partition_category(const gsl_rng * rng, int n);
+int cumulative_number_of_int_partitions_by_k(int n, i_array * dest);
+int number_of_int_partitions_by_k(int n, i_array * dest);
+double cumulative_frequency_of_int_partitions_by_k(int n, d_array * probs);
+double frequency_of_int_partitions_by_k(int n, d_array * probs);
+int number_of_int_partitions(int n);
+int draw_int_partition_category(const gsl_rng * rng, int n);
 
 /** 
  * A function for generating a random draw from a Dirichlet process.
@@ -66,12 +66,12 @@ int dirichlet_process_draw(const gsl_rng * rng, int n, double alpha,
  * @param ip
  *   The integer partition of n, or the total number of was to partition n when
  *   order is irrelevant.
- *   @see integer_partition()
+ *   @see number_of_int_partitions()
  * @param partitions
  *   A 2-dimensional array (ip x n) where the generated partitions will be
  *   stored.
  */ 
-void generate_integer_partitions(int n, int ip, int **partitions);
+void generate_int_partitions(int n, int ip, int **partitions);
 
 #endif /* PARTITION_COMBINATORICS_H */
 

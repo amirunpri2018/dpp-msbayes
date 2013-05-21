@@ -255,7 +255,7 @@ main (int argc, char *argv[])
   else if ((gParam.concentrationShape > -1.0) &&
           (gParam.concentrationScale > -1.0))
   {
-      numDivModels = integer_partition(gParam.numTaxonPairs);
+      numDivModels = number_of_int_partitions(gParam.numTaxonPairs);
       divModels = (int **) calloc(numDivModels, sizeof(int*));
       for (i = 0; i < numDivModels; i++) {
           divModels[i] = (int *) calloc(gParam.numTaxonPairs, sizeof(int));
@@ -272,7 +272,7 @@ main (int argc, char *argv[])
                   " divergence models\n");
           exit (EXIT_FAILURE);
       }
-      generate_integer_partitions(gParam.numTaxonPairs, numDivModels,
+      generate_int_partitions(gParam.numTaxonPairs, numDivModels,
               divModels);
   }
   recTbl = calloc (gParam.numLoci, sizeof (double));
