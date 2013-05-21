@@ -31,6 +31,8 @@ eureject_SOURCES = \
 	eureject_main.c \
 	array_utils.c \
 	array_utils.h \
+	math_utils.c \
+	math_utils.h \
 	stats_utils.c \
 	stats_utils.h \
 	parsing.c \
