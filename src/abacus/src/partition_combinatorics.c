@@ -1,7 +1,7 @@
 /**
  * @file        partition_combinatorics.c
  * @authors     Jamie Oaks
- * @package     msBayes
+ * @package     ABACUS (Approximate BAyesian C UtilitieS)
  * @brief       A collection of functions for partition combinatorics.
  * @copyright   Copyright (C) 2013 Jamie Oaks.
  *   This file is part of msBayes.  msBayes is free software; you can

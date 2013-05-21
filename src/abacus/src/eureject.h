@@ -1,7 +1,7 @@
 /**
  * @file        eureject.h
  * @authors     Jamie Oaks
- * @package     msBayes
+ * @package     ABACUS (Approximate BAyesian C UtilitieS)
  * @brief       A collection of functions for Euclidean-distance-based
  *              rejection.
  * @copyright   Copyright (C) 2013 Jamie Oaks.

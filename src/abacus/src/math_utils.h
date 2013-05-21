@@ -1,8 +1,8 @@
 /**
- * @file        eureject_main.c
+ * @file        math_utils.h
  * @authors     Jamie Oaks
- * @package     msBayes
- * @brief       The main function for eureject.
+ * @package     ABACUS (Approximate BAyesian C UtilitieS)
+ * @brief       A collection of math types and functions.
  * @copyright   Copyright (C) 2013 Jamie Oaks.
  *   This file is part of msBayes.  msBayes is free software; you can
  *   redistribute it and/or modify it under the terms of the GNU General Public
@@ -18,10 +18,16 @@
  *   with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "eureject.h"
+#ifndef MATH_UTILS_H
+#define MATH_UTILS_H
 
-int main(int argc, char ** argv) {
-    int rc;
-    rc = eureject_main(argc, argv);
-    return rc;
-}
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <assert.h>
+#include "array_utils.h"
+
+double get_euclidean_distance(const d_array * v1, const d_array * v2);
+
+#endif /* MATH_UTILS_H */
+

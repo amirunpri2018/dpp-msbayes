@@ -1,7 +1,7 @@
 /**
  * @file        parsing.c
  * @authors     Jamie Oaks
- * @package     msBayes
+ * @package     ABACUS (Approximate BAyesian C UtilitieS)
  * @brief       A collection of parsing functions.
  * @copyright   Copyright (C) 2013 Jamie Oaks.
  *   This file is part of msBayes.  msBayes is free software; you can

@@ -1,8 +1,8 @@
 /**
- * @file        parsing.h
+ * @file        math_utils.c
  * @authors     Jamie Oaks
- * @package     msBayes
- * @brief       A collection of parsing functions.
+ * @package     ABACUS (Approximate BAyesian C UtilitieS)
+ * @brief       A collection of math types and functions.
  * @copyright   Copyright (C) 2013 Jamie Oaks.
  *   This file is part of msBayes.  msBayes is free software; you can
  *   redistribute it and/or modify it under the terms of the GNU General Public
@@ -18,18 +18,15 @@
  *   with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PARSING_H
-#define PARSING_H
+#include "math_utils.h"
 
-#include <stdio.h>
-#include <string.h>
-
-#include "array_utils.h"
-
-
-void parse_header(const char * path, c_array * line_buffer, s_array * header);
-void parse_observed_stats_file(const char * path, c_array * line_buffer,
-        s_array * header, d_array * stats);
-
-#endif /* PARSING_H */
+double get_euclidean_distance(const d_array * v1, const d_array * v2) {
+    assert((*v1).length == (*v2).length);
+    double sum_of_squared_diffs = 0.0;
+    int i;
+    for (i = 0; i < (*v1).length; i++) {
+        sum_of_squared_diffs += pow(((*v1).a[i] - (*v2).a[i]), 2);
+    }
+    return sqrt(sum_of_squared_diffs);
+}
 
