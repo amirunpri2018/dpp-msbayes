@@ -7,7 +7,7 @@ AC_INIT([msbayes], [0.1], [joaks1@ku.edu])
 AC_PREREQ([2.59])
 
 # safety check for source dir
-AC_CONFIG_SRCDIR([src/eureject.c])
+AC_CONFIG_SRCDIR([src/msprior.c])
 
 # designate dir for auxiliary scripts
 AC_CONFIG_AUX_DIR([build-aux])
@@ -53,7 +53,10 @@ AC_SUBST([MATHLDADD])
 AC_CONFIG_HEADERS([config.h])
 
 # declare output `Makefile`s
-AC_CONFIG_FILES([Makefile src/Makefile test/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile])
+
+# call 'abacus's configure script recursively
+AC_CONFIG_SUBDIRS([src/abacus])
 
 # output declared files
 AC_OUTPUT

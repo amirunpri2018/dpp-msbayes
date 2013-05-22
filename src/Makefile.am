@@ -1,7 +1,6 @@
 EXTRA_DIST = hashtab/main.c hashtab/Makefile
 
 bin_PROGRAMS = \
-	eureject \
 	sumstatsvector \
 	msDQH \
 	msprior \
@@ -24,19 +23,6 @@ dist_rlib_SCRIPTS = \
 	calmod.r \
 	loc2plot.r \
 	make_pd2005.r
-
-eureject_SOURCES = \
-	eureject.c \
-	eureject.h \
-	eureject_main.c \
-	array_utils.c \
-	array_utils.h \
-	math_utils.c \
-	math_utils.h \
-	stats_utils.c \
-	stats_utils.h \
-	parsing.c \
-	parsing.h
 
 sumstatsvector_SOURCES = \
 	msStatsDQH.c \
@@ -71,10 +57,10 @@ msprior_SOURCES = \
 	hashtab/hashtab.h \
 	stringUtils.c \
 	stringUtils.h \
-	array_utils.c \
-	array_utils.h \
-	partition_combinatorics.c \
-	partition_combinatorics.h
+	abacus/src/array_utils.c \
+	abacus/src/array_utils.h \
+	abacus/src/partition_combinatorics.c \
+	abacus/src/partition_combinatorics.h
 
 msReject_SOURCES = rejectinC.c
 

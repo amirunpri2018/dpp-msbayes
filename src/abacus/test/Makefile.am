@@ -1,4 +1,6 @@
-dist_noinst_DATA = data/observed_stats_extra_line.txt
+dist_noinst_DATA = \
+	data/observed_stats_extra_line.txt \
+	data/observed_stats.txt
 
 TESTS = \
 	check_array_utils \

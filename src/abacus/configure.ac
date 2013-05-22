@@ -58,4 +58,3 @@ AC_CONFIG_FILES([Makefile src/Makefile test/Makefile])
 # output declared files
 AC_OUTPUT
 
-
