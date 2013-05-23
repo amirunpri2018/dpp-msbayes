@@ -1,3 +1,3 @@
 [submodule "src/abacus"]
 	path = src/abacus
-	url = git@github.com:joaks1/abacus.git
+	url = git://github.com/joaks1/abacus.git
