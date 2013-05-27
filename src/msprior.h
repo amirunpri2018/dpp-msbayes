@@ -29,6 +29,7 @@
 
 #include "hashtab/hashtab.h"
 #include "abacus/src/partition_combinatorics.h"
+#include "abacus/src/partition_combinatorics_random.h"
 
 // JRO - modified - 11/17/2011
 typedef struct
