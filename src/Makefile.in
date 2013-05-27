@@ -66,24 +66,35 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(bindir)" \
 	"$(DESTDIR)$(rlibdir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_msDQH_OBJECTS = msQHarbpop.$(OBJEXT) QHarbpop-streec.$(OBJEXT) \
-	QHsubs.$(OBJEXT) QHarbpop-getpars.$(OBJEXT) rand2new.$(OBJEXT)
+am_msDQH_OBJECTS = msDQH-msQHarbpop.$(OBJEXT) \
+	msDQH-QHarbpop-streec.$(OBJEXT) msDQH-QHsubs.$(OBJEXT) \
+	msDQH-QHarbpop-getpars.$(OBJEXT) msDQH-rand2new.$(OBJEXT)
 msDQH_OBJECTS = $(am_msDQH_OBJECTS)
-msDQH_LDADD = $(LDADD)
+msDQH_DEPENDENCIES =
+msDQH_LINK = $(CCLD) $(msDQH_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
 am_msReject_OBJECTS = rejectinC.$(OBJEXT)
 msReject_OBJECTS = $(am_msReject_OBJECTS)
-msReject_LDADD = $(LDADD)
-am_msprior_OBJECTS = msprior.$(OBJEXT) setup.$(OBJEXT) \
-	initvars.$(OBJEXT) whiteSpaces.$(OBJEXT) hashtab.$(OBJEXT) \
-	stringUtils.$(OBJEXT) array_utils.$(OBJEXT) \
-	partition_combinatorics.$(OBJEXT)
+msReject_DEPENDENCIES =
+am_msprior_OBJECTS = msprior-msprior.$(OBJEXT) msprior-setup.$(OBJEXT) \
+	msprior-initvars.$(OBJEXT) msprior-whiteSpaces.$(OBJEXT) \
+	msprior-hashtab.$(OBJEXT) msprior-stringUtils.$(OBJEXT) \
+	msprior-array_utils.$(OBJEXT) \
+	msprior-partition_combinatorics.$(OBJEXT) \
+	msprior-partition_combinatorics_random.$(OBJEXT)
 msprior_OBJECTS = $(am_msprior_OBJECTS)
-msprior_LDADD = $(LDADD)
-am_sumstatsvector_OBJECTS = msStatsDQH.$(OBJEXT) \
-	sumStatsVector.$(OBJEXT) hashtab.$(OBJEXT) \
-	whiteSpaces.$(OBJEXT) stringUtils.$(OBJEXT)
+msprior_DEPENDENCIES =
+msprior_LINK = $(CCLD) $(msprior_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
+am_sumstatsvector_OBJECTS = sumstatsvector-msStatsDQH.$(OBJEXT) \
+	sumstatsvector-sumStatsVector.$(OBJEXT) \
+	sumstatsvector-hashtab.$(OBJEXT) \
+	sumstatsvector-whiteSpaces.$(OBJEXT) \
+	sumstatsvector-stringUtils.$(OBJEXT)
 sumstatsvector_OBJECTS = $(am_sumstatsvector_OBJECTS)
-sumstatsvector_LDADD = $(LDADD)
+sumstatsvector_DEPENDENCIES =
+sumstatsvector_LINK = $(CCLD) $(sumstatsvector_CFLAGS) $(CFLAGS) \
+	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
     $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
@@ -154,6 +165,8 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 GREP = @GREP@
+GSL_CFLAGS = @GSL_CFLAGS@
+GSL_LIBS = @GSL_LIBS@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -256,6 +269,8 @@ sumstatsvector_SOURCES = \
 	stringUtils.c \
 	stringUtils.h
 
+sumstatsvector_LDADD = @GSL_LIBS@
+sumstatsvector_CFLAGS = @GSL_CFLAGS@
 msDQH_SOURCES = \
 	msQHarbpop.c \
 	msQHarbpop.h \
@@ -265,6 +280,8 @@ msDQH_SOURCES = \
 	QHarbpop-getpars.c \
 	rand2new.c
 
+msDQH_LDADD = @GSL_LIBS@
+msDQH_CFLAGS = @GSL_CFLAGS@
 msprior_SOURCES = \
 	msprior.c \
 	msprior.h \
@@ -281,9 +298,14 @@ msprior_SOURCES = \
 	abacus/src/array_utils.c \
 	abacus/src/array_utils.h \
 	abacus/src/partition_combinatorics.c \
-	abacus/src/partition_combinatorics.h
+	abacus/src/partition_combinatorics.h \
+	abacus/src/partition_combinatorics_random.c \
+	abacus/src/partition_combinatorics_random.h
 
+msprior_LDADD = @GSL_LIBS@
+msprior_CFLAGS = @GSL_CFLAGS@
 msReject_SOURCES = rejectinC.c
+msReject_LDADD = @MATHLDADD@
 all: all-am
 
 .SUFFIXES:
@@ -360,16 +382,16 @@ clean-binPROGRAMS:
 	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
 msDQH$(EXEEXT): $(msDQH_OBJECTS) $(msDQH_DEPENDENCIES) $(EXTRA_msDQH_DEPENDENCIES) 
 	@rm -f msDQH$(EXEEXT)
-	$(LINK) $(msDQH_OBJECTS) $(msDQH_LDADD) $(LIBS)
+	$(msDQH_LINK) $(msDQH_OBJECTS) $(msDQH_LDADD) $(LIBS)
 msReject$(EXEEXT): $(msReject_OBJECTS) $(msReject_DEPENDENCIES) $(EXTRA_msReject_DEPENDENCIES) 
 	@rm -f msReject$(EXEEXT)
 	$(LINK) $(msReject_OBJECTS) $(msReject_LDADD) $(LIBS)
 msprior$(EXEEXT): $(msprior_OBJECTS) $(msprior_DEPENDENCIES) $(EXTRA_msprior_DEPENDENCIES) 
 	@rm -f msprior$(EXEEXT)
-	$(LINK) $(msprior_OBJECTS) $(msprior_LDADD) $(LIBS)
+	$(msprior_LINK) $(msprior_OBJECTS) $(msprior_LDADD) $(LIBS)
 sumstatsvector$(EXEEXT): $(sumstatsvector_OBJECTS) $(sumstatsvector_DEPENDENCIES) $(EXTRA_sumstatsvector_DEPENDENCIES) 
 	@rm -f sumstatsvector$(EXEEXT)
-	$(LINK) $(sumstatsvector_OBJECTS) $(sumstatsvector_LDADD) $(LIBS)
+	$(sumstatsvector_LINK) $(sumstatsvector_OBJECTS) $(sumstatsvector_LDADD) $(LIBS)
 install-dist_binSCRIPTS: $(dist_bin_SCRIPTS)
 	@$(NORMAL_INSTALL)
 	@list='$(dist_bin_SCRIPTS)'; test -n "$(bindir)" || list=; \
@@ -447,22 +469,26 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/QHarbpop-getpars.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/QHarbpop-streec.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/QHsubs.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/array_utils.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hashtab.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/initvars.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msQHarbpop.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msStatsDQH.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msprior.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/partition_combinatorics.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rand2new.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msDQH-QHarbpop-getpars.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msDQH-QHarbpop-streec.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msDQH-QHsubs.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msDQH-msQHarbpop.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msDQH-rand2new.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msprior-array_utils.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msprior-hashtab.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msprior-initvars.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msprior-msprior.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msprior-partition_combinatorics.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msprior-partition_combinatorics_random.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msprior-setup.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msprior-stringUtils.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msprior-whiteSpaces.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rejectinC.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/setup.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stringUtils.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sumStatsVector.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/whiteSpaces.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sumstatsvector-hashtab.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sumstatsvector-msStatsDQH.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sumstatsvector-stringUtils.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sumstatsvector-sumStatsVector.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sumstatsvector-whiteSpaces.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -478,47 +504,271 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(COMPILE) -c `$(CYGPATH_W) '$<'`
 
-hashtab.o: hashtab/hashtab.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT hashtab.o -MD -MP -MF $(DEPDIR)/hashtab.Tpo -c -o hashtab.o `test -f 'hashtab/hashtab.c' || echo '$(srcdir)/'`hashtab/hashtab.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/hashtab.Tpo $(DEPDIR)/hashtab.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='hashtab/hashtab.c' object='hashtab.o' libtool=no @AMDEPBACKSLASH@
+msDQH-msQHarbpop.o: msQHarbpop.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msDQH_CFLAGS) $(CFLAGS) -MT msDQH-msQHarbpop.o -MD -MP -MF $(DEPDIR)/msDQH-msQHarbpop.Tpo -c -o msDQH-msQHarbpop.o `test -f 'msQHarbpop.c' || echo '$(srcdir)/'`msQHarbpop.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msDQH-msQHarbpop.Tpo $(DEPDIR)/msDQH-msQHarbpop.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='msQHarbpop.c' object='msDQH-msQHarbpop.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o hashtab.o `test -f 'hashtab/hashtab.c' || echo '$(srcdir)/'`hashtab/hashtab.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msDQH_CFLAGS) $(CFLAGS) -c -o msDQH-msQHarbpop.o `test -f 'msQHarbpop.c' || echo '$(srcdir)/'`msQHarbpop.c
 
-hashtab.obj: hashtab/hashtab.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT hashtab.obj -MD -MP -MF $(DEPDIR)/hashtab.Tpo -c -o hashtab.obj `if test -f 'hashtab/hashtab.c'; then $(CYGPATH_W) 'hashtab/hashtab.c'; else $(CYGPATH_W) '$(srcdir)/hashtab/hashtab.c'; fi`
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/hashtab.Tpo $(DEPDIR)/hashtab.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='hashtab/hashtab.c' object='hashtab.obj' libtool=no @AMDEPBACKSLASH@
+msDQH-msQHarbpop.obj: msQHarbpop.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msDQH_CFLAGS) $(CFLAGS) -MT msDQH-msQHarbpop.obj -MD -MP -MF $(DEPDIR)/msDQH-msQHarbpop.Tpo -c -o msDQH-msQHarbpop.obj `if test -f 'msQHarbpop.c'; then $(CYGPATH_W) 'msQHarbpop.c'; else $(CYGPATH_W) '$(srcdir)/msQHarbpop.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msDQH-msQHarbpop.Tpo $(DEPDIR)/msDQH-msQHarbpop.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='msQHarbpop.c' object='msDQH-msQHarbpop.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o hashtab.obj `if test -f 'hashtab/hashtab.c'; then $(CYGPATH_W) 'hashtab/hashtab.c'; else $(CYGPATH_W) '$(srcdir)/hashtab/hashtab.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msDQH_CFLAGS) $(CFLAGS) -c -o msDQH-msQHarbpop.obj `if test -f 'msQHarbpop.c'; then $(CYGPATH_W) 'msQHarbpop.c'; else $(CYGPATH_W) '$(srcdir)/msQHarbpop.c'; fi`
 
-array_utils.o: abacus/src/array_utils.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT array_utils.o -MD -MP -MF $(DEPDIR)/array_utils.Tpo -c -o array_utils.o `test -f 'abacus/src/array_utils.c' || echo '$(srcdir)/'`abacus/src/array_utils.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/array_utils.Tpo $(DEPDIR)/array_utils.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='abacus/src/array_utils.c' object='array_utils.o' libtool=no @AMDEPBACKSLASH@
+msDQH-QHarbpop-streec.o: QHarbpop-streec.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msDQH_CFLAGS) $(CFLAGS) -MT msDQH-QHarbpop-streec.o -MD -MP -MF $(DEPDIR)/msDQH-QHarbpop-streec.Tpo -c -o msDQH-QHarbpop-streec.o `test -f 'QHarbpop-streec.c' || echo '$(srcdir)/'`QHarbpop-streec.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msDQH-QHarbpop-streec.Tpo $(DEPDIR)/msDQH-QHarbpop-streec.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='QHarbpop-streec.c' object='msDQH-QHarbpop-streec.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o array_utils.o `test -f 'abacus/src/array_utils.c' || echo '$(srcdir)/'`abacus/src/array_utils.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msDQH_CFLAGS) $(CFLAGS) -c -o msDQH-QHarbpop-streec.o `test -f 'QHarbpop-streec.c' || echo '$(srcdir)/'`QHarbpop-streec.c
 
-array_utils.obj: abacus/src/array_utils.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT array_utils.obj -MD -MP -MF $(DEPDIR)/array_utils.Tpo -c -o array_utils.obj `if test -f 'abacus/src/array_utils.c'; then $(CYGPATH_W) 'abacus/src/array_utils.c'; else $(CYGPATH_W) '$(srcdir)/abacus/src/array_utils.c'; fi`
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/array_utils.Tpo $(DEPDIR)/array_utils.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='abacus/src/array_utils.c' object='array_utils.obj' libtool=no @AMDEPBACKSLASH@
+msDQH-QHarbpop-streec.obj: QHarbpop-streec.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msDQH_CFLAGS) $(CFLAGS) -MT msDQH-QHarbpop-streec.obj -MD -MP -MF $(DEPDIR)/msDQH-QHarbpop-streec.Tpo -c -o msDQH-QHarbpop-streec.obj `if test -f 'QHarbpop-streec.c'; then $(CYGPATH_W) 'QHarbpop-streec.c'; else $(CYGPATH_W) '$(srcdir)/QHarbpop-streec.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msDQH-QHarbpop-streec.Tpo $(DEPDIR)/msDQH-QHarbpop-streec.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='QHarbpop-streec.c' object='msDQH-QHarbpop-streec.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o array_utils.obj `if test -f 'abacus/src/array_utils.c'; then $(CYGPATH_W) 'abacus/src/array_utils.c'; else $(CYGPATH_W) '$(srcdir)/abacus/src/array_utils.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msDQH_CFLAGS) $(CFLAGS) -c -o msDQH-QHarbpop-streec.obj `if test -f 'QHarbpop-streec.c'; then $(CYGPATH_W) 'QHarbpop-streec.c'; else $(CYGPATH_W) '$(srcdir)/QHarbpop-streec.c'; fi`
 
-partition_combinatorics.o: abacus/src/partition_combinatorics.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT partition_combinatorics.o -MD -MP -MF $(DEPDIR)/partition_combinatorics.Tpo -c -o partition_combinatorics.o `test -f 'abacus/src/partition_combinatorics.c' || echo '$(srcdir)/'`abacus/src/partition_combinatorics.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/partition_combinatorics.Tpo $(DEPDIR)/partition_combinatorics.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='abacus/src/partition_combinatorics.c' object='partition_combinatorics.o' libtool=no @AMDEPBACKSLASH@
+msDQH-QHsubs.o: QHsubs.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msDQH_CFLAGS) $(CFLAGS) -MT msDQH-QHsubs.o -MD -MP -MF $(DEPDIR)/msDQH-QHsubs.Tpo -c -o msDQH-QHsubs.o `test -f 'QHsubs.c' || echo '$(srcdir)/'`QHsubs.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msDQH-QHsubs.Tpo $(DEPDIR)/msDQH-QHsubs.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='QHsubs.c' object='msDQH-QHsubs.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o partition_combinatorics.o `test -f 'abacus/src/partition_combinatorics.c' || echo '$(srcdir)/'`abacus/src/partition_combinatorics.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msDQH_CFLAGS) $(CFLAGS) -c -o msDQH-QHsubs.o `test -f 'QHsubs.c' || echo '$(srcdir)/'`QHsubs.c
 
-partition_combinatorics.obj: abacus/src/partition_combinatorics.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT partition_combinatorics.obj -MD -MP -MF $(DEPDIR)/partition_combinatorics.Tpo -c -o partition_combinatorics.obj `if test -f 'abacus/src/partition_combinatorics.c'; then $(CYGPATH_W) 'abacus/src/partition_combinatorics.c'; else $(CYGPATH_W) '$(srcdir)/abacus/src/partition_combinatorics.c'; fi`
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/partition_combinatorics.Tpo $(DEPDIR)/partition_combinatorics.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='abacus/src/partition_combinatorics.c' object='partition_combinatorics.obj' libtool=no @AMDEPBACKSLASH@
+msDQH-QHsubs.obj: QHsubs.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msDQH_CFLAGS) $(CFLAGS) -MT msDQH-QHsubs.obj -MD -MP -MF $(DEPDIR)/msDQH-QHsubs.Tpo -c -o msDQH-QHsubs.obj `if test -f 'QHsubs.c'; then $(CYGPATH_W) 'QHsubs.c'; else $(CYGPATH_W) '$(srcdir)/QHsubs.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msDQH-QHsubs.Tpo $(DEPDIR)/msDQH-QHsubs.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='QHsubs.c' object='msDQH-QHsubs.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o partition_combinatorics.obj `if test -f 'abacus/src/partition_combinatorics.c'; then $(CYGPATH_W) 'abacus/src/partition_combinatorics.c'; else $(CYGPATH_W) '$(srcdir)/abacus/src/partition_combinatorics.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msDQH_CFLAGS) $(CFLAGS) -c -o msDQH-QHsubs.obj `if test -f 'QHsubs.c'; then $(CYGPATH_W) 'QHsubs.c'; else $(CYGPATH_W) '$(srcdir)/QHsubs.c'; fi`
+
+msDQH-QHarbpop-getpars.o: QHarbpop-getpars.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msDQH_CFLAGS) $(CFLAGS) -MT msDQH-QHarbpop-getpars.o -MD -MP -MF $(DEPDIR)/msDQH-QHarbpop-getpars.Tpo -c -o msDQH-QHarbpop-getpars.o `test -f 'QHarbpop-getpars.c' || echo '$(srcdir)/'`QHarbpop-getpars.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msDQH-QHarbpop-getpars.Tpo $(DEPDIR)/msDQH-QHarbpop-getpars.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='QHarbpop-getpars.c' object='msDQH-QHarbpop-getpars.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msDQH_CFLAGS) $(CFLAGS) -c -o msDQH-QHarbpop-getpars.o `test -f 'QHarbpop-getpars.c' || echo '$(srcdir)/'`QHarbpop-getpars.c
+
+msDQH-QHarbpop-getpars.obj: QHarbpop-getpars.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msDQH_CFLAGS) $(CFLAGS) -MT msDQH-QHarbpop-getpars.obj -MD -MP -MF $(DEPDIR)/msDQH-QHarbpop-getpars.Tpo -c -o msDQH-QHarbpop-getpars.obj `if test -f 'QHarbpop-getpars.c'; then $(CYGPATH_W) 'QHarbpop-getpars.c'; else $(CYGPATH_W) '$(srcdir)/QHarbpop-getpars.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msDQH-QHarbpop-getpars.Tpo $(DEPDIR)/msDQH-QHarbpop-getpars.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='QHarbpop-getpars.c' object='msDQH-QHarbpop-getpars.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msDQH_CFLAGS) $(CFLAGS) -c -o msDQH-QHarbpop-getpars.obj `if test -f 'QHarbpop-getpars.c'; then $(CYGPATH_W) 'QHarbpop-getpars.c'; else $(CYGPATH_W) '$(srcdir)/QHarbpop-getpars.c'; fi`
+
+msDQH-rand2new.o: rand2new.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msDQH_CFLAGS) $(CFLAGS) -MT msDQH-rand2new.o -MD -MP -MF $(DEPDIR)/msDQH-rand2new.Tpo -c -o msDQH-rand2new.o `test -f 'rand2new.c' || echo '$(srcdir)/'`rand2new.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msDQH-rand2new.Tpo $(DEPDIR)/msDQH-rand2new.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='rand2new.c' object='msDQH-rand2new.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msDQH_CFLAGS) $(CFLAGS) -c -o msDQH-rand2new.o `test -f 'rand2new.c' || echo '$(srcdir)/'`rand2new.c
+
+msDQH-rand2new.obj: rand2new.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msDQH_CFLAGS) $(CFLAGS) -MT msDQH-rand2new.obj -MD -MP -MF $(DEPDIR)/msDQH-rand2new.Tpo -c -o msDQH-rand2new.obj `if test -f 'rand2new.c'; then $(CYGPATH_W) 'rand2new.c'; else $(CYGPATH_W) '$(srcdir)/rand2new.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msDQH-rand2new.Tpo $(DEPDIR)/msDQH-rand2new.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='rand2new.c' object='msDQH-rand2new.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msDQH_CFLAGS) $(CFLAGS) -c -o msDQH-rand2new.obj `if test -f 'rand2new.c'; then $(CYGPATH_W) 'rand2new.c'; else $(CYGPATH_W) '$(srcdir)/rand2new.c'; fi`
+
+msprior-msprior.o: msprior.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -MT msprior-msprior.o -MD -MP -MF $(DEPDIR)/msprior-msprior.Tpo -c -o msprior-msprior.o `test -f 'msprior.c' || echo '$(srcdir)/'`msprior.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msprior-msprior.Tpo $(DEPDIR)/msprior-msprior.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='msprior.c' object='msprior-msprior.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -c -o msprior-msprior.o `test -f 'msprior.c' || echo '$(srcdir)/'`msprior.c
+
+msprior-msprior.obj: msprior.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -MT msprior-msprior.obj -MD -MP -MF $(DEPDIR)/msprior-msprior.Tpo -c -o msprior-msprior.obj `if test -f 'msprior.c'; then $(CYGPATH_W) 'msprior.c'; else $(CYGPATH_W) '$(srcdir)/msprior.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msprior-msprior.Tpo $(DEPDIR)/msprior-msprior.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='msprior.c' object='msprior-msprior.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -c -o msprior-msprior.obj `if test -f 'msprior.c'; then $(CYGPATH_W) 'msprior.c'; else $(CYGPATH_W) '$(srcdir)/msprior.c'; fi`
+
+msprior-setup.o: setup.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -MT msprior-setup.o -MD -MP -MF $(DEPDIR)/msprior-setup.Tpo -c -o msprior-setup.o `test -f 'setup.c' || echo '$(srcdir)/'`setup.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msprior-setup.Tpo $(DEPDIR)/msprior-setup.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='setup.c' object='msprior-setup.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -c -o msprior-setup.o `test -f 'setup.c' || echo '$(srcdir)/'`setup.c
+
+msprior-setup.obj: setup.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -MT msprior-setup.obj -MD -MP -MF $(DEPDIR)/msprior-setup.Tpo -c -o msprior-setup.obj `if test -f 'setup.c'; then $(CYGPATH_W) 'setup.c'; else $(CYGPATH_W) '$(srcdir)/setup.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msprior-setup.Tpo $(DEPDIR)/msprior-setup.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='setup.c' object='msprior-setup.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -c -o msprior-setup.obj `if test -f 'setup.c'; then $(CYGPATH_W) 'setup.c'; else $(CYGPATH_W) '$(srcdir)/setup.c'; fi`
+
+msprior-initvars.o: initvars.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -MT msprior-initvars.o -MD -MP -MF $(DEPDIR)/msprior-initvars.Tpo -c -o msprior-initvars.o `test -f 'initvars.c' || echo '$(srcdir)/'`initvars.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msprior-initvars.Tpo $(DEPDIR)/msprior-initvars.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='initvars.c' object='msprior-initvars.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -c -o msprior-initvars.o `test -f 'initvars.c' || echo '$(srcdir)/'`initvars.c
+
+msprior-initvars.obj: initvars.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -MT msprior-initvars.obj -MD -MP -MF $(DEPDIR)/msprior-initvars.Tpo -c -o msprior-initvars.obj `if test -f 'initvars.c'; then $(CYGPATH_W) 'initvars.c'; else $(CYGPATH_W) '$(srcdir)/initvars.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msprior-initvars.Tpo $(DEPDIR)/msprior-initvars.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='initvars.c' object='msprior-initvars.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -c -o msprior-initvars.obj `if test -f 'initvars.c'; then $(CYGPATH_W) 'initvars.c'; else $(CYGPATH_W) '$(srcdir)/initvars.c'; fi`
+
+msprior-whiteSpaces.o: whiteSpaces.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -MT msprior-whiteSpaces.o -MD -MP -MF $(DEPDIR)/msprior-whiteSpaces.Tpo -c -o msprior-whiteSpaces.o `test -f 'whiteSpaces.c' || echo '$(srcdir)/'`whiteSpaces.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msprior-whiteSpaces.Tpo $(DEPDIR)/msprior-whiteSpaces.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='whiteSpaces.c' object='msprior-whiteSpaces.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -c -o msprior-whiteSpaces.o `test -f 'whiteSpaces.c' || echo '$(srcdir)/'`whiteSpaces.c
+
+msprior-whiteSpaces.obj: whiteSpaces.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -MT msprior-whiteSpaces.obj -MD -MP -MF $(DEPDIR)/msprior-whiteSpaces.Tpo -c -o msprior-whiteSpaces.obj `if test -f 'whiteSpaces.c'; then $(CYGPATH_W) 'whiteSpaces.c'; else $(CYGPATH_W) '$(srcdir)/whiteSpaces.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msprior-whiteSpaces.Tpo $(DEPDIR)/msprior-whiteSpaces.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='whiteSpaces.c' object='msprior-whiteSpaces.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -c -o msprior-whiteSpaces.obj `if test -f 'whiteSpaces.c'; then $(CYGPATH_W) 'whiteSpaces.c'; else $(CYGPATH_W) '$(srcdir)/whiteSpaces.c'; fi`
+
+msprior-hashtab.o: hashtab/hashtab.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -MT msprior-hashtab.o -MD -MP -MF $(DEPDIR)/msprior-hashtab.Tpo -c -o msprior-hashtab.o `test -f 'hashtab/hashtab.c' || echo '$(srcdir)/'`hashtab/hashtab.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msprior-hashtab.Tpo $(DEPDIR)/msprior-hashtab.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='hashtab/hashtab.c' object='msprior-hashtab.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -c -o msprior-hashtab.o `test -f 'hashtab/hashtab.c' || echo '$(srcdir)/'`hashtab/hashtab.c
+
+msprior-hashtab.obj: hashtab/hashtab.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -MT msprior-hashtab.obj -MD -MP -MF $(DEPDIR)/msprior-hashtab.Tpo -c -o msprior-hashtab.obj `if test -f 'hashtab/hashtab.c'; then $(CYGPATH_W) 'hashtab/hashtab.c'; else $(CYGPATH_W) '$(srcdir)/hashtab/hashtab.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msprior-hashtab.Tpo $(DEPDIR)/msprior-hashtab.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='hashtab/hashtab.c' object='msprior-hashtab.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -c -o msprior-hashtab.obj `if test -f 'hashtab/hashtab.c'; then $(CYGPATH_W) 'hashtab/hashtab.c'; else $(CYGPATH_W) '$(srcdir)/hashtab/hashtab.c'; fi`
+
+msprior-stringUtils.o: stringUtils.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -MT msprior-stringUtils.o -MD -MP -MF $(DEPDIR)/msprior-stringUtils.Tpo -c -o msprior-stringUtils.o `test -f 'stringUtils.c' || echo '$(srcdir)/'`stringUtils.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msprior-stringUtils.Tpo $(DEPDIR)/msprior-stringUtils.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='stringUtils.c' object='msprior-stringUtils.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -c -o msprior-stringUtils.o `test -f 'stringUtils.c' || echo '$(srcdir)/'`stringUtils.c
+
+msprior-stringUtils.obj: stringUtils.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -MT msprior-stringUtils.obj -MD -MP -MF $(DEPDIR)/msprior-stringUtils.Tpo -c -o msprior-stringUtils.obj `if test -f 'stringUtils.c'; then $(CYGPATH_W) 'stringUtils.c'; else $(CYGPATH_W) '$(srcdir)/stringUtils.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msprior-stringUtils.Tpo $(DEPDIR)/msprior-stringUtils.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='stringUtils.c' object='msprior-stringUtils.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -c -o msprior-stringUtils.obj `if test -f 'stringUtils.c'; then $(CYGPATH_W) 'stringUtils.c'; else $(CYGPATH_W) '$(srcdir)/stringUtils.c'; fi`
+
+msprior-array_utils.o: abacus/src/array_utils.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -MT msprior-array_utils.o -MD -MP -MF $(DEPDIR)/msprior-array_utils.Tpo -c -o msprior-array_utils.o `test -f 'abacus/src/array_utils.c' || echo '$(srcdir)/'`abacus/src/array_utils.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msprior-array_utils.Tpo $(DEPDIR)/msprior-array_utils.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='abacus/src/array_utils.c' object='msprior-array_utils.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -c -o msprior-array_utils.o `test -f 'abacus/src/array_utils.c' || echo '$(srcdir)/'`abacus/src/array_utils.c
+
+msprior-array_utils.obj: abacus/src/array_utils.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -MT msprior-array_utils.obj -MD -MP -MF $(DEPDIR)/msprior-array_utils.Tpo -c -o msprior-array_utils.obj `if test -f 'abacus/src/array_utils.c'; then $(CYGPATH_W) 'abacus/src/array_utils.c'; else $(CYGPATH_W) '$(srcdir)/abacus/src/array_utils.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msprior-array_utils.Tpo $(DEPDIR)/msprior-array_utils.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='abacus/src/array_utils.c' object='msprior-array_utils.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -c -o msprior-array_utils.obj `if test -f 'abacus/src/array_utils.c'; then $(CYGPATH_W) 'abacus/src/array_utils.c'; else $(CYGPATH_W) '$(srcdir)/abacus/src/array_utils.c'; fi`
+
+msprior-partition_combinatorics.o: abacus/src/partition_combinatorics.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -MT msprior-partition_combinatorics.o -MD -MP -MF $(DEPDIR)/msprior-partition_combinatorics.Tpo -c -o msprior-partition_combinatorics.o `test -f 'abacus/src/partition_combinatorics.c' || echo '$(srcdir)/'`abacus/src/partition_combinatorics.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msprior-partition_combinatorics.Tpo $(DEPDIR)/msprior-partition_combinatorics.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='abacus/src/partition_combinatorics.c' object='msprior-partition_combinatorics.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -c -o msprior-partition_combinatorics.o `test -f 'abacus/src/partition_combinatorics.c' || echo '$(srcdir)/'`abacus/src/partition_combinatorics.c
+
+msprior-partition_combinatorics.obj: abacus/src/partition_combinatorics.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -MT msprior-partition_combinatorics.obj -MD -MP -MF $(DEPDIR)/msprior-partition_combinatorics.Tpo -c -o msprior-partition_combinatorics.obj `if test -f 'abacus/src/partition_combinatorics.c'; then $(CYGPATH_W) 'abacus/src/partition_combinatorics.c'; else $(CYGPATH_W) '$(srcdir)/abacus/src/partition_combinatorics.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msprior-partition_combinatorics.Tpo $(DEPDIR)/msprior-partition_combinatorics.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='abacus/src/partition_combinatorics.c' object='msprior-partition_combinatorics.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -c -o msprior-partition_combinatorics.obj `if test -f 'abacus/src/partition_combinatorics.c'; then $(CYGPATH_W) 'abacus/src/partition_combinatorics.c'; else $(CYGPATH_W) '$(srcdir)/abacus/src/partition_combinatorics.c'; fi`
+
+msprior-partition_combinatorics_random.o: abacus/src/partition_combinatorics_random.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -MT msprior-partition_combinatorics_random.o -MD -MP -MF $(DEPDIR)/msprior-partition_combinatorics_random.Tpo -c -o msprior-partition_combinatorics_random.o `test -f 'abacus/src/partition_combinatorics_random.c' || echo '$(srcdir)/'`abacus/src/partition_combinatorics_random.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msprior-partition_combinatorics_random.Tpo $(DEPDIR)/msprior-partition_combinatorics_random.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='abacus/src/partition_combinatorics_random.c' object='msprior-partition_combinatorics_random.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -c -o msprior-partition_combinatorics_random.o `test -f 'abacus/src/partition_combinatorics_random.c' || echo '$(srcdir)/'`abacus/src/partition_combinatorics_random.c
+
+msprior-partition_combinatorics_random.obj: abacus/src/partition_combinatorics_random.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -MT msprior-partition_combinatorics_random.obj -MD -MP -MF $(DEPDIR)/msprior-partition_combinatorics_random.Tpo -c -o msprior-partition_combinatorics_random.obj `if test -f 'abacus/src/partition_combinatorics_random.c'; then $(CYGPATH_W) 'abacus/src/partition_combinatorics_random.c'; else $(CYGPATH_W) '$(srcdir)/abacus/src/partition_combinatorics_random.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msprior-partition_combinatorics_random.Tpo $(DEPDIR)/msprior-partition_combinatorics_random.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='abacus/src/partition_combinatorics_random.c' object='msprior-partition_combinatorics_random.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -c -o msprior-partition_combinatorics_random.obj `if test -f 'abacus/src/partition_combinatorics_random.c'; then $(CYGPATH_W) 'abacus/src/partition_combinatorics_random.c'; else $(CYGPATH_W) '$(srcdir)/abacus/src/partition_combinatorics_random.c'; fi`
+
+sumstatsvector-msStatsDQH.o: msStatsDQH.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(sumstatsvector_CFLAGS) $(CFLAGS) -MT sumstatsvector-msStatsDQH.o -MD -MP -MF $(DEPDIR)/sumstatsvector-msStatsDQH.Tpo -c -o sumstatsvector-msStatsDQH.o `test -f 'msStatsDQH.c' || echo '$(srcdir)/'`msStatsDQH.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/sumstatsvector-msStatsDQH.Tpo $(DEPDIR)/sumstatsvector-msStatsDQH.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='msStatsDQH.c' object='sumstatsvector-msStatsDQH.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(sumstatsvector_CFLAGS) $(CFLAGS) -c -o sumstatsvector-msStatsDQH.o `test -f 'msStatsDQH.c' || echo '$(srcdir)/'`msStatsDQH.c
+
+sumstatsvector-msStatsDQH.obj: msStatsDQH.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(sumstatsvector_CFLAGS) $(CFLAGS) -MT sumstatsvector-msStatsDQH.obj -MD -MP -MF $(DEPDIR)/sumstatsvector-msStatsDQH.Tpo -c -o sumstatsvector-msStatsDQH.obj `if test -f 'msStatsDQH.c'; then $(CYGPATH_W) 'msStatsDQH.c'; else $(CYGPATH_W) '$(srcdir)/msStatsDQH.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/sumstatsvector-msStatsDQH.Tpo $(DEPDIR)/sumstatsvector-msStatsDQH.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='msStatsDQH.c' object='sumstatsvector-msStatsDQH.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(sumstatsvector_CFLAGS) $(CFLAGS) -c -o sumstatsvector-msStatsDQH.obj `if test -f 'msStatsDQH.c'; then $(CYGPATH_W) 'msStatsDQH.c'; else $(CYGPATH_W) '$(srcdir)/msStatsDQH.c'; fi`
+
+sumstatsvector-sumStatsVector.o: sumStatsVector.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(sumstatsvector_CFLAGS) $(CFLAGS) -MT sumstatsvector-sumStatsVector.o -MD -MP -MF $(DEPDIR)/sumstatsvector-sumStatsVector.Tpo -c -o sumstatsvector-sumStatsVector.o `test -f 'sumStatsVector.c' || echo '$(srcdir)/'`sumStatsVector.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/sumstatsvector-sumStatsVector.Tpo $(DEPDIR)/sumstatsvector-sumStatsVector.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sumStatsVector.c' object='sumstatsvector-sumStatsVector.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(sumstatsvector_CFLAGS) $(CFLAGS) -c -o sumstatsvector-sumStatsVector.o `test -f 'sumStatsVector.c' || echo '$(srcdir)/'`sumStatsVector.c
+
+sumstatsvector-sumStatsVector.obj: sumStatsVector.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(sumstatsvector_CFLAGS) $(CFLAGS) -MT sumstatsvector-sumStatsVector.obj -MD -MP -MF $(DEPDIR)/sumstatsvector-sumStatsVector.Tpo -c -o sumstatsvector-sumStatsVector.obj `if test -f 'sumStatsVector.c'; then $(CYGPATH_W) 'sumStatsVector.c'; else $(CYGPATH_W) '$(srcdir)/sumStatsVector.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/sumstatsvector-sumStatsVector.Tpo $(DEPDIR)/sumstatsvector-sumStatsVector.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sumStatsVector.c' object='sumstatsvector-sumStatsVector.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(sumstatsvector_CFLAGS) $(CFLAGS) -c -o sumstatsvector-sumStatsVector.obj `if test -f 'sumStatsVector.c'; then $(CYGPATH_W) 'sumStatsVector.c'; else $(CYGPATH_W) '$(srcdir)/sumStatsVector.c'; fi`
+
+sumstatsvector-hashtab.o: hashtab/hashtab.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(sumstatsvector_CFLAGS) $(CFLAGS) -MT sumstatsvector-hashtab.o -MD -MP -MF $(DEPDIR)/sumstatsvector-hashtab.Tpo -c -o sumstatsvector-hashtab.o `test -f 'hashtab/hashtab.c' || echo '$(srcdir)/'`hashtab/hashtab.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/sumstatsvector-hashtab.Tpo $(DEPDIR)/sumstatsvector-hashtab.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='hashtab/hashtab.c' object='sumstatsvector-hashtab.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(sumstatsvector_CFLAGS) $(CFLAGS) -c -o sumstatsvector-hashtab.o `test -f 'hashtab/hashtab.c' || echo '$(srcdir)/'`hashtab/hashtab.c
+
+sumstatsvector-hashtab.obj: hashtab/hashtab.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(sumstatsvector_CFLAGS) $(CFLAGS) -MT sumstatsvector-hashtab.obj -MD -MP -MF $(DEPDIR)/sumstatsvector-hashtab.Tpo -c -o sumstatsvector-hashtab.obj `if test -f 'hashtab/hashtab.c'; then $(CYGPATH_W) 'hashtab/hashtab.c'; else $(CYGPATH_W) '$(srcdir)/hashtab/hashtab.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/sumstatsvector-hashtab.Tpo $(DEPDIR)/sumstatsvector-hashtab.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='hashtab/hashtab.c' object='sumstatsvector-hashtab.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(sumstatsvector_CFLAGS) $(CFLAGS) -c -o sumstatsvector-hashtab.obj `if test -f 'hashtab/hashtab.c'; then $(CYGPATH_W) 'hashtab/hashtab.c'; else $(CYGPATH_W) '$(srcdir)/hashtab/hashtab.c'; fi`
+
+sumstatsvector-whiteSpaces.o: whiteSpaces.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(sumstatsvector_CFLAGS) $(CFLAGS) -MT sumstatsvector-whiteSpaces.o -MD -MP -MF $(DEPDIR)/sumstatsvector-whiteSpaces.Tpo -c -o sumstatsvector-whiteSpaces.o `test -f 'whiteSpaces.c' || echo '$(srcdir)/'`whiteSpaces.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/sumstatsvector-whiteSpaces.Tpo $(DEPDIR)/sumstatsvector-whiteSpaces.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='whiteSpaces.c' object='sumstatsvector-whiteSpaces.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(sumstatsvector_CFLAGS) $(CFLAGS) -c -o sumstatsvector-whiteSpaces.o `test -f 'whiteSpaces.c' || echo '$(srcdir)/'`whiteSpaces.c
+
+sumstatsvector-whiteSpaces.obj: whiteSpaces.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(sumstatsvector_CFLAGS) $(CFLAGS) -MT sumstatsvector-whiteSpaces.obj -MD -MP -MF $(DEPDIR)/sumstatsvector-whiteSpaces.Tpo -c -o sumstatsvector-whiteSpaces.obj `if test -f 'whiteSpaces.c'; then $(CYGPATH_W) 'whiteSpaces.c'; else $(CYGPATH_W) '$(srcdir)/whiteSpaces.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/sumstatsvector-whiteSpaces.Tpo $(DEPDIR)/sumstatsvector-whiteSpaces.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='whiteSpaces.c' object='sumstatsvector-whiteSpaces.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(sumstatsvector_CFLAGS) $(CFLAGS) -c -o sumstatsvector-whiteSpaces.obj `if test -f 'whiteSpaces.c'; then $(CYGPATH_W) 'whiteSpaces.c'; else $(CYGPATH_W) '$(srcdir)/whiteSpaces.c'; fi`
+
+sumstatsvector-stringUtils.o: stringUtils.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(sumstatsvector_CFLAGS) $(CFLAGS) -MT sumstatsvector-stringUtils.o -MD -MP -MF $(DEPDIR)/sumstatsvector-stringUtils.Tpo -c -o sumstatsvector-stringUtils.o `test -f 'stringUtils.c' || echo '$(srcdir)/'`stringUtils.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/sumstatsvector-stringUtils.Tpo $(DEPDIR)/sumstatsvector-stringUtils.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='stringUtils.c' object='sumstatsvector-stringUtils.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(sumstatsvector_CFLAGS) $(CFLAGS) -c -o sumstatsvector-stringUtils.o `test -f 'stringUtils.c' || echo '$(srcdir)/'`stringUtils.c
+
+sumstatsvector-stringUtils.obj: stringUtils.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(sumstatsvector_CFLAGS) $(CFLAGS) -MT sumstatsvector-stringUtils.obj -MD -MP -MF $(DEPDIR)/sumstatsvector-stringUtils.Tpo -c -o sumstatsvector-stringUtils.obj `if test -f 'stringUtils.c'; then $(CYGPATH_W) 'stringUtils.c'; else $(CYGPATH_W) '$(srcdir)/stringUtils.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/sumstatsvector-stringUtils.Tpo $(DEPDIR)/sumstatsvector-stringUtils.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='stringUtils.c' object='sumstatsvector-stringUtils.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(sumstatsvector_CFLAGS) $(CFLAGS) -c -o sumstatsvector-stringUtils.obj `if test -f 'stringUtils.c'; then $(CYGPATH_W) 'stringUtils.c'; else $(CYGPATH_W) '$(srcdir)/stringUtils.c'; fi`
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \

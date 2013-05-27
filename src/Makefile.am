@@ -35,6 +35,9 @@ sumstatsvector_SOURCES = \
 	stringUtils.c \
 	stringUtils.h
 
+sumstatsvector_LDADD = @GSL_LIBS@
+sumstatsvector_CFLAGS = @GSL_CFLAGS@
+
 msDQH_SOURCES = \
 	msQHarbpop.c \
 	msQHarbpop.h \
@@ -43,6 +46,9 @@ msDQH_SOURCES = \
 	QHsubs.h \
 	QHarbpop-getpars.c \
 	rand2new.c
+
+msDQH_LDADD = @GSL_LIBS@
+msDQH_CFLAGS = @GSL_CFLAGS@
 
 msprior_SOURCES = \
 	msprior.c \
@@ -60,7 +66,14 @@ msprior_SOURCES = \
 	abacus/src/array_utils.c \
 	abacus/src/array_utils.h \
 	abacus/src/partition_combinatorics.c \
-	abacus/src/partition_combinatorics.h
+	abacus/src/partition_combinatorics.h \
+	abacus/src/partition_combinatorics_random.c \
+	abacus/src/partition_combinatorics_random.h
+
+msprior_LDADD = @GSL_LIBS@
+msprior_CFLAGS = @GSL_CFLAGS@
 
 msReject_SOURCES = rejectinC.c
+
+msReject_LDADD = @MATHLDADD@
 
