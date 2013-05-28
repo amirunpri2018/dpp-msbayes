@@ -36,6 +36,18 @@ AC_CHECK_FUNCS([pow strtok strncpy calloc sqrt])
 # AM_PATH_CHECK([0.9.0],[],[AC_MSG_WARN([check is missing or old; you will not be able to run the test suite])])
 PKG_CHECK_MODULES([CHECK], [check >= 0.9.4], [], [AC_MSG_WARN([check is missing or old; you will not be able to run the test suite])])
 
+AC_ARG_ENABLE([static],
+    [AS_HELP_STRING(
+        [--enable-static],
+        [build statically linked binaries])],
+    [STATIC_ARG="${enable_static}"],
+    [STATIC_ARG=no])
+
+if ! test "${STATIC_ARG}" = "no"
+then
+    LDFLAGS="${LDFLAGS} -static"
+fi
+
 ###############################################################################
 # check for GSL
 ###############################################################################
@@ -156,6 +168,8 @@ AC_SUBST([GSL_CFLAGS])
 MATHLDADD="-lm"
 AC_SUBST([MATHLDADD])
 
+AC_SUBST([LDFLAGS])
+
 # declare `config.h` as output header
 AC_CONFIG_HEADERS([config.h])
 
@@ -167,5 +181,4 @@ AC_CONFIG_SUBDIRS([src/abacus])
 
 # output declared files
 AC_OUTPUT
-
 

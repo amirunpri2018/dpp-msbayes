@@ -725,6 +725,7 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 enable_dependency_tracking
+enable_static
 with_gsl
 '
       ac_precious_vars='build_alias
@@ -1357,6 +1358,7 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --disable-dependency-tracking  speeds up one-time build
   --enable-dependency-tracking   do not reject slow dependency extractors
+  --enable-static         build statically linked binaries
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -4683,6 +4685,19 @@ $as_echo "yes" >&6; }
 
 fi
 
+# Check whether --enable-static was given.
+if test "${enable_static+set}" = set; then :
+  enableval=$enable_static; STATIC_ARG="${enable_static}"
+else
+  STATIC_ARG=no
+fi
+
+
+if ! test "${STATIC_ARG}" = "no"
+then
+    LDFLAGS="${LDFLAGS} -static"
+fi
+
 ###############################################################################
 # check for GSL
 ###############################################################################
@@ -4866,6 +4881,8 @@ fi
 
 # define flags
 MATHLDADD="-lm"
+
+
 
 
 # declare `config.h` as output header
@@ -6480,6 +6497,5 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: unrecognized options: $ac_unrecognized_opts" >&5
 $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
-
 
 
