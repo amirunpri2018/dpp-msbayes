@@ -206,7 +206,7 @@ ReadInMSoutputAndCalculateSummaryStatistics (FILE * pfin){
      */
     numTaxonLocusPairs = taxonLocusID = BasePairs = -1;
     sscanf (line,
-	    " %s %s %d %d %s %lf %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %u %s %s %s %d %s %s %s %u ",
+	    " %s %s %d %d %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %u %s %s %s %d %s %s %s %u ",
 	    dum, dum, &nsam, &howmany, dum, dum, dum, dum, dum, dum, dum,
 	    dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum,
 	    dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum, dum,
