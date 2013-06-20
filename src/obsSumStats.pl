@@ -23,7 +23,8 @@
 
 # version: 20060615
 # Originally written by ????, and completely rewritten by 
-# Mike Hickerson <mhick@berkeley.edu> and Naoki Takebayashi <ffnt@uaf.edu>
+# Mike Hickerson <mhickerson@ccny.cuny.edu> and 
+# Naoki Takebayashi <ntakebayashi@alaska.edu>
 # Licensing: GPL
 
 ## dummy strings (DUM_...) will be replaced.
@@ -843,7 +844,9 @@ sub GetSeqDat {
 
     foreach my $i (@data) {
         @line = split (/$sep/, $i);
-        push @result, $line[1];
+	# Note that @line == 1 when the sequence data is empty: ""
+	# Instead of returning undef, it's returning "" in this case.
+	push @result, (@line == 1) ? "" : $line[1];
     }
 
     return (@result)

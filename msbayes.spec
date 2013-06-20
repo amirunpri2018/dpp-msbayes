@@ -1,7 +1,7 @@
 %define debug_package  %{nil}
 
 %define name msbayes
-%define version 20120510
+%define version 20130611
 %define release 1
 
 %define prefix   /usr/local
@@ -29,9 +29,14 @@ taxon pairs.
 
 For the full description, see:
 
-2006 Hickerson, M.J., E, Stahl, and H.A. Lessios. Test for
-simultaneous divergence (TSD) using approximate Bayesian computation
-(ABC). In press (Evolution)
+Huang, W., N. Takebayashi, Y. Qi, M.J. Hickerson. 2011. MTML-msBayes:
+  Approximate Bayesian compartive phylogeographic inference from
+  multiple taxa and multiple loci with rate heterogeneity.  BMC
+  Bioinformatics 12:1-14
+
+Hickerson, M.J., E. Stahl, and H.A. Lessios. 2006. Test for
+simultaneous divergence using approximate Bayesian computation
+(ABC). Evolution 60: 2435-2453
 
 The binaries are statically linked, so you do not need to install GSL
 if you use this RPM.
@@ -81,6 +86,10 @@ rm -r %{builddir}
 %{prefix}/lib/msbayes
 
 %changelog
+* Tue Jun 11 2013 Naoki Takebayashi <ntakebayashi@alaska.edu> [20130611-1]
+- version update
+- minor bug fix
+
 * Wed May 10 2012 Naoki Takebayashi <ntakebayashi@alaska.edu> [20120510-1]
 - version update
 - Fixed a bug that msbayes.pl get stuck without completing all runs.
