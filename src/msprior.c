@@ -244,13 +244,17 @@ main (int argc, char *argv[])
   descendant1ThetaArray = calloc (gParam.numTaxonPairs, sizeof (double));
   descendant2ThetaArray = calloc (gParam.numTaxonPairs, sizeof (double));
   ancestralThetaArray = calloc (gParam.numTaxonPairs, sizeof (double));
+  divIndices = init_i_array(1);
+  divModels = init_i_array_2d(1, 1);
   if ((gParam.concentrationShape > 0) && (gParam.concentrationScale > 0))
   {
+      free_i_array(divIndices);
       divIndices = init_i_array(gParam.numTaxonPairs);
   }
   else if ((gParam.concentrationShape > -1.0) &&
           (gParam.concentrationScale > -1.0))
   {
+      free_i_array_2d(divModels);
       divModels = generate_int_partitions(gParam.numTaxonPairs);
   }
   recTbl = calloc (gParam.numLoci, sizeof (double));
@@ -358,7 +362,9 @@ main (int argc, char *argv[])
                 divModelIndex = gsl_rng_uniform_int(gBaseRand,
                         divModels->length);
                 divMod = get_i_array_2d(divModels, divModelIndex);
-                PSIarray = divMod->a;
+                for (i = 0; i < divMod->length; i++) {
+                    PSIarray[i] = get_i_array(divMod, i);
+                }
                 numTauClasses = divMod->length;
             }
             else
@@ -788,15 +794,8 @@ main (int argc, char *argv[])
   free (ancestralThetaArray);
   free (recTbl);
   free (subParamConstrainConfig);
-  if ((gParam.concentrationShape > 0) && (gParam.concentrationScale > 0))
-  {
-      free_i_array(divIndices);
-  }
-  else if ((gParam.concentrationShape > -1.0) &&
-          (gParam.concentrationScale > -1.0))
-  {
-      free_i_array_2d(divModels);
-  }
+  free_i_array(divIndices);
+  free_i_array_2d(divModels);
   exit (0);
 }
 
