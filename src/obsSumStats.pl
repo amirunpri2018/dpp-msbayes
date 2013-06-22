@@ -85,6 +85,7 @@ use IO::File;
 use File::Copy;
 use Getopt::Std;
 use IPC::Open2;
+use File::Basename;
 
 # Adding the following paths to @INC, so we can find the R scripts.
 # The R scripts should be in the same directory as this perl script,
@@ -94,7 +95,7 @@ use IPC::Open2;
 use FindBin qw($Bin);
 use lib "$Bin";
 use lib "$Bin/../lib/msbayes";
-use lib ".";  # looks for required files in the current directory at first
+# use lib ".";  # looks for required files in the current directory at first
 
 my $sumStatsBinName  = "sumstatsvector";
 my $sep = "\t";  # used as the internal separater between seq and seq name
@@ -930,7 +931,8 @@ sub FindExec {
     # force this behavior to reduce confusion. 
     # When this program become more matured, we should reevaluate this.
     # Similar behavior in acceptRej.pl introduced  Naoki Feb 8, 2008
-    $ENV{'PATH'} = ".:" . $ENV{'PATH'} . 
+    my $bin_dir = dirname(__FILE__);
+    $ENV{'PATH'} = $bin_dir . ":" . $ENV{'PATH'} . 
 	":/bin:/usr/bin:/usr/local/bin:$ENV{'HOME'}/bin";
     my $bin = `which $prog 2>/dev/null`;
     chomp $bin;
