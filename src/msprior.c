@@ -153,7 +153,7 @@ main (int argc, char *argv[])
          *descendant1ThetaArray = NULL, *descendant2ThetaArray = NULL,
          *ancestralThetaArray = NULL, spTheta, thetaMean, descendant1Theta,
          descendant2Theta, tauequalizer, gaussTime = 0.0, mig, rec, BottStr1,
-         BottStr2, BottleTime, concentrationParameter;
+         BottStr2, BottleTime, concentrationParameter, tau_a, tau_b;
   double *recTbl;
   int tauClass, *PSIarray = NULL, i, j;
   i_array_2d * divModels;
@@ -422,8 +422,20 @@ main (int argc, char *argv[])
         // uniqTauArray[u] = gsl_ran_flat (gBaseRand, 0.0, gParam.upperTau);
 	    /* uniqTauArray[u] = gsl_ran_flat (gBaseRand, gParam.lowerTau, */
 	    /*                                 gParam.upperTau); */
-            uniqTauArray[u] = gsl_ran_gamma(gBaseRand, gParam.tauShape,
-                    gParam.tauScale);
+            if ((gParam.tauShape > 0.0) && (gParam.tauScale > 0.0)) {
+                uniqTauArray[u] = gsl_ran_gamma(gBaseRand, gParam.tauShape,
+                        gParam.tauScale);
+            }
+            else {
+                tau_a = fabs(gParam.tauShape);
+                tau_b = fabs(gParam.tauScale);
+                if (tau_a < tau_b) {
+                    uniqTauArray[u] = gsl_ran_flat (gBaseRand, tau_a, tau_b);
+                }
+                else {
+                    uniqTauArray[u] = gsl_ran_flat (gBaseRand, tau_b, tau_a);
+                }
+            }
         }
 
         if ((gParam.concentrationShape > 0) && (gParam.concentrationScale > 0))
