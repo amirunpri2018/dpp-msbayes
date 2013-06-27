@@ -438,7 +438,8 @@ main (int argc, char *argv[])
             }
         }
 
-        if ((gParam.concentrationShape > 0) && (gParam.concentrationScale > 0))
+        if ((gParam.concentrationShape > 0) && (gParam.concentrationScale > 0) 
+                && (numTauClasses < 1))
         {
             /* memset(PSIarray, 0, sizeof(PSIarray)); */
             for (i = 0; i < gParam.numTaxonPairs; i++)
@@ -453,7 +454,8 @@ main (int argc, char *argv[])
             }
         }
         else if ((gParam.concentrationShape > -1.0) &&
-                    (gParam.concentrationScale > -1.0))
+                    (gParam.concentrationScale > -1.0) &&
+                    (numTauClasses < 1))
         {
             counter = 0;
             for (i = 0; i < divMod->length; i++)
