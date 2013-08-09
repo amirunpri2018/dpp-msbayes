@@ -79,7 +79,7 @@ msReject_DEPENDENCIES =
 am_msprior_OBJECTS = msprior-msprior.$(OBJEXT) msprior-setup.$(OBJEXT) \
 	msprior-initvars.$(OBJEXT) msprior-whiteSpaces.$(OBJEXT) \
 	msprior-hashtab.$(OBJEXT) msprior-stringUtils.$(OBJEXT) \
-	msprior-array_utils.$(OBJEXT) \
+	msprior-array_utils.$(OBJEXT) msprior-probability.$(OBJEXT) \
 	msprior-partition_combinatorics.$(OBJEXT) \
 	msprior-partition_combinatorics_random.$(OBJEXT)
 msprior_OBJECTS = $(am_msprior_OBJECTS)
@@ -297,6 +297,8 @@ msprior_SOURCES = \
 	stringUtils.h \
 	abacus/src/array_utils.c \
 	abacus/src/array_utils.h \
+	abacus/src/probability.c \
+	abacus/src/probability.h \
 	abacus/src/partition_combinatorics.c \
 	abacus/src/partition_combinatorics.h \
 	abacus/src/partition_combinatorics_random.c \
@@ -480,6 +482,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msprior-msprior.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msprior-partition_combinatorics.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msprior-partition_combinatorics_random.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msprior-probability.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msprior-setup.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msprior-stringUtils.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msprior-whiteSpaces.Po@am__quote@
@@ -671,6 +674,20 @@ msprior-array_utils.obj: abacus/src/array_utils.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='abacus/src/array_utils.c' object='msprior-array_utils.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -c -o msprior-array_utils.obj `if test -f 'abacus/src/array_utils.c'; then $(CYGPATH_W) 'abacus/src/array_utils.c'; else $(CYGPATH_W) '$(srcdir)/abacus/src/array_utils.c'; fi`
+
+msprior-probability.o: abacus/src/probability.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -MT msprior-probability.o -MD -MP -MF $(DEPDIR)/msprior-probability.Tpo -c -o msprior-probability.o `test -f 'abacus/src/probability.c' || echo '$(srcdir)/'`abacus/src/probability.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msprior-probability.Tpo $(DEPDIR)/msprior-probability.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='abacus/src/probability.c' object='msprior-probability.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -c -o msprior-probability.o `test -f 'abacus/src/probability.c' || echo '$(srcdir)/'`abacus/src/probability.c
+
+msprior-probability.obj: abacus/src/probability.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -MT msprior-probability.obj -MD -MP -MF $(DEPDIR)/msprior-probability.Tpo -c -o msprior-probability.obj `if test -f 'abacus/src/probability.c'; then $(CYGPATH_W) 'abacus/src/probability.c'; else $(CYGPATH_W) '$(srcdir)/abacus/src/probability.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/msprior-probability.Tpo $(DEPDIR)/msprior-probability.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='abacus/src/probability.c' object='msprior-probability.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -c -o msprior-probability.obj `if test -f 'abacus/src/probability.c'; then $(CYGPATH_W) 'abacus/src/probability.c'; else $(CYGPATH_W) '$(srcdir)/abacus/src/probability.c'; fi`
 
 msprior-partition_combinatorics.o: abacus/src/partition_combinatorics.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(msprior_CFLAGS) $(CFLAGS) -MT msprior-partition_combinatorics.o -MD -MP -MF $(DEPDIR)/msprior-partition_combinatorics.Tpo -c -o msprior-partition_combinatorics.o `test -f 'abacus/src/partition_combinatorics.c' || echo '$(srcdir)/'`abacus/src/partition_combinatorics.c

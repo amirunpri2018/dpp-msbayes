@@ -331,7 +331,7 @@ main (int argc, char *argv[])
   }
 #endif
 
-  thetaMean = gParam.thetaShape * gParam.thetaScale;
+  thetaMean = get_gamma_or_uniform_mean(gParam.thetaShape, gParam.thetaScale);
 
   /* Beginning of the main loop */
   for (rep = 0; rep < gParam.reps; rep++)
@@ -422,20 +422,8 @@ main (int argc, char *argv[])
         // uniqTauArray[u] = gsl_ran_flat (gBaseRand, 0.0, gParam.upperTau);
 	    /* uniqTauArray[u] = gsl_ran_flat (gBaseRand, gParam.lowerTau, */
 	    /*                                 gParam.upperTau); */
-            if ((gParam.tauShape > 0.0) && (gParam.tauScale > 0.0)) {
-                uniqTauArray[u] = gsl_ran_gamma(gBaseRand, gParam.tauShape,
+            uniqTauArray[u] = draw_gamma_or_uniform(gBaseRand, gParam.tauShape,
                         gParam.tauScale);
-            }
-            else {
-                tau_a = fabs(gParam.tauShape);
-                tau_b = fabs(gParam.tauScale);
-                if (tau_a < tau_b) {
-                    uniqTauArray[u] = gsl_ran_flat (gBaseRand, tau_a, tau_b);
-                }
-                else {
-                    uniqTauArray[u] = gsl_ran_flat (gBaseRand, tau_b, tau_a);
-                }
-            }
         }
 
         if ((gParam.concentrationShape > 0) && (gParam.concentrationScale > 0) 
@@ -543,10 +531,10 @@ main (int argc, char *argv[])
 
 	  /* spTheta prior */
 
-      descendant1Theta = gsl_ran_gamma(gBaseRand, gParam.thetaShape,
+      descendant1Theta = draw_gamma_or_uniform(gBaseRand, gParam.thetaShape,
               gParam.thetaScale);
       if (gParam.thetaParameters[1] == '1') {
-          descendant2Theta = gsl_ran_gamma(gBaseRand, gParam.thetaShape,
+          descendant2Theta = draw_gamma_or_uniform(gBaseRand, gParam.thetaShape,
                   gParam.thetaScale);
       } else if (gParam.thetaParameters[1] == '0') {
           descendant2Theta = descendant1Theta;
@@ -583,11 +571,12 @@ main (int argc, char *argv[])
       {
           if ((gParam.ancestralThetaShape > 0) && (gParam.ancestralThetaScale > 0))
           {
-              Nanc = gsl_ran_gamma(gBaseRand, gParam.ancestralThetaShape,
+              Nanc = draw_gamma_or_uniform(gBaseRand,
+                      gParam.ancestralThetaShape,
                       gParam.ancestralThetaScale);
           } else
           {
-              Nanc = gsl_ran_gamma(gBaseRand, gParam.thetaShape,
+              Nanc = draw_gamma_or_uniform(gBaseRand, gParam.thetaShape,
                       gParam.thetaScale);
           }
       }
