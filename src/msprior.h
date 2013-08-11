@@ -29,6 +29,7 @@
 
 #include "hashtab/hashtab.h"
 #include "abacus/src/probability.h"
+#include "abacus/src/array_utils.h"
 #include "abacus/src/partition_combinatorics.h"
 #include "abacus/src/partition_combinatorics_random.h"
 

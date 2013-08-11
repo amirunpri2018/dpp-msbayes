@@ -569,15 +569,17 @@ main (int argc, char *argv[])
               ((gParam.thetaParameters[2] == '1') &&
                       (gParam.thetaParameters[1] == '0')))
       {
-          if ((gParam.ancestralThetaShape > 0) && (gParam.ancestralThetaScale > 0))
+          if ((almost_equal(gParam.ancestralThetaShape, 0.0, 0.000000000001)) &&
+              (almost_equal(gParam.ancestralThetaScale, 0.0, 0.000000000001)))
+          {
+              Nanc = draw_gamma_or_uniform(gBaseRand, gParam.thetaShape,
+                      gParam.thetaScale);
+          }
+          else
           {
               Nanc = draw_gamma_or_uniform(gBaseRand,
                       gParam.ancestralThetaShape,
                       gParam.ancestralThetaScale);
-          } else
-          {
-              Nanc = draw_gamma_or_uniform(gBaseRand, gParam.thetaShape,
-                      gParam.thetaScale);
           }
       }
       else if ((gParam.thetaParameters[2] == '1') && 
