@@ -67,6 +67,8 @@ msprior_SOURCES = \
 	abacus/src/array_utils.h \
 	abacus/src/probability.c \
 	abacus/src/probability.h \
+	abacus/src/parsing.c \
+	abacus/src/parsing.h \
 	abacus/src/partition_combinatorics.c \
 	abacus/src/partition_combinatorics.h \
 	abacus/src/partition_combinatorics_random.c \

@@ -36,6 +36,8 @@
 #include <stdarg.h>
 #include <string.h>
 #include <ctype.h>
+#include <string.h>
+#include "abacus/src/parsing.h"
 #include "initvars.h"
 
 int init_globals(FILE *fp, char *names, char *types, ...)
@@ -44,19 +46,30 @@ int init_globals(FILE *fp, char *names, char *types, ...)
     char *p;
     va_list arglist;
     char *namep, *typep, name[40], *e;
+    char * end = "begin sample_tbl";
     void *argp;
     int k;
     int numleft;
+    int found;
 
     numleft = strlen(types);
-    while ( numleft && fgets(ln, LNSZ, fp) ) {  /* read init file */
+    while ( fgets(ln, LNSZ, fp) ) {  /* read init file */
+        found = 0;
         while ( isspace((int)ln[0]) )           /* drop leading whitespace */
             memmove(ln, ln+1, strlen(ln));
         if ( ln[0] == 0 || ln[0] == '#')        /* skip if blank line and */
 	  continue;                             /* comments starting with # */
         p = strchr(ln, '=');                    /* find equal sign */
-        if ( p == NULL )                        /* continue if none */
-            continue;
+        if ( p == NULL) {
+            e = strip(ln);
+            if (strcmp_i(e, end) == 0) {
+                va_end(arglist);
+                break;
+            } else {
+                fprintf(stderr, "ERROR: invalid setting '%s' in config\n", ln);
+                exit(1);
+            }
+        }
         while ( p > ln && isspace((int)(p[-1])) ) { /* remove whitespace */
             memmove(p-1, p, strlen(p-1));           /*   before = sign */
             --p;
@@ -85,12 +98,13 @@ int init_globals(FILE *fp, char *names, char *types, ...)
             k = strcspn(namep, " ");        /* length of namelist entry */
             memmove(name, namep, k);        /* put into name hold area */
             name[k] = 0;                    /* terminate it */
-            if ( strcmp(name, ln) != 0 ) { /* if it doesn't match... */
+            if ( strcmp_i(name, ln) != 0 ) { /* if it doesn't match... */
                 namep += k;                 /* get next name */
                 while ( *namep == ' ' )
                     ++namep;
                 ++typep;                    /* get next type */
             } else {                        /* else name is found... */
+                found = 1;
                 if ( *typep == 'i' ) {      /* if it's an int, init it */
                     *(int *)argp = atoi(p);
 		} else if ( *typep == 'd' ) { /* double */
@@ -131,6 +145,10 @@ int init_globals(FILE *fp, char *names, char *types, ...)
                 numleft--;
                 break;              /* break search; get next line */
             }
+        }
+        if (found == 0) {
+            fprintf(stderr, "ERROR: invalid setting '%s' in config\n", ln);
+            exit(1);
         }
         va_end(arglist);
     }
@@ -186,3 +204,4 @@ int main(int argc, char **argv)
 }
 
 #endif /* TEST */
+
