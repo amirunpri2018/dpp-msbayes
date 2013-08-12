@@ -47,6 +47,7 @@ int init_globals(FILE *fp, char *names, char *types, ...)
     va_list arglist;
     char *namep, *typep, name[40], *e;
     char * end = "begin sample_tbl";
+    char * rng_str = "prngSeed";
     void *argp;
     int k;
     int numleft;
@@ -63,9 +64,11 @@ int init_globals(FILE *fp, char *names, char *types, ...)
         if ( p == NULL) {
             e = strip(ln);
             if (strcmp_i(e, end) == 0) {
+                free(e);
                 va_end(arglist);
                 break;
             } else {
+                free(e);
                 fprintf(stderr, "ERROR: invalid setting '%s' in config\n", ln);
                 exit(1);
             }
@@ -98,7 +101,7 @@ int init_globals(FILE *fp, char *names, char *types, ...)
             k = strcspn(namep, " ");        /* length of namelist entry */
             memmove(name, namep, k);        /* put into name hold area */
             name[k] = 0;                    /* terminate it */
-            if ( strcmp_i(name, ln) != 0 ) { /* if it doesn't match... */
+            if (strcmp_i(name, ln) != 0) { /* if it doesn't match... */
                 namep += k;                 /* get next name */
                 while ( *namep == ' ' )
                     ++namep;
@@ -146,7 +149,7 @@ int init_globals(FILE *fp, char *names, char *types, ...)
                 break;              /* break search; get next line */
             }
         }
-        if (found == 0) {
+        if ((found == 0) && (strcmp_i(ln, rng_str) != 0)) {
             fprintf(stderr, "ERROR: invalid setting '%s' in config\n", ln);
             exit(1);
         }
