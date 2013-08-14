@@ -46,7 +46,7 @@ of `msBayes` can be found in:
  > Oaks, J. R., Sukumaran, J., Esselstyn, J. A., Linkem, C. W., Siler, C. D.,
  > Holder, M. T., & Brown, R. M. (2012). Evidence for climate-driven
  > diversification? A caution for interpreting ABC inferences of simultaneous
- > historical events. Evolution, 67(4), 991–1010.
+ > historical events. Evolution, 67(4), 991-1010.
  > doi:10.1111/j.1558-5646.2012.01840.x.
 
 Documentation
@@ -105,8 +105,8 @@ the original when it comes to the preamble of configuration files.
     implementation is case-sensitive regarding the keywords in the preamble.
     I.e., the camel-case type for `subParamConstrain` is strictly enforced.
     More importantly, the old version quietly uses default settings when any
-    options are mis-typed.  in other words if you specified `uppertheta = 0.01`
-    in a config (note the lower case "t"), it would quietly use the default
+    options are mis-typed.  in other words if you specify `uppertheta = 0.01`
+    in a config (note the lower case "t"), it will quietly use the default
     setting for `upperTheta` and *not* report any warning or error.
 
     In this version of the software, the keywords in the preamble are case
@@ -117,144 +117,144 @@ the original when it comes to the preamble of configuration files.
     parameterize the model and specify prior probability distributions on
     parameters, as follows:
 
- -  `concentrationShape`/`concentrationScale`
+     -  `concentrationShape`/`concentrationScale`
+        
+        Rather than assume the U-shaped prior of the original `msBayes` (see Oaks
+        et al., 2012), this implementation allows the user to specify a
+        Dirichlet-process prior over all possible divergence models.  Specifically
+        when both of these options are positive numbers, they define the shape and
+        scale parameters of a gamma hyperprior controlling the concentration
+        parameter of a Dirichlet-process prior on divergence models.
     
-    Rather than assume the U-shaped prior of the original `msBayes` (see Oaks
-    et al., 2012), this implementation allows the user to specify a
-    Dirichlet-process prior over all possible divergence models.  Specifically
-    when both of these options are positive numbers, they define the shape and
-    scale parameters of a gamma hyperprior controlling the concentration
-    parameter of a Dirichlet-process prior on divergence models.
-
-    If either or both are zero (as above), this specifies that a uniform prior
-    over order-independent divergence models (*not* over the number of
-    divergence events; I.e., Psi) is to be used.
-
-    If either or both are -1.0 or less, then the original U-shaped prior is
-    used. It's an odd combination of a discrete uniform distribution on the
-    number of divergence events (Psi) and a multinomial distribution on the
-    divergence model given the number of events (with the constraint that there
-    must be Psi elements in the model; see Oaks et al. 2012 for full details).
-
- -  `thetaParameters`
+        If either or both are zero (as above), this specifies that a uniform prior
+        over order-independent divergence models (*not* over the number of
+        divergence events; I.e., Psi) is to be used.
     
-    This implementation allows the user full control over the parameterization
-    of the population size parameters for each population pair, which we will
-    refer to theta_a, theta_d1, and theta_d2 for the ancestral, and two
-    descendant populations.
-
-    `000` is one extreme, where theta_a, theta_d1, and theta_d2 are all
-    constrained to be equal for each population pair (population sizes will
-    still vary among pairs).
-
-    `012` is the other extreme, where theta_a, theta_d1, and theta_d2 are all
-    estimated as independent parameters. This is most similar to the original
-    `msBayes`, however, the descendant population sizes are constrained to be
-    negatively correlated in the original implementation (see Oaks 2012).
-
-    Another example is `001`: the descendant populations share the same size
-    parameter, but the ancestral population size is free to vary.
-
-    For `011` and `010`, one of the descendant population is constrained to the
-    same size as the ancestral, and the other is free to vary.
-
-    Note, this indicator sequence should always be three integers long, always
-    start with `0` and increment by 1 whenever a free parameter is added.
-
- -  `thetaShape`/`thetaScale`
-
-    These settings define the shape and scale parameters of a gamma prior
-    distribution on population size parameters (scaled by the per-site mutation
-    rate (u); Nu).
-
- -  `ancestralThetaShape`/`ancestralThetaScale`
+        If either or both are -1.0 or less, then the original U-shaped prior is
+        used. It's an odd combination of a discrete uniform distribution on the
+        number of divergence events (Psi) and a multinomial distribution on the
+        divergence model given the number of events (with the constraint that there
+        must be Psi elements in the model; see Oaks et al. 2012 for full details).
     
-    If these settings are both provided and both are positive, they define the
-    shape and scale parameters of a gamma prior on the sizes of ancestral
-    populations.
+     -  `thetaParameters`
+        
+        This implementation allows the user full control over the parameterization
+        of the population size parameters for each population pair, which we will
+        refer to theta_a, theta_d1, and theta_d2 for the ancestral, and two
+        descendant populations.
     
-    If they are excluded, or both are zero, the `thetaShape` and `thetaScale`
-    settings are used for the gamma prior on ancestral population size
-    parameters.
-
- -  `tauShape`/`tauScale`
+        `000` is one extreme, where theta_a, theta_d1, and theta_d2 are all
+        constrained to be equal for each population pair (population sizes will
+        still vary among pairs).
     
-    These settings define the shape and scale parameters of a gamma prior
-    distribution on divergence time parameters. The units are in coalescent
-    units, Nc generations, where "Nc" is a constant reference population size
-    based on the mean of the theta prior (defined by `thetaShape` and
-    `thetaScale`). If we use theta_prior_mean to represent the mean of the
-    theta prior, then Nc is theta_prior_mean / u, where "u" is the per-site
-    mutation rate. Thus, you can convert these "Nc generations" units to the
-    number of generations by assuming a mutation rate and multiplying by
-    (theta_mean_prior/u). See Oaks (2012) for more details.
-
- -  `bottleProportionShapeA`/`bottleProportionShapeB`
+        `012` is the other extreme, where theta_a, theta_d1, and theta_d2 are all
+        estimated as independent parameters. This is most similar to the original
+        `msBayes`, however, the descendant population sizes are constrained to be
+        negatively correlated in the original implementation (see Oaks 2012).
     
-    If both are positive, settings define the shape parameters alpha and beta,
-    respectively, of a beta prior distribution on the magnitude parameters (in
-    units of the proportion of the population size) of a post-divergence
-    bottleneck in each of the descendant populations.
-
-    The bottleneck proportions are in terms of the proportion of the effective
-    population size that remains following the bottleneck. Thus a value of 0.95
-    would mean that bottleneck reduces the effective population size by 5%.
-
-    If either or both are zero or less, there is no post-divergence population
-    bottleneck (i.e., these parameters along with the timing of the bottleneck
-    are removed from the model).
-
-    NOTE, there are also a parameters in the model for the timing of the end of
-    the bottleneck (it begins at speciation in forward time). There is one of
-    these parameters for each descendant population (i.e., the descendant
-    populations of each pair share the same bottleneck-end-time parameter).
-    Thus if either or both of the
-    `bottleProportionShapeA`/`bottleProportionShapeB` settings are zero or
-    less, you are also removing these bottleneck timing parameters from the
-    model. This means you are removing 3*Y parameters from the model, where "Y"
-    is the number of taxon pairs.
-
- -  `bottleProportionShared`
-
-    If this option is zero, then there are two free bottleneck-magnitude
-    parameters for each population pair (one for each descendant population).
-    If it is any other number, then there is one bottleneck-magnitude parameter
-    for each population pair (i.e., the descendant populations of each pair
-    share the same bottleneck parameter).
-
-    NOTE, this setting is overridden if either or both of the
-    `bottleProportionShapeA` or `bottleProportionShapeB` settings is zero or
-    less (because then there is no bottleneck parameters at all).
-
- -  `migrationShape`/`migrationScale`
-
-    These settings define the shape and scale parameters of a gamma prior
-    distribution on symmetric migration parameters (in units of the number of
-    gene copies per generation).
-
-    If either or both are zero or less, there is no migration in the model.
-
- -  `recombinationShape`/`recombinationScale`
-
-    These settings define the shape and scale parameters of a gamma prior
-    distribution on the intragenic recombination rate parameters.
-
-    If either or both are zero or less, there is no recombination in the model.
-
- -  `numTauClasses`
+        Another example is `001`: the descendant populations share the same size
+        parameter, but the ancestral population size is free to vary.
     
-    If this setting is zero, the number of divergence events is free to vary
-    according to the prior on divergence models specified by
-    `concentrationShape` and `concentrationScale`.
-
-    If greater than zero, then the model is constrained to `numTauClasses`
-    divergence events.
-
- -  `constrain`/`subParamConstrain`
+        For `011` and `010`, one of the descendant population is constrained to the
+        same size as the ancestral, and the other is free to vary.
     
-    I strongly recommend *not* changing these settings. The software is
-    completely untested in how it behaves when constrained models are specified
-    with these options.
+        Note, this indicator sequence should always be three integers long, always
+        start with `0` and increment by 1 whenever a free parameter is added.
+    
+     -  `thetaShape`/`thetaScale`
+    
+        These settings define the shape and scale parameters of a gamma prior
+        distribution on population size parameters (scaled by the per-site mutation
+        rate (u); Nu).
+    
+     -  `ancestralThetaShape`/`ancestralThetaScale`
+        
+        If these settings are both provided and both are positive, they define the
+        shape and scale parameters of a gamma prior on the sizes of ancestral
+        populations.
+        
+        If they are excluded, or both are zero, the `thetaShape` and `thetaScale`
+        settings are used for the gamma prior on ancestral population size
+        parameters.
+    
+     -  `tauShape`/`tauScale`
+        
+        These settings define the shape and scale parameters of a gamma prior
+        distribution on divergence time parameters. The units are in coalescent
+        units, Nc generations, where "Nc" is a constant reference population size
+        based on the mean of the theta prior (defined by `thetaShape` and
+        `thetaScale`). If we use theta_prior_mean to represent the mean of the
+        theta prior, then Nc is theta_prior_mean / u, where "u" is the per-site
+        mutation rate. Thus, you can convert these "Nc generations" units to the
+        number of generations by assuming a mutation rate and multiplying by
+        (theta_mean_prior/u). See Oaks (2012) for more details.
+    
+     -  `bottleProportionShapeA`/`bottleProportionShapeB`
+        
+        If both are positive, settings define the shape parameters alpha and beta,
+        respectively, of a beta prior distribution on the magnitude parameters (in
+        units of the proportion of the population size) of a post-divergence
+        bottleneck in each of the descendant populations.
+    
+        The bottleneck proportions are in terms of the proportion of the effective
+        population size that remains following the bottleneck. Thus a value of 0.95
+        would mean that bottleneck reduces the effective population size by 5%.
+    
+        If either or both are zero or less, there is no post-divergence population
+        bottleneck (i.e., these parameters along with the timing of the bottleneck
+        are removed from the model).
+    
+        NOTE, there are also a parameters in the model for the timing of the end of
+        the bottleneck (it begins at speciation in forward time). There is one of
+        these parameters for each descendant population (i.e., the descendant
+        populations of each pair share the same bottleneck-end-time parameter).
+        Thus if either or both of the
+        `bottleProportionShapeA`/`bottleProportionShapeB` settings are zero or
+        less, you are also removing these bottleneck timing parameters from the
+        model. This means you are removing 3*Y parameters from the model, where "Y"
+        is the number of taxon pairs.
+    
+     -  `bottleProportionShared`
+    
+        If this option is zero, then there are two free bottleneck-magnitude
+        parameters for each population pair (one for each descendant population).
+        If it is any other number, then there is one bottleneck-magnitude parameter
+        for each population pair (i.e., the descendant populations of each pair
+        share the same bottleneck parameter).
+    
+        NOTE, this setting is overridden if either or both of the
+        `bottleProportionShapeA` or `bottleProportionShapeB` settings is zero or
+        less (because then there is no bottleneck parameters at all).
+    
+     -  `migrationShape`/`migrationScale`
+    
+        These settings define the shape and scale parameters of a gamma prior
+        distribution on symmetric migration parameters (in units of the number of
+        gene copies per generation).
+    
+        If either or both are zero or less, there is no migration in the model.
+    
+     -  `recombinationShape`/`recombinationScale`
+    
+        These settings define the shape and scale parameters of a gamma prior
+        distribution on the intragenic recombination rate parameters.
+    
+        If either or both are zero or less, there is no recombination in the model.
+    
+     -  `numTauClasses`
+        
+        If this setting is zero, the number of divergence events is free to vary
+        according to the prior on divergence models specified by
+        `concentrationShape` and `concentrationScale`.
+    
+        If greater than zero, then the model is constrained to `numTauClasses`
+        divergence events.
+    
+     -  `constrain`/`subParamConstrain`
+        
+        I strongly recommend *not* changing these settings. The software is
+        completely untested in how it behaves when constrained models are specified
+        with these options.
 
 Literature Cited
 ================
@@ -262,7 +262,7 @@ Literature Cited
  > Oaks, J. R., Sukumaran, J., Esselstyn, J. A., Linkem, C. W., Siler, C. D.,
  > Holder, M. T., & Brown, R. M. (2012). Evidence for climate-driven
  > diversification? A caution for interpreting ABC inferences of simultaneous
- > historical events. Evolution, 67(4), 991–1010.
+ > historical events. Evolution, 67(4), 991-1010.
  > doi:10.1111/j.1558-5646.2012.01840.x.
 
 License
