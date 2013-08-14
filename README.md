@@ -10,7 +10,7 @@ phylogeographic histories.
 
 In this distribution of the code, the phylogeographic model has been
 re-parameterized, and different probability distributions are made available to
-express prior information about many of the models' parameters.
+express prior uncertainty about many of the models' parameters.
 
 Requirements
 ============
@@ -94,10 +94,28 @@ configuration file:
     pair3	locus0	1	1	10	10	15.6	1000	0.35	0.28	0.13	pair3.locus0.fasta
     END SAMPLE_TBL
 
-The only difference between the configuration for this modified version of
-`msBayes` and the original is in the preamble (the section prior to
-"BEGIN SAMPLE_TBL"). The options in the preamble allow you to parameterize
-the model and specify probability distributions on parameters.
+A configuration file has two parts, (1) the *sample table* delimited by the
+`BEGIN SAMPLE_TBL` and `END SAMPLE_TBL` lines, and (2) the *preamble*
+containing keyword arguments prior to the sample table.
+
+There are two differences between this modified implementation of `msBayes` and
+the original when it comes to the preamble of configuration files.
+
+ 1. The preamble is processed differently in this version. The original
+    implementation is case-sensitive regarding the keywords in the preamble.
+    I.e., the camel-case type for `subParamConstrain` is strictly enforced.
+    More importantly, the old version quietly uses default settings when any
+    options are mis-typed.  in other words if you specified `uppertheta = 0.01`
+    in a config (note the lower case "t"), it would quietly use the default
+    setting for `upperTheta` and *not* report any warning or error.
+
+    In this version of the software, the keywords in the preamble are case
+    insensitive, and if any unrecognized keywords are encountered, an error is
+    reported and the process exits (i.e., crashes).
+
+ 2. In this version, the options in the preamble are different and allow you to
+    parameterize the model and specify prior probability distributions on
+    parameters, as follows:
 
  -  `concentrationShape`/`concentrationScale`
     
@@ -237,6 +255,15 @@ the model and specify probability distributions on parameters.
     I strongly recommend *not* changing these settings. The software is
     completely untested in how it behaves when constrained models are specified
     with these options.
+
+Literature Cited
+================
+
+ > Oaks, J. R., Sukumaran, J., Esselstyn, J. A., Linkem, C. W., Siler, C. D.,
+ > Holder, M. T., & Brown, R. M. (2012). Evidence for climate-driven
+ > diversification? A caution for interpreting ABC inferences of simultaneous
+ > historical events. Evolution, 67(4), 991–1010.
+ > doi:10.1111/j.1558-5646.2012.01840.x.
 
 License
 =======
