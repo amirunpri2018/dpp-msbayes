@@ -16,12 +16,19 @@ This is a modified version of the `msBayes` package. It is modified from
 version 20130611 (revision 146) available via SVN here:
 <http://sourceforge.net/projects/msbayes/>.
 
-`msBayes` implements approximate Bayesian model choice to infer comparative
+`dpp-msbayes` implements approximate Bayesian model choice to infer comparative
 phylogeographic histories.
 
 In this distribution of the code, the phylogeographic model has been
 re-parameterized, and different probability distributions are made available to
 express prior uncertainty about many of the models' parameters.
+
+I strongly recommend you use this software via the Python multiprocessing
+package `PyMsBayes` (<https://github.com/joaks1/PyMsBayes>). This package comes
+bundled with pre-compiled `dpp-msbayes` executables (and the original `msBayes`
+executable, as well, which you can use interchangeably). Also, the test suite
+of `PyMsBayes` is *much* more extensive. If you do opt to use `PyMsBayes`,
+however, I still encourage you to read the `Documentation` section below.
 
 Requirements
 ============
