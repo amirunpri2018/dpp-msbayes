@@ -116,7 +116,6 @@ the original when it comes to the preamble of configuration files.
  2. In this version, the options in the preamble are different and allow you to
     parameterize the model and specify prior probability distributions on
     parameters, as follows:
-
      -  `concentrationShape`/`concentrationScale`
         
         Rather than assume the U-shaped prior of the original `msBayes` (see Oaks
@@ -135,7 +134,6 @@ the original when it comes to the preamble of configuration files.
         number of divergence events (Psi) and a multinomial distribution on the
         divergence model given the number of events (with the constraint that there
         must be Psi elements in the model; see Oaks et al. 2012 for full details).
-    
      -  `thetaParameters`
         
         This implementation allows the user full control over the parameterization
@@ -160,13 +158,11 @@ the original when it comes to the preamble of configuration files.
     
         Note, this indicator sequence should always be three integers long, always
         start with `0` and increment by 1 whenever a free parameter is added.
-    
      -  `thetaShape`/`thetaScale`
     
         These settings define the shape and scale parameters of a gamma prior
         distribution on population size parameters (scaled by the per-site mutation
         rate (u); Nu).
-    
      -  `ancestralThetaShape`/`ancestralThetaScale`
         
         If these settings are both provided and both are positive, they define the
@@ -176,7 +172,6 @@ the original when it comes to the preamble of configuration files.
         If they are excluded, or both are zero, the `thetaShape` and `thetaScale`
         settings are used for the gamma prior on ancestral population size
         parameters.
-    
      -  `tauShape`/`tauScale`
         
         These settings define the shape and scale parameters of a gamma prior
@@ -188,7 +183,6 @@ the original when it comes to the preamble of configuration files.
         mutation rate. Thus, you can convert these "Nc generations" units to the
         number of generations by assuming a mutation rate and multiplying by
         (theta_mean_prior/u). See Oaks (2012) for more details.
-    
      -  `bottleProportionShapeA`/`bottleProportionShapeB`
         
         If both are positive, settings define the shape parameters alpha and beta,
@@ -213,7 +207,6 @@ the original when it comes to the preamble of configuration files.
         less, you are also removing these bottleneck timing parameters from the
         model. This means you are removing 3*Y parameters from the model, where "Y"
         is the number of taxon pairs.
-    
      -  `bottleProportionShared`
     
         If this option is zero, then there are two free bottleneck-magnitude
@@ -225,7 +218,6 @@ the original when it comes to the preamble of configuration files.
         NOTE, this setting is overridden if either or both of the
         `bottleProportionShapeA` or `bottleProportionShapeB` settings is zero or
         less (because then there is no bottleneck parameters at all).
-    
      -  `migrationShape`/`migrationScale`
     
         These settings define the shape and scale parameters of a gamma prior
@@ -233,14 +225,12 @@ the original when it comes to the preamble of configuration files.
         gene copies per generation).
     
         If either or both are zero or less, there is no migration in the model.
-    
      -  `recombinationShape`/`recombinationScale`
     
         These settings define the shape and scale parameters of a gamma prior
         distribution on the intragenic recombination rate parameters.
     
         If either or both are zero or less, there is no recombination in the model.
-    
      -  `numTauClasses`
         
         If this setting is zero, the number of divergence events is free to vary
@@ -249,7 +239,6 @@ the original when it comes to the preamble of configuration files.
     
         If greater than zero, then the model is constrained to `numTauClasses`
         divergence events.
-    
      -  `constrain`/`subParamConstrain`
         
         I strongly recommend *not* changing these settings. The software is
