@@ -1,3 +1,14 @@
+Table of Contents
+=================
+
+ -  [Overview](#overview)
+ -  [Requirements](#requirements)
+ -  [Installation](#installation)
+ -  [Citing dpp-msbayes](#citing-dpp-msbayes)
+ -  [Documentation](#documentation)
+ -  [Literature Cited](#literature-cited)
+ -  [License](#license)
+
 Overview
 ========
 
@@ -29,8 +40,8 @@ Installation
 This version of `msBayes` now follows the GNU Build System via Autotools.  For
 specifics, please see `INSTALL.md`.
 
-Citing PyMsBayes
-================
+Citing dpp-msbayes
+==================
 
 If you publish results obtained using this software, please cite the work
 describing the version of `msBayes` this code is based on:
