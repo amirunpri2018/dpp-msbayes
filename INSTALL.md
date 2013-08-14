@@ -1,3 +1,13 @@
+Table of Contents
+=================
+
+ -  [Installation](#installation)
+    -  [Requirements](#requirements)
+    -  [Quick Default Install](#quick-default-install)
+    -  [More Install Details](#more-install-details)
+        -  [Specifying GSL location](#specifying-gsl-location)
+        -  [Changing the install location](#changing-the-install-location)
+
 Installation
 ============
 
