@@ -771,13 +771,11 @@ main (int argc, char *argv[])
 	}
 
       /* The followings are used to calculate prior, processed in msbayes.pl */
-      printf ("# TAU_PSI_TBL setting: %d realizedNumTauClasses: %u tauTbl:", 
+      printf ("# TAU_PSI_TBL setting: %d realizedNumTauClasses: %u", 
 	      gParam.numTauClasses, numTauClasses);
-      for (zzz = 0; zzz < numTauClasses; zzz++)
-	printf (",%lf", uniqTauArray[zzz]);
-      printf(" psiTbl:");
-      for (zzz = 0; zzz < numTauClasses; zzz++)
-	printf (",%d", PSIarray[zzz]);
+      printf(" tauTbl:");
+      for (zzz = 0; zzz < gParam.numTaxonPairs; zzz++)
+          printf (",%.11lf", taxonTauArray[zzz]);
       printf(" d1ThetaTbl:");
       for (zzz = 0; zzz < gParam.numTaxonPairs; zzz++)
           printf (",%lf", descendant1ThetaArray[zzz]);
