@@ -272,6 +272,15 @@ Literature Cited
  > historical events. Evolution, 67(4), 991-1010.
  > doi:10.1111/j.1558-5646.2012.01840.x.
 
+Acknowledgements
+================
+
+This software greatly benefited from funding provided to Jamie Oaks from the
+National Science Foundation (DEB 1011423), University of Kansas (KU) Office of
+Graduate Studies, Society of Systematic Biologists, Sigma Xi Scientific
+Research Society, KU Ecology and Evolutionary Biology Department, and the KU
+Biodiversity Institute.
+
 License
 =======
 
