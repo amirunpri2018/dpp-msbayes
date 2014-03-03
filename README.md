@@ -275,11 +275,11 @@ Literature Cited
 Acknowledgements
 ================
 
-This software greatly benefited from funding provided to Jamie Oaks from the
-National Science Foundation (DEB 1011423), University of Kansas (KU) Office of
-Graduate Studies, Society of Systematic Biologists, Sigma Xi Scientific
-Research Society, KU Ecology and Evolutionary Biology Department, and the KU
-Biodiversity Institute.
+This software greatly benefited from funding provided to [Jamie
+Oaks](http://www.phyletica.com) from the National Science Foundation (DEB
+1011423), University of Kansas (KU) Office of Graduate Studies, Society of
+Systematic Biologists, Sigma Xi Scientific Research Society, KU Ecology and
+Evolutionary Biology Department, and the KU Biodiversity Institute.
 
 License
 =======
