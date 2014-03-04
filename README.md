@@ -12,9 +12,9 @@ Table of Contents
 Overview
 ========
 
-This is a modified version of the `msBayes` package. It is modified from
-version 20130611 (revision 146) available via SVN here:
-<http://sourceforge.net/projects/msbayes/>.
+This is a modified version of the `msBayes` package. It is modified by [Jamie
+Oaks](http://www.phyletica.com) from version 20130611 (revision 146) available
+via SVN here: <http://sourceforge.net/projects/msbayes/>.
 
 `dpp-msbayes` implements approximate Bayesian model choice to infer comparative
 phylogeographic histories.
@@ -50,15 +50,21 @@ specifics, please see `INSTALL.md`.
 Citing dpp-msbayes
 ==================
 
-If you publish results obtained using this software, please cite the work
-describing the version of `msBayes` this code is based on:
+If you publish results obtained using this software, please cite:
+
+ > Oaks, J. R. (2014). An Improved Approximate-Bayesian Model-choice Method for
+ > Estimating Shared Evolutionary History. arXiv:1402.6303 [q-bio:PE].
+ > <http://arxiv.org/abs/1402.6303>
+
+Also, please cite the work describing the version of `msBayes` this code is
+based on:
 
  > Huang, W., N. Takebayashi, Y. Qi, and M. J. Hickerson, 2011.
  > MTML-msBayes: Approximate Bayesian comparative phylogeographic
  > inference from multiple taxa and multiple loci with rate
  > heterogeneity. BMC Bioinformatics 12:1.
 
-Also, more details of the model implemeted in the original version
+Also, more details of the model implemented in the original version
 of `msBayes` can be found in:
 
  > Oaks, J. R., Sukumaran, J., Esselstyn, J. A., Linkem, C. W., Siler, C. D.,
