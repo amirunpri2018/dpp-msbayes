@@ -3,7 +3,7 @@ EXTRA_DIST = hashtab/main.c hashtab/Makefile
 bin_PROGRAMS = \
 	sumstatsvector \
 	msDQH \
-	msprior \
+	dpp-msprior \
 	msReject
 
 dist_bin_SCRIPTS = \
@@ -50,7 +50,7 @@ msDQH_SOURCES = \
 msDQH_LDADD = @GSL_LIBS@
 msDQH_CFLAGS = @GSL_CFLAGS@
 
-msprior_SOURCES = \
+dpp_msprior_SOURCES = \
 	msprior.c \
 	msprior.h \
 	setup.c \
@@ -74,8 +74,8 @@ msprior_SOURCES = \
 	abacus/src/partition_combinatorics_random.c \
 	abacus/src/partition_combinatorics_random.h
 
-msprior_LDADD = @GSL_LIBS@
-msprior_CFLAGS = @GSL_CFLAGS@
+dpp_msprior_LDADD = @GSL_LIBS@
+dpp_msprior_CFLAGS = @GSL_CFLAGS@
 
 msReject_SOURCES = rejectinC.c
 
