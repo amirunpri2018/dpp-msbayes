@@ -11,7 +11,7 @@ dist_bin_SCRIPTS = \
 	acceptRej_flex.pl \
 	convertIM.pl \
 	dataSummary.pl \
-	msbayes.pl \
+	dpp-msbayes.pl \
 	msCombModels.pl \
 	obsSumStats.pl \
 	regress_cli.r
