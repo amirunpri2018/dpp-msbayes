@@ -1,5 +1,5 @@
 if USE_GSL
-SUBDIRS = src/abacus src .
+SUBDIRS = src/abacus src/old-model src .
 else
 SUBDIRS = src/abacus .
 endif

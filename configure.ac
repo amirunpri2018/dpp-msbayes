@@ -43,10 +43,19 @@ AC_ARG_ENABLE([static],
     [STATIC_ARG="${enable_static}"],
     [STATIC_ARG=no])
 
+AC_ARG_ENABLE([old-model],
+    [AS_HELP_STRING(
+        [--enable-old-model],
+        [build and install old model along side new implementation])],
+    [OLD_MODEL_ARG="${enable_old_model}"],
+    [OLD_MODEL_ARG=no])
+
 if ! test "${STATIC_ARG}" = "no"
 then
     LDFLAGS="${LDFLAGS} -static"
 fi
+
+AM_CONDITIONAL([INSTALL_OLD], [test "$OLD_MODEL_ARG" = "yes"])
 
 ###############################################################################
 # check for GSL
@@ -174,7 +183,7 @@ AC_SUBST([LDFLAGS])
 AC_CONFIG_HEADERS([config.h])
 
 # declare output `Makefile`s
-AC_CONFIG_FILES([Makefile src/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile src/old-model/Makefile])
 
 # call 'abacus's configure script recursively
 AC_CONFIG_SUBDIRS([src/abacus])

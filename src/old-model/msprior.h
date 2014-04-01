@@ -17,7 +17,7 @@
 #define MAX_NAME_CHAR_LEN 1024
 #define NUMBER_OF_CONPARAM 9
 
-#include "hashtab.h"
+#include "../hashtab/hashtab.h"
 
 // JRO - modified - 11/17/2011
 typedef struct
