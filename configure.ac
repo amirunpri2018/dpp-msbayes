@@ -3,7 +3,7 @@
 # `aclocal.m4`, respectively.
 
 # initialize Autoconf
-AC_INIT([msbayes], [0.1], [joaks1@ku.edu])
+AC_INIT([dpp-msbayes], [0.1], [joaks1@gmail.com])
 AC_PREREQ([2.59])
 
 # safety check for source dir
