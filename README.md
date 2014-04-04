@@ -6,8 +6,8 @@ Table of Contents
  -  [Installation](#installation)
  -  [Citing dpp-msbayes](#citing-dpp-msbayes)
  -  [Documentation](#documentation)
- -  [The Configuration File](#the-configuration-file)
- -  [The Preamble](#the-preamble)
+    -  [The Configuration File](#the-configuration-file)
+        -  [The Preamble](#the-preamble)
  -  [Literature Cited](#literature-cited)
  -  [License](#license)
 
