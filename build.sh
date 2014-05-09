@@ -8,6 +8,7 @@ usage () {
     echo "  -p|--prefix     install path. Default: '/usr/local'."
     echo "  -t|--test       run the test suite after building."
     echo "  -i|--install    install the executables."
+    echo "  --old           include old model in build."
     echo ""
 }
 
@@ -27,6 +28,7 @@ static=""
 install_prefix=""
 run_tests=""
 run_install=""
+include_old=""
 while [ "$1" != "" ]
 do
     case $1 in
@@ -47,6 +49,9 @@ do
         -i| --install)
             run_install=1
             ;;
+        --old)
+            include_old=1
+            ;;
         * )
             extra_args="$extra_args $1"
     esac
@@ -60,6 +65,10 @@ fi
 if [ -n "$static" ]
 then
     args="${args} -DCMAKE_C_FLAGS=-static"
+fi
+if [ -n "$include_old" ]
+then
+    args="${args} -DINCLUDE_OLD_MODEL=YES"
 fi
 if [ -n "$extra_args" ]
 then
