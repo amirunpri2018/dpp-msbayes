@@ -46,8 +46,8 @@ availabe (e.g., GLM regression implemented by `ABCtoolbox`;
 Installation
 ============
 
-This version of `msBayes` now follows the GNU Build System via Autotools.  For
-specifics, please see
+This version of `msBayes` now uses `CMake` (<http://www.cmake.org/>) for the
+build system.  For specifics, please see
 [`INSTALL.md`](https://github.com/joaks1/dpp-msbayes/blob/master/INSTALL.md).
 
 Citing dpp-msbayes
