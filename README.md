@@ -8,8 +8,9 @@ Table of Contents
  -  [Documentation](#documentation)
     -  [The Configuration File](#the-configuration-file)
         -  [The Preamble](#the-preamble)
- -  [Literature Cited](#literature-cited)
+ -  [Acknowledgements](#acknowledgements)
  -  [License](#license)
+ -  [Literature Cited](#literature-cited)
 
 Overview
 ========
@@ -278,15 +279,6 @@ the original when it comes to the preamble of configuration files.
     completely untested in how it behaves when constrained models are specified
     with these options.
 
-Literature Cited
-================
-
- > Oaks, J. R., Sukumaran, J., Esselstyn, J. A., Linkem, C. W., Siler, C. D.,
- > Holder, M. T., & Brown, R. M. (2012). Evidence for climate-driven
- > diversification? A caution for interpreting ABC inferences of simultaneous
- > historical events. Evolution, 67(4), 991-1010.
- > doi:10.1111/j.1558-5646.2012.01840.x.
-
 Acknowledgements
 ================
 
@@ -313,4 +305,13 @@ You should have received a copy of the GNU General Public License along
 with this program. If not, see <http://www.gnu.org/licenses/>.
 
 See "LICENSE" for full terms and conditions of usage.
+
+Literature Cited
+================
+
+ > Oaks, J. R., Sukumaran, J., Esselstyn, J. A., Linkem, C. W., Siler, C. D.,
+ > Holder, M. T., & Brown, R. M. (2012). Evidence for climate-driven
+ > diversification? A caution for interpreting ABC inferences of simultaneous
+ > historical events. Evolution, 67(4), 991-1010.
+ > doi:10.1111/j.1558-5646.2012.01840.x.
 
