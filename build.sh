@@ -33,6 +33,7 @@ install_prefix=""
 run_tests=""
 run_install=""
 include_old=""
+universal_mac_build=""
 while [ "$1" != "" ]
 do
     case $1 in
@@ -56,6 +57,11 @@ do
         --old)
             include_old=1
             ;;
+        --universal-mac-build)
+            universal_mac_build=1
+            include_old=1
+            static=1
+            ;;
         * )
             extra_args="$extra_args $1"
     esac
@@ -78,6 +84,10 @@ if [ -n "$extra_args" ]
 then
     args="${args} ${extra_args}"
 fi
+if [ -n "$universal_mac_build" ]
+then
+    args="${args} -DCMAKE_C_FLAGS=\"-arch ppc -arch i386 -arch x86_64\""
+fi
 
 # check for build directory
 build_dir="${base_dir}/build"
@@ -93,8 +103,8 @@ fi
 # configure make files and build
 cd "$build_dir"
 echo "Configuring make files..."
-echo "    cmake ../ $args"
-cmake ../ $args || exit 1
+echo "    ../ $args | xargs cmake"
+echo "../ $args" | xargs cmake || exit 1
 echo "Building..."
 make || exit 1
 if [ -n "$run_tests" ]
