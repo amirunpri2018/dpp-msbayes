@@ -13,6 +13,8 @@ set(PROJECT_PATCH_VERSION 0)
 set(PROJECT_VERSION
     ${PROJECT_MAJOR_VERSION}.${PROJECT_MINOR_VERSION}.${PROJECT_PATCH_VERSION})
 
+set (STATIC_LINKING OFF CACHE BOOL "build with static links")
+
 include_directories("${PROJECT_BINARY_DIR}")
 
 add_subdirectory(src)

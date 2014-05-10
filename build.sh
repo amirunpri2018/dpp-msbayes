@@ -64,7 +64,7 @@ then
 fi
 if [ -n "$static" ]
 then
-    args="${args} -DCMAKE_C_FLAGS=-static"
+    args="${args} -DSTATIC_LINKING=YES"
 fi
 if [ -n "$include_old" ]
 then
