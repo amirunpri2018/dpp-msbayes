@@ -22,6 +22,10 @@ else
     base_dir="$(pwd)"
 fi
 
+# make sure abacus is here and up to date
+git submodule init
+git submodule update
+
 # process args
 extra_args=""
 static=""
