@@ -103,7 +103,7 @@ ReadInMSoutputAndCalculateSummaryStatistics (FILE * pfin){
 
   int maxsites = 1000; /* max number of seg sites, used for size of data mat */
   int nsam, i, howmany, npops, *config;
-  char **list, line[MAX_LNSZ], longline[32000], *mutscanline;
+  char **list, line[MAX_LNSZ], longline[262145], *mutscanline;
   char dum[100];
   tPositionOfSegSites *posit;
   double theta;
@@ -305,9 +305,13 @@ ReadInMSoutputAndCalculateSummaryStatistics (FILE * pfin){
 	  {
 	    sscanf (line, "segsites: %d\n", &segsites);
 
-	    if (segsites >= maxsites)	/* readjust the size of data matrix */
+        /* JRO: this should be a while loop and double the size of the data
+         * matrix until large enough;  updating accordingly. */
+	    /* if (segsites >= maxsites)	/1* readjust the size of data matrix *1/ */
+	    while (segsites >= maxsites)	/* readjust the size of data matrix */
 	      {
-		maxsites = segsites + 10;	/* extra 10 elements */
+		/* maxsites = segsites + 10;	/1* extra 10 elements *1/ */
+		maxsites *= 2;	/* extra 10 elements */
 		posit = (tPositionOfSegSites *)
 		  realloc (posit, maxsites * sizeof (tPositionOfSegSites));
 		/*printf("PRE %d %d %d\n", segsites, maxsites, nsam); */
@@ -330,7 +334,7 @@ ReadInMSoutputAndCalculateSummaryStatistics (FILE * pfin){
 	if (segsites > 0)
 	  {
 	    /* read in position of segregating sites */
-	    fgets (longline, 32000, pfin);
+	    fgets (longline, 262144, pfin);
 
 	    /* posit array initialized */
 	    ReadInPositionOfSegSites (longline, posit, segsites);
@@ -551,6 +555,8 @@ ReadInPositionOfSegSites (const char *line,
       positionArray[i] = (int) strtol (charPtr, &tempPtr, 10);
       if (charPtr == tempPtr)
 	{
+    /* JRO: If this fails char array `longline` needs to be larger to read in
+     * all the segregating site positiongs */
 	  fprintf (stderr, "ERROR: reached to the end, while processing "
 		   "positions line\n");
 	  exit (EXIT_FAILURE);
