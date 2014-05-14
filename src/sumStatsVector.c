@@ -715,6 +715,6 @@ ParseCommandLine (int argc, char *argv[])
 	  break;
 	}
     }
-    fprintf (stderr, "allow sorting: %d\n", allow_sorting);
-    fprintf (stderr, "sort index: %d\n", gSortPattern);
+    /* fprintf (stderr, "allow sorting: %d\n", allow_sorting); */
+    /* fprintf (stderr, "sort index: %d\n", gSortPattern); */
 }
