@@ -76,7 +76,8 @@ static void ReadInPositionOfSegSites (const char *line,
 static void ParseCommandLine (int argc, char *argv[]);
 static void ReadInMSoutputAndCalculateSummaryStatistics (FILE * pfin);
 
-int gSortPattern = 7;
+int gSortPattern = 11;
+int allow_sorting = 1;
 
 
 int
@@ -632,6 +633,10 @@ PrintUsage (char *progname)
 	   "               5: group by taxon then sort by the average of pi.b, use first 3 moments\n"
 	   "               6: group by taxon then sort by the average of pi.b, use first 2 moments\n"
 	   "               7: group by taxon then sort by the average of pi.b, use the first moment\n"
+	   "               8: group by taxon, NO sorting, use first 4 moments\n"
+	   "               9: group by taxon, NO sorting, use first 3 moments\n"
+	   "              10: group by taxon, NO sorting, use first 2 moments\n"
+	   "              11: group by taxon, NO sorting, use the first moment\n"
 	   "        nadv: Specify nadv (-a)\n"
 	   "stdin is used to read in a single line of msDQH output "
 	   "(output_line_of_msDQH)" "\n\n", p);
@@ -643,7 +648,7 @@ static struct option sim_opts[] = {
   {"help", 0, NULL, 'h'},	/* list options */
   {"header", 0, NULL, 'H'},
   {"name", 0, NULL, 'n'},
-  {"sort", 7, NULL, 's'},
+  {"sort", 11, NULL, 's'},
   {"nadv", 1, NULL, 'a'},
   {NULL, 0, NULL, 0}
 };
@@ -678,11 +683,19 @@ ParseCommandLine (int argc, char *argv[])
 	      PrintUsage (argv[0]);
 	    }
 	  gSortPattern = strtol(optarg, NULL, 10);
-	  if (errno || (gSortPattern < 0) || (gSortPattern > 7))
+	  if (errno || (gSortPattern < 0) || (gSortPattern > 11))
 	    {
 	      fprintf (stderr, "Invalid sort: %s\n", optarg);
 	      PrintUsage (argv[0]);
 	    }
+      if (gSortPattern == 0) {
+          allow_sorting = 0;
+      }
+      else if (gSortPattern > 7) {
+          allow_sorting = 0;
+          gSortPattern -= 4;
+      }
+
 	  break;
 	case 'a':		/* specify nadv */
 	  if (!optarg)
@@ -702,4 +715,6 @@ ParseCommandLine (int argc, char *argv[])
 	  break;
 	}
     }
+    fprintf (stderr, "allow sorting: %d\n", allow_sorting);
+    fprintf (stderr, "sort index: %d\n", gSortPattern);
 }

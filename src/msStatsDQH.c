@@ -43,6 +43,7 @@
 #define HIGHEST_MOMENT 3
 
 extern int gSortPattern;
+extern int allow_sorting;
 
 double nucdiv (int, int, char **);
 double nucdiv_w (int, int, char **, int, int *, int);
@@ -549,7 +550,9 @@ PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs, int n
      * The taxonPairs:gene with the largerest pi.b (divergence between the
      * pair) becomes the 1st column (left most).
      */	 
-   qsort(SumStat_list, numTaxonLocusPairs, sizeof(SumStat_list[0]), SS_comp);
+      if (allow_sorting != 0) {
+          qsort(SumStat_list, numTaxonLocusPairs, sizeof(SumStat_list[0]), SS_comp);
+      }
   }
   else if(gSortPattern == 2)
   {  
@@ -595,7 +598,9 @@ PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs, int n
 		 }// for a
 
 		//head = &tempSumStat[headCursor];		
-		qsort(&tempSumStat[headCursor], tailCursor - headCursor, sizeof(tempSumStat[headCursor]), SS_comp);
+        if (allow_sorting != 0) {
+		    qsort(&tempSumStat[headCursor], tailCursor - headCursor, sizeof(tempSumStat[headCursor]), SS_comp);
+        }
 			
 		headCursor = tailCursor = -1;
 		//head = NULL;
@@ -880,7 +885,9 @@ PrintSumStatsArray (struct SumStat **SumStat_list, int numTaxonLocusPairs, int n
 	free(SumStat_kurtosis);
 
 	// sort rows of ss_moments by PI_b_mean(across loci)
-	qsort(matrixToPrint, numTaxonPairs, sizeof(matrixToPrint[0]), SS_comp_moments);
+    if (allow_sorting != 0) {
+	    qsort(matrixToPrint, numTaxonPairs, sizeof(matrixToPrint[0]), SS_comp_moments);
+    }
     
 	if (gPrintHeader)
     {
