@@ -34,7 +34,7 @@ build_dpp_msbayes () {
         echo "To reconfigure, please remove this directory and re-run this script."
         exit 1
     else
-        mkdir "$build_dir"
+        mkdir -p "$build_dir"
     fi
     
     # configure make files and build
@@ -141,7 +141,7 @@ then
     for arch in "32" "64"
     do
         args="${args} -DCMAKE_INSTALL_PREFIX=${DPP_MSBAYES_BASE_DIR}/install/m${arch}"
-        args="${args} -DCMAKE_C_FLAGS=-m${arch}"
+        args="${args} -DCMAKE_C_FLAGS=-m${arch} -DCMAKE_LD_FLAGS=-m${arch}"
         export DPP_MSBAYES_BUILD_DIR="${DPP_MSBAYES_BASE_DIR}/build/m${arch}"
         build_dpp_msbayes $args
     done
