@@ -82,7 +82,8 @@ DPP_MSBAYES_RUN_TESTS=""
 DPP_MSBAYES_RUN_INSTALL=""
 include_old=""
 universal_mac_build=""
-universal_linux_build=""
+linux_dist_build=""
+mbit=""
 while [ "$1" != "" ]
 do
     case $1 in
@@ -108,13 +109,17 @@ do
         --old)
             include_old=1
             ;;
+        -m)
+            shift
+            mbit=$1
+            ;;
         --universal-mac-build)
             universal_mac_build=1
             include_old=1
             static=1
             ;;
-        --universal-linux-build)
-            universal_linux_build=1
+        --linux-dist-build)
+            linux_dist_build=1
             include_old=1
             static=1
             ;;
@@ -124,6 +129,10 @@ do
     shift
 done
 args=""
+if [ -n "$install_prefix" ]
+then
+    args="${args} -DCMAKE_INSTALL_PREFIX=${install_prefix}"
+fi
 if [ -n "$static" ]
 then
     args="${args} -DSTATIC_LINKING=YES"
@@ -136,19 +145,9 @@ if [ -n "$extra_args" ]
 then
     args="${args} ${extra_args}"
 fi
-if [ -n "$universal_linux_build" ]
+if [ -n "$linux_dist_build" ] && [ -n "$mbit" ]
 then
-    for arch in "32" "64"
-    do
-        args="${args} -DCMAKE_INSTALL_PREFIX=${DPP_MSBAYES_BASE_DIR}/install/m${arch}"
-        args="${args} -DCMAKE_C_FLAGS=-m${arch} -DCMAKE_LD_FLAGS=-m${arch}"
-        export DPP_MSBAYES_BUILD_DIR="${DPP_MSBAYES_BASE_DIR}/build/m${arch}"
-        build_dpp_msbayes $args
-    done
-fi
-if [ -n "$install_prefix" ]
-then
-    args="${args} -DCMAKE_INSTALL_PREFIX=${install_prefix}"
+    args="${args} -DCMAKE_C_FLAGS=-m${mbit} -DCMAKE_LD_FLAGS=-m${mbit}"
 fi
 if [ -n "$universal_mac_build" ]
 then
