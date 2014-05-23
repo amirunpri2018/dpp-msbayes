@@ -23,9 +23,8 @@ then
     MATH_LIB="$(find /usr -name "libm.dylib")"
     g++ -arch ppc -arch i386 -arch x86_64  -Wl,-search_paths_first -Wl,-headerpad_max_install_names -Bstatic *.cpp  -o ABCestimator "$MATH_LIB"
 else
-    MATH_LIB="$(find /usr -name "libm.a")"
-    g++ -m32  -Wl,-search_paths_first -Wl,-headerpad_max_install_names -Bstatic *.cpp  -o ABCestimator32 "$MATH_LIB"
-    g++ -m64  -Wl,-search_paths_first -Wl,-headerpad_max_install_names -Bstatic *.cpp  -o ABCestimator64 "$MATH_LIB"
+    g++ -m32 -static *.cpp -o ABCestimator32 -lm
+    g++ -m64 -static *.cpp -o ABCestimator64 -lm
 fi
 
 cd "$BASE_DIR"
