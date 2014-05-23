@@ -60,8 +60,8 @@ do
     echo
     echo
     echo Copying ${ARCH} headers and binaries...
-    INCLUDE_DIR="${BASE_DIR}/${ARCH}/include"
-    LIB_DIR="${BASE_DIR}/${ARCH}/libs"
+    INCLUDE_DIR="${BUILD_DIR}/${ARCH}/include"
+    LIB_DIR="${BUILD_DIR}/${ARCH}/libs"
     mkdir -p "$INCLUDE_DIR"
     mkdir -p "$LIB_DIR"
     cp `find ${GSLVER} -name "*.h"` "$INCLUDE_DIR"
