@@ -54,10 +54,10 @@ do
 
     env_path="${BUILD_DIR}/gsl-${ARCH}-env.sh"
     echo "#!/bin/sh" > "$env_path"
-    echo 'export PATH="${BUILD_DIR}/${ARCH}/bin:${PATH}"' >> "$env_path"
-    echo 'export LD_LIBRARY_PATH="${BUILD_DIR}/${ARCH}/lib:${LD_LIBRARY_PATH}"' >> "$env_path"
-    echo 'export PKG_CONFIG_PATH="${BUILD_DIR}/${ARCH}/lib/pkgconfig:${PKG_CONFIG_PATH}"' >> "$env_path"
-    echo 'export GSL_PREFIX="${BUILD_DIR}/${ARCH}"' >> "$env_path"
+    echo export PATH="${BUILD_DIR}/${ARCH}/bin:${PATH}" >> "$env_path"
+    echo export LD_LIBRARY_PATH="${BUILD_DIR}/${ARCH}/lib:${LD_LIBRARY_PATH}" >> "$env_path"
+    echo export PKG_CONFIG_PATH="${BUILD_DIR}/${ARCH}/lib/pkgconfig:${PKG_CONFIG_PATH}" >> "$env_path"
+    echo export GSL_PREFIX="${BUILD_DIR}/${ARCH}" >> "$env_path"
 
     cd "$BASE_DIR"
 
