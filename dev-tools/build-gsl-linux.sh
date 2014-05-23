@@ -64,8 +64,8 @@ do
     LIB_DIR="${BUILD_DIR}/${ARCH}/libs"
     mkdir -p "$INCLUDE_DIR"
     mkdir -p "$LIB_DIR"
-    cp `find ${GSLVER} -name "*.h"` "$INCLUDE_DIR"
-    cp `find ${GSLVER} -name "*.a"` "$LIB_DIR"
+    cp `find ${ARCH_DIR} -name "*.h"` "$INCLUDE_DIR"
+    cp `find ${ARCH_DIR} -name "*.a"` "$LIB_DIR"
      
     echo
     echo
