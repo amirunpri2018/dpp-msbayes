@@ -20,23 +20,15 @@ curl -o "$SOURCEFILE" "http://mirror.sdunix.com/gnu/gsl/${GSL_TAR_BALL}"
 GSLVER=${SOURCEFILE%.tar.gz}
 tar -xzf "$SOURCEFILE" -C "$BUILD_DIR"
 
-# possible archs: i386 ppc x86_64 ppc64
-# note: ppc64 doesn't work in Snow Leopard
 ARCHITECTURES="m32 m64"
  
 # number of cpus to use during compile
 COMPILETHREADS=2
  
 COMPILER=gcc
-#COMPILER=gcc-4.2
-#COMPILER=/Developer/usr/bin/llvm-g++-4.2
  
 # configure flags
 CONFFLAGS="--disable-shared"
- 
-# compiler flags
-# COMPFLAGS="-O3"
- 
  
 for ARCH in $ARCHITECTURES
 do
@@ -59,6 +51,13 @@ do
     echo
     echo ${ARCH} headers and binaries are in:
     echo "    $INSTALL_DIR"
+
+    env_path="${BUILD_DIR}/gsl-${ARCH}-env.sh"
+    echo "#!/bin/sh" > "$env_path"
+    echo 'export PATH="${BUILD_DIR}/${ARCH}/bin:${PATH}"' >> "$env_path"
+    echo 'export LD_LIBRARY_PATH="${BUILD_DIR}/${ARCH}/lib:${LD_LIBRARY_PATH}"' >> "$env_path"
+    echo 'export PKG_CONFIG_PATH="${BUILD_DIR}/${ARCH}/lib/pkgconfig:${PKG_CONFIG_PATH}"' >> "$env_path"
+    echo 'export GSL_PREFIX="${BUILD_DIR}/${ARCH}"' >> "$env_path"
 
     cd "$BASE_DIR"
 
