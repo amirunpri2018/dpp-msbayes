@@ -533,9 +533,15 @@ main (int argc, char *argv[])
 
       descendant1Theta = draw_gamma_or_uniform(gBaseRand, gParam.thetaShape,
               gParam.thetaScale);
+      if (almost_equal(descendant1Theta, 0.0, 0.000000000001)) {
+          descendant1Theta = 0.000000000001;
+      }
       if (gParam.thetaParameters[1] == '1') {
           descendant2Theta = draw_gamma_or_uniform(gBaseRand, gParam.thetaShape,
                   gParam.thetaScale);
+          if (almost_equal(descendant2Theta, 0.0, 0.000000000001)) {
+              descendant2Theta = 0.000000000001;
+          }
       } else if (gParam.thetaParameters[1] == '0') {
           descendant2Theta = descendant1Theta;
       } else {
@@ -580,6 +586,9 @@ main (int argc, char *argv[])
               Nanc = draw_gamma_or_uniform(gBaseRand,
                       gParam.ancestralThetaShape,
                       gParam.ancestralThetaScale);
+          }
+          if (almost_equal(Nanc, 0.0, 0.000000000001)) {
+              Nanc = 0.000000000001;
           }
       }
       else if ((gParam.thetaParameters[2] == '1') && 
@@ -730,13 +739,26 @@ main (int argc, char *argv[])
 		 N assumed in upperTheta) */
 	      /* I think we should get rid of /2 from tauequalizer */
 
+          /* JRO: Yes the following is weird and the threshold of 0.0001
+           * coalescent units can actually be thousands of generations which
+           * is not trivial. Also, the hack to avoid unrealistic growth rates
+           * is the wrong approach. If the div time is essentially zero, then
+           * there should simply be no bottleneck. Updating to make the
+           * threshold smaller, and simply preventing a bottleneck if the
+           * div time is smaller.*/
 	      /* The following if is a little weird */
-	      if (scaledGaussTime < 0.0001) {
-		scaledGaussTime  = 0.0001;
-		scaledBottleTime = 0.00005;
-	      } else {
-		scaledBottleTime = BottleTime * 0.95 * scaledGaussTime;
-	      }
+	      /* if (scaledGaussTime < 0.0001) { */
+		/* scaledGaussTime  = 0.0001; */
+		/* scaledBottleTime = 0.00005; */
+	      /* } else { */
+		/* scaledBottleTime = BottleTime * 0.95 * scaledGaussTime; */
+	      /* } */
+            if (scaledGaussTime < 0.000001) {
+                // no bottleneck if div time is essentially zero
+                BottStr1 = 1.0;
+                BottStr2 = 1.0;
+            }
+            scaledBottleTime = BottleTime * 0.95 * scaledGaussTime;
 	      
 	      if (debug_level)
 		fprintf (stderr, 
@@ -746,17 +768,17 @@ main (int argc, char *argv[])
 	      /* We can send some extra info to msbayes.pl here */
 	      printf ("%u %u %u ", lociTaxonPairIDcntr, taxonID+1, locus+1);
 	      lociTaxonPairIDcntr ++; /* seriral id: 1 to # taxon:locus pairs */
-	      printf ("%.11lf %.11lf %.11lf %.11lf ",
+	      printf ("%.17lf %.17lf %.17lf %.17lf ",
 		      locTheta, scaledGaussTime, mig, 
 		      recTbl[locus] * (taxonPairDat.seqLen - 1));
-	      printf ("%.11lf %.11lf %.11lf ", scaledBottleTime, 
+	      printf ("%.17lf %.17lf %.17lf ", scaledBottleTime, 
 		      BottStr1 * N1, BottStr2 * N2);
 	      printf ("%u %u %u %lf %lf %lf ",
 		      taxonPairDat.numPerTaxa,
 		      taxonPairDat.sample[0], taxonPairDat.sample[1],
 		      taxonPairDat.tstv[0], taxonPairDat.tstv[1],
 		      taxonPairDat.gamma);
-	      printf ("%u %.11lf %.11lf %.17lf ",
+	      printf ("%u %.17lf %.17lf %.17lf ",
 		      taxonPairDat.seqLen, N1, N2, thisNanc);
 	      printf ("%lf %lf %lf %lf\n",
 		      taxonPairDat.freqA, taxonPairDat.freqC,
