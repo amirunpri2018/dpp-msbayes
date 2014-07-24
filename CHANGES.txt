@@ -1,0 +1,57 @@
+Version 0.2.0
+=============
+
+Changes
+-------
+  - Updating ``dpp-msprior``.
+    
+    Adding a lower bound of "0.000000000001" to all theta parameters, because
+    the coalescent simulator ``msDQH`` crashes if theta parameters are zero.
+    
+    Also, I am updating the weirdness from the original ``msBayes`` where there
+    was a check for small (i.e., 0.0001) divergence times. In such simulations,
+    the div time was set to this arbitrary lower bound, and the bottleneck time
+    was set to 0.5 of this.  I am guessing this was to prevent unrealistic (and
+    numerically unstable?) changes in pop size. However, 0.0001 can be
+    thousands of generations which is not trivial. Also, rather than this weird
+    hack of the bottleneck time, it seems much better to simply have no
+    bottleneck if the div time is essentially zero. Accordingly, I lowered the
+    threshold and simply "turn off" the bottleneck if the time is below it (I
+    no longer adjust the div time or bottleneck time).
+
+Bug Fixes
+---------
+  - ``msDQH`` would crash if theta was zero. The change above should prevent
+    this. If your runs under previous versions did not crash, then you were not
+    affected by this bug.
+
+
+Version 0.1.0
+=============
+
+Changes
+-------
+  - First "official" release of ``dpp-msbayes``.
+  - Many changes, new features, and bug fixes from the original ``msBayes``
+    code base. Please see the git log for full details; a few changes
+    are highlighted below.
+
+New Features
+------------
+  - A non-parametric Dirichlet process prior on the distribution of divergence
+    times across taxon pairs.
+  - Gamma and beta distributions on demographic parameters.
+  - New "grouping" and "sorting" options for per-taxon summary statistics.
+  - Much more control over the parameter richness of the model.
+    Parameterization of the population sizes for each taxon is completely
+    controllable.  The parameters controlling the timing and severity of
+    population bottlenecks can be removed from the model.
+
+
+Bug Fixes
+---------
+  - When parsing config files, ``msBayes`` will quietly ignore unrecognized
+    options and quietly use default settings (!!). This has been fixed, and
+    the program will crash if there are any unrecognized options in the
+    configuration file.
+  - Many other small fixes.
