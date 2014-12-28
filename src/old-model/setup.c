@@ -382,6 +382,7 @@ SetDefaultParams (runParameters * paramPtr)
   if (!paramPtr->upperAncPopSize)
     {
       paramPtr->upperAncPopSize = DEFAULT_UPPER_ANC_POPSIZE;
+    }
   if (!paramPtr->timeInSubsPerSite)
     {
       paramPtr->timeInSubsPerSite = DEFAULT_TIME_IN_SUBS_PER_SITE;
