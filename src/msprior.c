@@ -331,7 +331,10 @@ main (int argc, char *argv[])
   }
 #endif
 
-  thetaMean = get_gamma_or_uniform_mean(gParam.thetaShape, gParam.thetaScale);
+  thetaMean = 1.0;
+  if (gParam.timeInSubsPerSite == 0) {
+    thetaMean = get_gamma_or_uniform_mean(gParam.thetaShape, gParam.thetaScale);
+  }
 
   /* Beginning of the main loop */
   for (rep = 0; rep < gParam.reps; rep++)

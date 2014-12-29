@@ -420,6 +420,10 @@ SetDefaultParams (runParameters * paramPtr)
       strncpy (paramPtr->thetaParameters, DEFAULT_THETA_PARAMETERS,
 	       NUMBER_OF_THETA_PARAMETERS);
     }
+  if (!paramPtr->timeInSubsPerSite)
+    {
+      paramPtr->timeInSubsPerSite = DEFAULT_TIME_IN_SUBS_PER_SITE;
+    }
   if (!paramPtr->reps)
     {
       paramPtr->reps = DEFAULT_REPS;
@@ -703,6 +707,20 @@ InteractiveSetupParams (runParameters * paramPtr)
 	  paramPtr->ancestralThetaScale = tempValDouble;
 	}
     }
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+           "Time is on the scale of expected substitutions per site (0: False, 1: True) "
+	       "[%u]: \n", paramPtr->timeInSubsPerSite);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%u", &tempValUI) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->timeInSubsPerSite = tempValUI;
+	}
+    }
 
   /* rep */
   for (badInput = 1; badInput;)
@@ -763,8 +781,8 @@ SetupParams (FILE * fp, runParameters * paramPtr)
 // JRO - modified - 11/29/2011
 // JRO - modified - 11/17/2011
   retVal = init_globals (fp,
-			 "concentrationShape concentrationScale thetaShape thetaScale tauShape tauScale bottleProportionShapeA bottleProportionShapeB bottleProportionShared migrationShape migrationScale recombinationShape recombinationScale ancestralThetaShape ancestralThetaScale thetaParameters numTauClasses reps constrain subParamConstrain",
-			 "dddddddduddddddsuVus",
+			 "concentrationShape concentrationScale thetaShape thetaScale tauShape tauScale bottleProportionShapeA bottleProportionShapeB bottleProportionShared migrationShape migrationScale recombinationShape recombinationScale ancestralThetaShape ancestralThetaScale thetaParameters timeInSubsPerSite numTauClasses reps constrain subParamConstrain",
+			 "dddddddduddddddsuuVus",
              &paramPtr->concentrationShape, &paramPtr->concentrationScale,
              &paramPtr->thetaShape, &paramPtr->thetaScale, &paramPtr->tauShape,
              &paramPtr->tauScale, &paramPtr->bottleProportionShapeA,
@@ -773,6 +791,7 @@ SetupParams (FILE * fp, runParameters * paramPtr)
              &paramPtr->migrationScale, &paramPtr->recombinationShape,
              &paramPtr->recombinationScale, &paramPtr->ancestralThetaShape,
              &paramPtr->ancestralThetaScale, &paramPtr->thetaParameters,
+             &paramPtr->timeInSubsPerSite,
              &paramPtr->numTauClasses, &paramPtr->reps, &paramPtr->constrain,
              &paramPtr->subParamConstrain);
 
@@ -1366,6 +1385,7 @@ PrintParam (FILE *fp)
   fprintf (fp, "ancestralThetaShape =\t%.17lf\n", gParam.ancestralThetaShape);
   fprintf (fp, "ancestralThetaScale =\t%.17lf\n", gParam.ancestralThetaScale);
   fprintf (fp, "thetaParameters =\t%s\n", gParam.thetaParameters);
+  fprintf (fp, "timeInSubsPerSite =\t%u\n", gParam.timeInSubsPerSite);
   fprintf (fp, "reps =\t%llu\n", gParam.reps);
   fprintf (fp, "numTaxonLocusPairs =\t%u\n", gParam.numTaxonLocusPairs);
   fprintf (fp, "numTaxonPairs =\t%u\n", gParam.numTaxonPairs);

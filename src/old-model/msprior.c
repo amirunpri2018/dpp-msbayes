@@ -151,10 +151,10 @@ main (int argc, char *argv[])
 {
   double N1, N2, Nanc, NancLower, *uniqTauArray = NULL, *taxonTauArray = NULL,
          *descendant1ThetaArray = NULL, *descendant2ThetaArray = NULL,
-         *ancestralThetaArray = NULL, spTheta, tauequalizer, gaussTime = 0.0,
+         *ancestralThetaArray = NULL, spTheta, thetaMean, tauequalizer, gaussTime = 0.0,
          mig, rec, BottStr1, BottStr2, BottleTime;
   double *recTbl;
-  int tauClass, *PSIarray = NULL;
+  int tauClass, *PSIarray = NULL, i;
   unsigned int numTauClasses = -1, u, locus, taxonID, zzz;
   unsigned long randSeed;
   unsigned long long rep;
@@ -172,10 +172,10 @@ main (int argc, char *argv[])
   LoadConfiguration (argc, argv);
 
   /* set the lower Nanc */
-  NancLower = 0.00001 * gParam.lowerTheta;
-  if (NancLower < 0.00000000004) { /* 4 * (mu=10^(-11)) * (Ne=1) */
-    NancLower = 0.00000000004;
-  }
+  /* NancLower = 0.00001 * gParam.lowerTheta; */
+  /* if (NancLower < 0.00000000004) { /1* 4 * (mu=10^(-11)) * (Ne=1) *1/ */
+  /*   NancLower = 0.00000000004; */
+  /* } */
 
   /* set b_constrain to 1 if constrain */
   if (gParam.constrain > 0)
@@ -192,7 +192,6 @@ main (int argc, char *argv[])
 	  exit (EXIT_FAILURE);
 	}
 
-      int i;
       for (i = 0; i < strlen (gParam.subParamConstrain); i++)
 	{
 	  char a = (gParam.subParamConstrain)[i];
@@ -314,6 +313,11 @@ main (int argc, char *argv[])
     exit(EXIT_FAILURE);
   }
 #endif
+
+  thetaMean = 1.0;
+  if (gParam.timeInSubsPerSite == 0) {
+    thetaMean = (gParam.lowerTheta + gParam.upperTheta) / 2.0;
+  }
 
   /* Beginning of the main loop */
   for (rep = 0; rep < gParam.reps; rep++)
@@ -560,8 +564,9 @@ main (int argc, char *argv[])
 	      /* this scaling is done inside of locus loop to accomodate 
 		 the gamma dist'n of mut rate for each locus */
 
-	      tauequalizer = gParam.upperTheta / 
-		2 / (spTheta * taxonPairDat.NScaler);
+	      /* tauequalizer = gParam.upperTheta / */ 
+		/* 2 / (spTheta * taxonPairDat.NScaler); */
+          tauequalizer = thetaMean / (spTheta * taxonPairDat.NScaler);
 	      /* WORK, CONFIRM THIS. Naoki Nov 2, 2009.  IT USED TO BE
 		 tauequalizer = gParam.upperTheta * taxonPairDat.seqLen / 
 		 2 / locTheta;
@@ -578,13 +583,26 @@ main (int argc, char *argv[])
 		 N assumed in upperTheta) */
 	      /* I think we should get rid of /2 from tauequalizer */
 
+          /* JRO: Yes the following is weird and the threshold of 0.0001
+           * coalescent units can actually be thousands of generations which
+           * is not trivial. Also, the hack to avoid unrealistic growth rates
+           * is the wrong approach. If the div time is essentially zero, then
+           * there should simply be no bottleneck. Updating to make the
+           * threshold smaller, and simply preventing a bottleneck if the
+           * div time is smaller.*/
 	      /* The following if is a little weird */
-	      if (scaledGaussTime < 0.0001) {
-		scaledGaussTime  = 0.0001;
-		scaledBottleTime = 0.00005;
-	      } else {
-		scaledBottleTime = BottleTime * 0.95 * scaledGaussTime;
-	      }
+	      /* if (scaledGaussTime < 0.0001) { */
+		/* scaledGaussTime  = 0.0001; */
+		/* scaledBottleTime = 0.00005; */
+	      /* } else { */
+		/* scaledBottleTime = BottleTime * 0.95 * scaledGaussTime; */
+	      /* } */
+            if (scaledGaussTime < 0.000001) {
+                // no bottleneck if div time is essentially zero
+                BottStr1 = 1.0;
+                BottStr2 = 1.0;
+            }
+            scaledBottleTime = BottleTime * 0.95 * scaledGaussTime;
 	      
 	      if (debug_level)
 		fprintf (stderr, 
@@ -594,17 +612,17 @@ main (int argc, char *argv[])
 	      /* We can send some extra info to msbayes.pl here */
 	      printf ("%u %u %u ", lociTaxonPairIDcntr, taxonID+1, locus+1);
 	      lociTaxonPairIDcntr ++; /* seriral id: 1 to # taxon:locus pairs */
-	      printf ("%.11lf %.11lf %.11lf %.11lf ",
+	      printf ("%.17lf %.17lf %.17lf %.17lf ",
 		      locTheta, scaledGaussTime, mig, 
 		      recTbl[locus] * (taxonPairDat.seqLen - 1));
-	      printf ("%.11lf %.11lf %.11lf ", scaledBottleTime, 
+	      printf ("%.17lf %.17lf %.17lf ", scaledBottleTime, 
 		      BottStr1 * N1, BottStr2 * N2);
 	      printf ("%u %u %u %lf %lf %lf ",
 		      taxonPairDat.numPerTaxa,
 		      taxonPairDat.sample[0], taxonPairDat.sample[1],
 		      taxonPairDat.tstv[0], taxonPairDat.tstv[1],
 		      taxonPairDat.gamma);
-	      printf ("%u %.11lf %.11lf %.17lf ",
+	      printf ("%u %.17lf %.17lf %.17lf ",
 		      taxonPairDat.seqLen, N1, N2, thisNanc);
 	      printf ("%lf %lf %lf %lf\n",
 		      taxonPairDat.freqA, taxonPairDat.freqC,
