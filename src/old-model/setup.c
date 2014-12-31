@@ -383,6 +383,10 @@ SetDefaultParams (runParameters * paramPtr)
     {
       paramPtr->upperAncPopSize = DEFAULT_UPPER_ANC_POPSIZE;
     }
+  if (!paramPtr->timeInSubsPerSite)
+    {
+      paramPtr->timeInSubsPerSite = DEFAULT_TIME_IN_SUBS_PER_SITE;
+    }
   if (!paramPtr->reps)
     {
       paramPtr->reps = DEFAULT_REPS;
@@ -551,6 +555,20 @@ InteractiveSetupParams (runParameters * paramPtr)
 	  paramPtr->upperAncPopSize = tempValDouble;
 	}
     }
+  for (badInput = 1; badInput;)
+    {
+      fprintf (stderr,
+           "Time is on the scale of expected substitutions per site (0: False, 1: True) "
+	       "[%u]: \n", paramPtr->timeInSubsPerSite);
+      lineLen = GetLine (line, MAX_INPUT_LINE_LENGTH);
+      if (lineLen == 1)
+	badInput = 0;		/* use default value */
+      else if ((lineLen > 1) && (sscanf (line, "%u", &tempValUI) == 1))
+	{
+	  badInput = 0;
+	  paramPtr->timeInSubsPerSite = tempValUI;
+	}
+    }
 
   /* rep */
   for (badInput = 1; badInput;)
@@ -611,11 +629,12 @@ SetupParams (FILE * fp, runParameters * paramPtr)
 // JRO - modified - 11/29/2011
 // JRO - modified - 11/17/2011
   retVal = init_globals (fp,
-			 "lowerTheta upperTheta lowerTau upperTau upperMig upperRec upperAncPopSize numTauClasses reps constrain subParamConstrain",
-			 "ddddddduVus",
+			 "lowerTheta upperTheta lowerTau upperTau upperMig upperRec upperAncPopSize timeInSubsPerSite numTauClasses reps constrain subParamConstrain",
+			 "ddddddduuVus",
 			 &paramPtr->lowerTheta, &paramPtr->upperTheta,
 			 &paramPtr->lowerTau, &paramPtr->upperTau, &paramPtr->upperMig, 
 			 &paramPtr->upperRec, &paramPtr->upperAncPopSize, 
+             &paramPtr->timeInSubsPerSite,
 			 &paramPtr->numTauClasses, &paramPtr->reps,
 			 &paramPtr->constrain, &paramPtr->subParamConstrain);
 
@@ -1200,6 +1219,7 @@ PrintParam (FILE *fp)
   fprintf (fp, "upperMig =\t%.17lf\n", gParam.upperMig);
   fprintf (fp, "upperRec =\t%.17lf\n", gParam.upperRec);
   fprintf (fp, "upperAncPopSize =\t%.17lf\n", gParam.upperAncPopSize);
+  fprintf (fp, "timeInSubsPerSite =\t%u\n", gParam.timeInSubsPerSite);
   fprintf (fp, "reps =\t%llu\n", gParam.reps);
   fprintf (fp, "numTaxonLocusPairs =\t%u\n", gParam.numTaxonLocusPairs);
   fprintf (fp, "numTaxonPairs =\t%u\n", gParam.numTaxonPairs);

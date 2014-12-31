@@ -21,6 +21,7 @@
 #define DEFAULT_REPS  1000000
 #define DEFAULT_MUT_FILE "SampleSize_MuModel_Vector"
 #define DEFAULT_SUBPARAMCONSTRAIN "000000000"
+#define DEFAULT_TIME_IN_SUBS_PER_SITE 0
 
 #define MAX_FILENAME_LEN 1024
 #define MAX_NAME_CHAR_LEN 1024
@@ -52,6 +53,7 @@ typedef struct
   double ancestralThetaScale;
   double ancestralThetaShape;
   char thetaParameters[NUMBER_OF_THETA_PARAMETERS];
+  int timeInSubsPerSite;
   unsigned long long reps;
   unsigned int numTaxonLocusPairs; /* total number of taxon:locus pairs */
   unsigned int numTaxonPairs;     /* number of unique taxon pairs */ 

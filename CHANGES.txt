@@ -1,3 +1,42 @@
+Version 0.3.0
+=============
+
+New Features
+------------
+
+  - Adding option to scale time in expected substitutions per site. Use
+    ``timeInSubsPerSite 1`` in the configuration file to use this new feature.
+    The default (``timeInSubsPerSite 0``) is to use the old scaling
+    proportional to the mean of the prior on theta.
+  - The coefficient of variation of divergence times is now reported.  This
+    unitless statistic is a more useful metric than 'omega' (variance-to-mean
+    ratio) for comparisons across models and datasets.
+
+Changes
+-------
+
+  - Making three changes to the 'old' msBayes model:
+    
+    1.  Rescaling time using the mean of the uniform prior on theta (rather
+        than half of the upper limit). This now mirrors the dpp code.
+    
+    2.  As I did for ``dpp-msprior``, I am updating the hack where there was
+        a check for small (i.e., 0.0001) divergence times. In such
+        simulations, the div time was set to this arbitrary lower bound, and
+        the bottleneck time was set to 0.5 of this.  I am guessing this was
+        to prevent unrealistic (and numerically unstable?) changes in pop
+        size. However, 0.0001 can be thousands of generations which is not
+        trivial. Also, rather than this weird hack of the bottleneck time,
+        it seems much better to simply have no bottleneck if the div time is
+        essentially zero.  Accordingly, I lowered the threshold and simply
+        "turn off" the bottleneck if the time is below it (I no longer
+        adjust the div time or bottleneck time).
+    
+    3.  Adding support for ``timeInSubsPerSite`` option, as I did for the
+        dpp code. This boolean option in the config allows the user to have
+        time in the scale of expected substitutions per site.
+
+
 Version 0.2.0
 =============
 
