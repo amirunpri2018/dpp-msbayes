@@ -1,3 +1,13 @@
+Version 0.3.1
+=============
+
+Changes
+-------
+
+  - Updating PERL scripts (msbayes.pl and dpp-msbayes.pl) to use
+    File::Temp::tempfile instead of deprecated POSIX::tmpnam.
+
+
 Version 0.3.0
 =============
 
