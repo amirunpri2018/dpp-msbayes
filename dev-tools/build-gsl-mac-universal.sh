@@ -16,7 +16,7 @@ else
     mkdir -p "$BUILD_DIR"
 fi
 SOURCEFILE="${BUILD_DIR}/${GSL_TAR_BALL}"
-curl -o "$SOURCEFILE" "http://mirror.sdunix.com/gnu/gsl/${GSL_TAR_BALL}"
+curl -o "$SOURCEFILE" "http://mirror.nexcess.net/gnu/gsl/${GSL_TAR_BALL}"
 GSLVER=${SOURCEFILE%.tar.gz}
 tar -xzf "$SOURCEFILE" -C "$BUILD_DIR"
 
@@ -60,7 +60,7 @@ do
      
 done
  
-INCLUDE_DIR="${BUILD_DIR}/include"
+INCLUDE_DIR="${BUILD_DIR}/include/gsl"
 LIB_DIR="${BUILD_DIR}/libs"
 mkdir -p "$INCLUDE_DIR"
 mkdir -p "$LIB_DIR"
@@ -87,3 +87,8 @@ echo Universal Binaries:
 echo
 lipo -info "$LIB_DIR"/*.a
 
+
+env_path="${BUILD_DIR}/gsl-mac-env.sh"
+echo "#!/bin/sh" > "$env_path"
+echo export LD_LIBRARY_PATH="${BUILD_DIR}/libs" >> "$env_path"
+echo export GSL_PREFIX="${BUILD_DIR}" >> "$env_path"
