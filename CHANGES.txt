@@ -1,3 +1,12 @@
+Version 0.3.2
+=============
+
+Changes
+-------
+
+  - Updating to abacus version 0.1.1, which uses a larger line buffer for
+    eureject. This will allow analyses with very large numbers of loci.
+
 Version 0.3.1
 =============
 
